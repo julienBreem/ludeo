@@ -38,7 +38,8 @@ const RING_RY = 76 * BS;
 const SHELF_Y = 725;
 const ICON = 112;
 const HELD = ICON * 1.15; // an ingredient in her hand
-const GRAB_MS = 600; // long press: one more every GRAB_MS x anim factor
+const GRAB_FIRST_MS = 1000; // long press: the second one after GRAB_FIRST_MS (a careful pause is not a grab),
+const GRAB_MS = 600; // then one more every GRAB_MS, both x anim factor
 const GRAB_ZONE = ICON / 2 + 12; // the press stays a long press while the pointer is on the item
 const PILE_MAX = 3; // copies drawn behind the held ingredient
 const POUR_GAP = 140; // ms between two ingredients of one pour
@@ -297,8 +298,9 @@ export class DoughScene extends Phaser.Scene {
     }
   }
 
-  // Press on a shelf ingredient: the hand holds one; while the press stays on the item, one more
-  // every GRAB_MS (x anim factor), up to what the board can still take of that kind.
+  // Press on a shelf ingredient: the hand holds one; while the press stays on the item, a second
+  // one after GRAB_FIRST_MS, then one more every GRAB_MS (x anim factor), up to what the board can
+  // still take of that kind.
   startDrag(p, key, homeX) {
     if (this.drag || this.stirring) return;
     const hand = this.add.container(p.x, p.y).setDepth(40);
@@ -307,7 +309,12 @@ export class DoughScene extends Phaser.Scene {
     hand.add([pile, badge]);
     this.drag = { key, hand, pile, badge, homeX, id: p.id, n: 1, grabbing: true, timer: null };
     this.drawHand();
-    this.drag.timer = this.time.addEvent({ delay: dur(GRAB_MS), loop: true, callback: () => this.grabOne() });
+    const d = this.drag;
+    d.timer = this.time.delayedCall(dur(GRAB_FIRST_MS), () => {
+      if (this.drag !== d || !d.grabbing) return;
+      this.grabOne();
+      d.timer = this.time.addEvent({ delay: dur(GRAB_MS), loop: true, callback: () => this.grabOne() });
+    });
   }
 
   grabOne() {
