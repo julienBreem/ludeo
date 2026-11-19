@@ -39,7 +39,7 @@ export function updateState(fn) {
 export function newRound() {
   const previous = round?.client ?? null;
   const levels = phaseLevels(ID);
-  round = createRound(debugOrder() ?? generateOrder(getState().owned));
+  round = createRound(debugOrder() ?? generateOrder(getState().owned, Math.random, levels));
   round.client = generateClient(Math.random, previous);
   round.levels = levels;
   return round;

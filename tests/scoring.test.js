@@ -91,3 +91,41 @@ test('score and mood', () => {
   assert.deepEqual(scoreRound(mk(0)), { coins: 0, mood: 'fache' });
 });
 test('createRound starts empty', () => { const r = createRound(order); assert.equal(r.cake.dessert, 'gateau'); assert.deepEqual(r.cake.toppings, []); assert.deepEqual(r.results, {}); });
+
+// ---- Lot 3: repeated bands, motif slots, hints ----
+import { judgeMotif, judgeOrderToppings } from '../jeux/stand-desserts/src/logic/scoring.js';
+
+test('N3 glaze: repeated colours in adjacent bands are judged band by band', () => {
+  const KEYS4 = ['rose', 'violet', 'vert'];
+  const size = 12, mask = new Uint8Array(size * size).fill(1);
+  const zones = zoneMap(mask, size, 3);
+  const glaze = ['rose', 'rose', 'violet']; // 2/3 rose, 1/3 violet
+  const paint = colorOf => Uint8Array.from(zones, z => colorOf(z));
+  assert.equal(judgeColor(paint(z => (z < 2 ? 1 : 2)), KEYS4, zones, glaze).ok, true);
+  const bad = judgeColor(paint(z => (z === 0 ? 1 : 2)), KEYS4, zones, glaze);
+  assert.deepEqual(bad, { ok: false, reason: 'mauvaise-couleur', zone: 1, color: 'violet' });
+  const gap = Uint8Array.from(zones, z => (z === 1 ? 0 : z < 2 ? 1 : 2));
+  assert.deepEqual(judgeColor(gap, KEYS4, zones, glaze), { ok: false, reason: 'pas-couvert', zone: 1 });
+  // a mixed colour the shelf holds (not in the starter list) is judged like any other
+  assert.equal(judgeColor(paint(() => 1), ['orange'], zones, ['orange', 'orange', 'orange']).ok, true);
+  assert.equal(judgeColor(paint(() => 1), ['orange'], zones, ['orange', 'orange', 'vert']).ok, false);
+});
+
+test('N2 motif: judged slot by slot', () => {
+  const seq = ['fraise', 'etoile', 'fraise', 'etoile', 'fraise', 'etoile'];
+  assert.deepEqual(judgeMotif([...seq], seq), { ok: true });
+  assert.deepEqual(judgeMotif(['fraise', 'etoile', 'fraise', 'etoile', 'etoile', null], seq),
+    { ok: false, reason: 'emplacements', wrong: [4], empty: [5] });
+  assert.deepEqual(judgeMotif([], ['a', 'b']).empty, [0, 1]);
+});
+
+test('judgeOrderToppings: motif by slots, counts and hints by exact counts', () => {
+  const motifOrder = { toppingMode: 'motif', motif: { sequence: ['a', 'b', 'a', 'b'] }, toppings: [{ key: 'a', count: 2 }, { key: 'b', count: 2 }] };
+  assert.equal(judgeOrderToppings(['a', 'b', 'a', 'b'], motifOrder).ok, true);
+  assert.equal(judgeOrderToppings(['a', 'b', 'b', 'a'], motifOrder).ok, false);
+  const hintOrder = { toppingMode: 'hints', toppings: [{ key: 'a', count: 3 }, { key: 'b', count: 4 }] };
+  assert.equal(judgeOrderToppings(['b', 'a', 'a', 'b', 'b', 'a', 'b'], hintOrder).ok, true);
+  assert.equal(judgeOrderToppings(['a', 'a', 'a', 'b', 'b', 'b'], hintOrder).reason, 'pas-assez');
+  assert.equal(judgeOrderToppings(['a', 'a', 'a', 'b', 'b', 'b', 'b', 'b'], hintOrder).reason, 'trop');
+  assert.equal(judgeOrderToppings(['a'], { toppings: [{ key: 'a', count: 1 }] }).ok, true);
+});

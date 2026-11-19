@@ -80,6 +80,29 @@ export function judgeToppings(placed, toppings) {
   return OK;
 }
 
+// Level 2: `slots` is what the child put in each ring slot (a topping key or null), `sequence` what
+// each slot should hold. Wrong slots hold another kind, empty ones nothing (prefilled slots are
+// part of both lists and always match). -> { ok } or { ok: false, reason: 'emplacements', wrong, empty }
+// with the slot indexes.
+export function judgeMotif(slots, sequence) {
+  const wrong = [];
+  const empty = [];
+  sequence.forEach((want, i) => {
+    const have = slots[i] ?? null;
+    if (have === null) empty.push(i);
+    else if (have !== want) wrong.push(i);
+  });
+  return wrong.length || empty.length ? { ok: false, reason: 'emplacements', wrong, empty } : OK;
+}
+
+// Judges a round's toppings by the order's mode. `placed`: topping keys put on the cake (modes
+// counts and hints, free placement; exact counts, as judgeToppings), or the per-slot list
+// (mode motif, as judgeMotif).
+export function judgeOrderToppings(placed, order) {
+  if (order.toppingMode === 'motif' && order.motif) return judgeMotif(placed, order.motif.sequence);
+  return judgeToppings(placed, order.toppings);
+}
+
 const BITES = [0, 1, 1, 2, 3, 4];
 export function bitesFor(coins) {
   return BITES[coins] ?? (coins > 5 ? 4 : 0);

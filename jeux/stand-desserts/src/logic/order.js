@@ -1,4 +1,5 @@
 import { DESSERTS, ITEMS, ownedKeys } from './catalog.js';
+import { basesOf, obtainable, mixedColors } from './colors.js';
 
 export const ZONE_WEIGHTS = [0.5, 0.35, 0.15];
 export const KIND_WEIGHTS = [0.5, 0.35, 0.15];
@@ -26,21 +27,172 @@ function pickDistinct(list, n, rng) {
   return out;
 }
 
-export function generateOrder(owned, rng = Math.random) {
-  const colors = ownedKeys(owned, 'color');
-  const kinds = ownedKeys(owned, 'topping');
-  const glaze = pickDistinct(colors, pickSize(ZONE_WEIGHTS, colors.length, rng), rng);
+const MAX_HINT_TOTAL = 8;
+export const MAX_RING_SLOTS = 8;
+
+// Equal-band patterns of level 3: letters are colours, each letter one run of adjacent bands, so
+// every colour covers a plain fraction (1/3, 2/3, 1/4, 1/2, 3/4) and at least one is repeated.
+export const BAND_PATTERNS = [
+  [0, 0, 1], [0, 1, 1],
+  [0, 0, 0, 1], [0, 1, 1, 1], [0, 0, 1, 1], [0, 0, 1, 2], [0, 1, 1, 2], [0, 1, 2, 2],
+];
+
+// Motifs of level 2, one period (letters are topping kinds): AB, then AAB, then ABC.
+export const MOTIFS = [[0, 1], [0, 0, 1], [0, 1, 2]];
+
+const levelOf = (levels, phase) => ([1, 2, 3].includes(levels?.[phase]) ? levels[phase] : 1);
+
+function countsOf(keys) {
+  const m = new Map();
+  for (const k of keys) m.set(k, (m.get(k) ?? 0) + 1);
+  return [...m].map(([key, count]) => ({ key, count }));
+}
+
+// Swaps one colour of the list for a mixed one (a random one not already there) when none is.
+function ensureMixed(colors, mixed, rng) {
+  if (colors.some(c => mixed.includes(c))) return colors;
+  const free = mixed.filter(c => !colors.includes(c));
+  if (!free.length) return colors;
+  const out = [...colors];
+  out[Math.floor(rng() * out.length)] = pick(free, rng);
+  return out;
+}
+
+function glazeBandsFor(level, owned, rng) {
+  if (level === 1) {
+    const colors = ownedKeys(owned, 'color');
+    return pickDistinct(colors, pickSize(ZONE_WEIGHTS, colors.length, rng), rng);
+  }
+  const bases = basesOf(owned);
+  const all = obtainable(bases);
+  const mixed = mixedColors(bases);
+  if (level === 2) {
+    return ensureMixed(pickDistinct(all, pickSize(ZONE_WEIGHTS, 3, rng), rng), mixed, rng);
+  }
+  const pattern = pick(BAND_PATTERNS, rng);
+  const letters = Math.max(...pattern) + 1;
+  const colors = ensureMixed(pickDistinct(all, letters, rng), mixed, rng);
+  return pattern.map(i => colors[i]);
+}
+
+// Level 2: a ring of 6 or 8 slots, the start of the motif already placed (at least two periods,
+// at least two slots left to fill). AB may use 6 slots; AAB and ABC need 8.
+function motifFor(kinds, rng) {
+  const usable = MOTIFS.filter(m => Math.max(...m) + 1 <= kinds.length);
+  if (!usable.length) return null;
+  const letters = pick(usable, rng);
+  const used = pickDistinct(kinds, Math.max(...letters) + 1, rng);
+  const pattern = letters.map(i => used[i]);
+  const slots = letters.length === 2 && rng() < 0.5 ? 6 : MAX_RING_SLOTS;
+  const maxPrefill = slots - 2;
+  const minPrefill = 2 * pattern.length;
+  const prefill = minPrefill + Math.floor(rng() * (Math.min(maxPrefill, 6) - minPrefill + 1));
+  const sequence = Array.from({ length: slots }, (_, i) => pattern[i % pattern.length]);
+  return { slots, pattern, sequence, prefill };
+}
+
+// solveHints(hints) -> [{key, count}] or null. A hint is {key, rel: 'count', count} (the card
+// shows `count` of the picture), or {key, rel: 'same'|'plus'|'minus', of, n} (the key equals the
+// count of `of`, plus or minus n). Null unless every kind is fixed exactly once by an earlier
+// kind and every count is >= 1.
+export function solveHints(hints) {
+  const counts = new Map();
+  for (const h of hints) {
+    if (counts.has(h.key)) return null;
+    let n;
+    if (h.rel === 'count') n = h.count;
+    else if (counts.has(h.of)) n = counts.get(h.of) + (h.rel === 'plus' ? h.n : h.rel === 'minus' ? -h.n : 0);
+    else return null;
+    if (!Number.isInteger(n) || n < 1) return null;
+    counts.set(h.key, n);
+  }
+  return [...counts].map(([key, count]) => ({ key, count }));
+}
+
+// Level 3: the card gives one kind by pictures, the others by « = », « + 1 » or (with 2 or more
+// to take from) « − 1 » on an earlier kind. Total <= 8, every count >= 1.
+function hintCardFor(kinds, rng) {
+  if (kinds.length < 2) return null;
+  for (let attempt = 0; attempt < 50; attempt++) {
+    const nKinds = Math.min(kinds.length, 2 + Math.floor(rng() * 2));
+    const keys = pickDistinct(kinds, nKinds, rng);
+    const hints = [{ key: keys[0], rel: 'count', count: 2 + Math.floor(rng() * 3) }];
+    for (let i = 1; i < keys.length; i++) {
+      const rel = pick(['same', 'plus', 'minus'], rng);
+      hints.push({ key: keys[i], rel, of: keys[Math.floor(rng() * i)], n: rel === 'same' ? 0 : 1 });
+    }
+    const solution = solveHints(hints);
+    if (solution && solution.reduce((a, t) => a + t.count, 0) <= MAX_HINT_TOTAL) return { hints, solution };
+  }
+  const [a, b] = kinds;
+  const hints = [{ key: a, rel: 'count', count: 3 }, { key: b, rel: 'same', of: a, n: 0 }];
+  return { hints, solution: solveHints(hints) };
+}
+
+function countsToppings(kinds, rng) {
   const keys = pickDistinct(kinds, pickSize(KIND_WEIGHTS, kinds.length, rng), rng);
   let counts;
   do {
     counts = keys.map(() => 1 + Math.floor(rng() * MAX_COUNT));
   } while (counts.reduce((a, b) => a + b, 0) > MAX_TOPPINGS);
-  return {
+  return keys.map((key, i) => ({ key, count: counts[i] }));
+}
+
+/**
+ * generateOrder(owned, rng, levels) -> Order
+ * `levels` is the round's phase levels ({couleur, toppings, ...}); a missing or unknown level is 1.
+ * Always: dessert, shape, `glaze` (the colour of each equal band, left to right: same list as
+ * glazeBands) and `toppings` ([{key, count}], the total the cake needs, whatever the mode).
+ * Added by level:
+ *  - glazeBands: colour per band; level 1 as before (<= 3 distinct); level 2 up to 3 distinct,
+ *    all obtainable with the owned bases, at least one needing a mix; level 3 has 3 or 4 bands
+ *    with adjacent bands sharing a colour (BAND_PATTERNS), same colour rules.
+ *  - toppingMode 'counts' (level 1, as before), 'motif' (level 2: `motif` = {slots, pattern,
+ *    sequence, prefill}) or 'hints' (level 3: `hintCard` = {hints, solution}).
+ */
+export function generateOrder(owned, rng = Math.random, levels = {}) {
+  const lc = levelOf(levels, 'couleur');
+  const lt = levelOf(levels, 'toppings');
+  const glazeBands = glazeBandsFor(lc, owned, rng);
+  const kinds = ownedKeys(owned, 'topping');
+  let toppingMode = 'counts';
+  let motif = null;
+  let hintCard = null;
+  let toppings;
+  if (lt === 2) motif = motifFor(kinds, rng);
+  if (lt === 3) hintCard = hintCardFor(kinds, rng);
+  if (motif) {
+    toppingMode = 'motif';
+    toppings = countsOf(motif.sequence);
+  } else if (hintCard) {
+    toppingMode = 'hints';
+    toppings = hintCard.solution.map(t => ({ ...t }));
+  } else {
+    toppings = countsToppings(kinds, rng);
+  }
+  const order = {
     dessert: pick(Object.keys(DESSERTS), rng),
     shape: pick(ownedKeys(owned, 'shape'), rng),
-    glaze,
-    toppings: keys.map((key, i) => ({ key, count: counts[i] })),
+    glaze: [...glazeBands],
+    glazeBands,
+    toppings,
+    toppingMode,
   };
+  if (motif) order.motif = motif;
+  if (hintCard) order.hintCard = hintCard;
+  return order;
+}
+
+/**
+ * ringPositions(n) -> [{x, y}] n slots on the cake's top face, centre-relative, in 400-frame
+ * units (top-down, before the 3/4 squash, as toppingSpots). On a circle, the first slot just
+ * right of the top going clockwise; the set is mirror-symmetric left/right (and top/bottom).
+ */
+export function ringPositions(n, radius = 115) {
+  return Array.from({ length: n }, (_, k) => {
+    const a = ((-90 + (360 * (k + 0.5)) / n) * Math.PI) / 180;
+    return { x: Math.round(radius * Math.cos(a) * 1000) / 1000, y: Math.round(radius * Math.sin(a) * 1000) / 1000 };
+  });
 }
 
 /**
