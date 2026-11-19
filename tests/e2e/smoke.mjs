@@ -306,6 +306,8 @@ const actions = {
     if (lastClient) check(client !== lastClient, `new client differs from the previous one (${client})`);
     lastClient = client;
     roundClient = client;
+    const tags = await sceneEval('Stand', 's => s.level === 1 && s.tags ? s.tags.map(it => [it.tag.input.hitArea.width, it.tag.input.hitArea.height]) : null');
+    if (tags) check(tags.every(([w, h]) => w >= 96 && h >= 96), `N1 tags: touch targets >= 96 px (${JSON.stringify(tags)})`);
     if (name) await shot(name);
     await tap(OK_BTN);
     await waitScene('Dough');
@@ -573,8 +575,9 @@ const actions = {
     const rec = await sceneEval('Dough', 's => s.round.recipe');
     const pre = Object.values(rec.prefilled ?? {}).some(v => v > 0);
     if (n === 1) check(!pre && !rec.double, `N1 recipe: plain dice (${JSON.stringify(rec.target)})`);
-    if (n === 2) check(!pre && !rec.double && Object.values(rec.target).every(v => v <= 10), `N2 recipe: numbers up to 10 (${JSON.stringify(rec.target)})`);
-    if (n === 3) check(Object.values(rec.target).every(v => v <= 20), `N3 recipe: numbers up to 20 (${JSON.stringify(rec.target)})`);
+    const pour = Object.keys(rec.target).reduce((a, k) => a + rec.target[k] - (rec.prefilled?.[k] ?? 0), 0);
+    if (n === 2) check(!pre && !rec.double && Object.values(rec.target).every(v => v <= 10) && pour <= 15, `N2 recipe: numbers up to 10, ${pour} <= 15 to pour (${JSON.stringify(rec.target)})`);
+    if (n === 3) check(Object.values(rec.target).every(v => v <= 20) && pour <= 20, `N3 recipe: numbers up to 20, ${pour} <= 20 to pour (${JSON.stringify(rec.target)})`);
     await actions.dough({ shot: name });
   },
 
@@ -583,8 +586,9 @@ const actions = {
   async pateProposal({ shot: name } = {}) {
     const read = () => evaluate(`(() => { const c = JSON.parse(localStorage.getItem('collection.v1')); return { levels: c.levels, overrides: c.overrides, history: Object.keys(c.history ?? {}) }; })()`);
     const before = await read();
+    // three played rounds failed at pâte N2 (&record=1: the sample round counts at the stored levels)
     for (let i = 0; i < 3; i++) {
-      await actions.forcedService({ score: 0 });
+      await actions.forcedService({ score: 0, record: true });
     }
     await loadHome(URL);
     await tapEl('#gear');
@@ -642,19 +646,70 @@ const actions = {
   },
 
   // Opens the Service directly with the debug sample round and a forced score
-  // (?scene=Service&score=N), runs the Service checks, then goes on to the Stand.
-  async forcedService({ score, now, expectConfetti, shot: name }) {
+  // (?debug&scene=Service&score=N), runs the Service checks, then goes on to the Stand. A sample
+  // round saves no result for the parent's proposals unless `record` (&record=1).
+  async forcedService({ score, now, expectConfetti, record = false, shot: name }) {
     const u = new globalThis.URL(GAME_URL);
-    if (now) { u.searchParams.set('debug', '1'); u.searchParams.set('now', now); }
+    u.searchParams.set('debug', '1');
+    if (now) u.searchParams.set('now', now);
     u.searchParams.set('scene', 'Service');
     u.searchParams.set('score', String(score));
+    if (record) u.searchParams.set('record', '1');
+    const history = () => evaluate(`JSON.stringify(JSON.parse(localStorage.getItem('collection.v1') ?? '{}').history ?? {})`);
+    const before = await history().catch(() => null);
     await send('Page.navigate', { url: u.href });
     await waitFor('Phaser hook', () => evaluate(HOOK), 15000);
     await waitScene('Service', 20000);
     roundClient = await sceneEval('Service', 's => JSON.stringify(s.client.client)');
     lastClient = roundClient; // the next Stand client must differ from the sample client
     wrongColor = null;
+    if (!record && before !== null) {
+      const after = await history();
+      check(after === before, `a debug sample round saves no result (history ${after})`);
+    }
     await actions.service({ shot: name, expectCoins: score, expectConfetti });
+  },
+
+  // I1: without the debug flag, ?scene= and &score= are ignored: the game starts at the Stand
+  // and nothing is saved for the parent's proposals.
+  async noDebugEntry() {
+    const history = () => evaluate(`JSON.stringify(JSON.parse(localStorage.getItem('collection.v1') ?? '{}').history ?? {})`);
+    const before = await history();
+    const u = new globalThis.URL(GAME_URL);
+    u.searchParams.set('scene', 'Service');
+    u.searchParams.set('score', '0');
+    await send('Page.navigate', { url: u.href });
+    await waitFor('Phaser hook', () => evaluate(HOOK), 15000);
+    await waitScene('Stand', 20000);
+    log('  ok: ?scene=Service&score=0 without ?debug starts at the Stand');
+    check(await history() === before, 'no result saved by a link without ?debug');
+    lastClient = null;
+  },
+
+  // C1: Commande N2, three clients in one page (Stand -> Shop -> Stand): the picture hides for
+  // each of them (Phaser reuses the Stand scene: its per-run state must start again every time).
+  async commandeN2Clients({ clients = 3, shot: name } = {}) {
+    await loadHome(URL);
+    await tap(await elCenter(TILE));
+    await waitFor('stand page', () => evaluate(`location.href === ${JSON.stringify(GAME_URL)}`).catch(() => false), 15000);
+    await waitFor('Phaser hook', () => evaluate(HOOK).catch(() => false), 15000);
+    await evaluate('window.__smokePage = 1; true');
+    for (let i = 1; i <= clients; i++) {
+      await waitScene('Stand', 20000);
+      await waitFor('client at the stand', () => sceneEval('Stand', 's => s.ready'));
+      check((await sceneEval('Stand', 's => s.level')) === 2, `client ${i}: Commande N2`);
+      // 5 s x the pace (calme) for the picture, then its fade
+      await waitFor(`client ${i}: picture hidden`, () => sceneEval('Stand', 's => s.pictureHidden && s.picture.alpha === 0'), 20000);
+      check(await evaluate('window.__smokePage === 1'), `client ${i}: picture hidden, same page`);
+      if (name) await shot(`${name}-${i}`);
+      if (i < clients) {
+        await tap(LEFT_BTN);
+        await waitScene('Shop');
+        await tap(LEFT_BTN);
+      }
+    }
+    lastClient = null;
+    await loadHome(URL); // the next step starts from the home, as after parentLevels
   },
 };
 
