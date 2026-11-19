@@ -24,6 +24,12 @@
 - No "game over": every client ends at the Service screen, then a new client.
 - Every step has ↺ (restart the whole step) and ✓ (lock the step and move on). No per-gesture undo. After ✓, no going back.
 
+## Execution
+
+- One fresh agent per task; one whole-branch review at the end (no per-task review).
+- Models: Tasks 1–5, 8–10, 12–14 → Sonnet 5.5; Task 6 (art) → Fable 5.2; Tasks 7 and 11 → Opus 5.5; final review → Opus 5.5.
+- Order: Task 1, then Task 6 (art, with its checkpoints) in parallel with Tasks 2–5, then 7 → 14 in sequence.
+
 ## Review Focus
 
 1. Storage unavailable or corrupted (private mode, quota, garbage JSON, `localStorage` throwing) → game starts with the default state and keeps running; nothing crashes. *(Task 2 test)*
@@ -354,6 +360,10 @@ test('clear resets', () => { /* paint, clear → coverage 0 */ });
     - `stand-awning`, `stand-counter`, `bubble`, `coin`
     - `icon-ok`, `icon-ko`, `icon-restart`, `icon-next`, `icon-shop`, `icon-go` (▶ start oven), `icon-out` (take out of oven)
   - Sizes: ingredients/toppings/icons 160×160, shapes and desserts 400×400 (all shape silhouettes share the same 400×400 frame, centred), client parts 300×300, oven 500×450, stand pieces 1280-wide.
+
+**Art process — two human checkpoints (the implementer stops and reports at each; the controller shows the art in the visual companion and relays feedback):**
+- **Checkpoint A — style samples.** Before anything else, draw 5 pieces: `dessert-gateau` + `shape-coeur-fill/-line` composed with a pink glaze and 3 `topping-fraise` (render the stack), `client-head` + `client-hair-1` + `client-body` + `face-content`, `oven`, `ing-oeuf`, `icon-ok`. Render each to PNG (`qlmanage -t -s 512 -o <scratch> file.svg`), look at them, fix, then stop and report the file paths. Do not continue until the controller relays approval; the approved pieces become the style reference for everything else.
+- **Checkpoint B — full sheet.** After drawing everything, stop and report. The controller shows all pieces on one page grouped by family; redo any piece flagged, then continue with the tests below.
 
 - [ ] **Step 1: Write the failing test** `tests/assets.test.js`:
 
