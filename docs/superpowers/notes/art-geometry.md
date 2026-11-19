@@ -198,3 +198,55 @@ Branch feat/art-edu2. 41 new SVGs, all S2. Review sheet rendered with headless C
 - There is no minute hand: the hour hand moves alone.
 - Small start clock: clock-face + clock-hour-hand at the same pivot. The digits stay readable down to about scale 0.45; at 0.3 only the hand position reads.
 - icon-alarm (160x160, assets/ui/): complete glossy disc, magenta like the alarm hand, white bell.
+
+# Educational lot 3 art (Glaçage = colours and fractions, Toppings = logic) — geometry and contracts
+
+Branch feat/art-edu3. 8 new SVGs, all S2. Review sheet rendered with headless Chromium. Layout numbers marked "sheet" are the ones used on the review sheet (1280x800 frame); they are suggestions.
+
+## Mixing bowl — bowl-mix and bowl-mix-liquid (360x260, assets/kitchen/)
+
+- bowl-mix: white bowl with a turquoise stripe and a small pouring lip on each side, 3/4 view. Not tinted. It is white on purpose: the dough bowl is lilac, and a neutral bowl does not fight the colour inside.
+- Inside opening: ellipse centre (180,86), radii 148 x 50. Outer rim: x 4..356, y 22..136. Foot down to y 252.
+- bowl-mix-liquid: same frame, drawn at the same x,y over the bowl. White and grey only (surface, darker edge, a swirl): multiply tint = the colour. Surface ellipse centre (180,98), radii 130 x 35; it lies wholly inside the opening, so no front layer is needed.
+- States: empty = bowl alone. One pot poured = liquid tinted with that colour. Two pots = tween the tint to the mix. To show both colours before they blend, draw the liquid twice with setCrop on the halves (x 0..180 and 180..360).
+- Drop zone for a pot: the opening ellipse; a generous hit zone is the whole rim box.
+- Sheet: scale 1, centre (1050,535), under the progress bar; the two poured pots shown small (scale 0.34, tilted 18 degrees) on the rim at (985,425) and (1115,425).
+
+## Pots — the existing `pot` covers every base and every mix (confirmed, no new file)
+
+- Rendered with a multiply tint for all 13 colours and the failed mix: each reads well and they stay distinct from each other (gris against blanc, beige against marron and against the failed mix).
+- Existing COLOR_HEX kept: rose 0xff8fb7, violet 0x7c4dff, jaune 0xffeb3b, blanc 0xffffff, bleu 0x2979ff, vert 0x00e676.
+- To add (the values on the sheet): rouge 0xff3d2e, orange 0xff9800, bleuclair 0x7fd0ff, marron 0x8d5a3b, noir 0x3d3944, beige 0xe6cfa4, gris 0x9aa3b0. Failed mix: 0x8a7d54.
+- noir must not be 0x000000: with a multiply tint a pure black wipes out the pot's shading and outline. 0x3d3944 keeps them.
+- The same values tint bowl-mix-liquid and fill the glaze.
+
+## blob-rate (160x160, assets/kitchen/) — "mélange raté"
+
+- Muddy khaki splash with three dull streaks (violet, green, brick) and four droplets. Not tinted. Its body colour is 0x8a7d54, the tint to give the pot and the liquid of a failed mix.
+- Use: pops over the bowl when a mix is undefined (sheet: scale 0.45 above the liquid), or as the picture of that mix in a recap. Readable down to about 60 px.
+
+## slot-ring (96x96, assets/ui/)
+
+- One empty slot: 12 white dashes with a dark edge on a circle r 40 about (48,48), plus a faint white disc (alpha 0.28). It reads on white, yellow, pink and dark glazes.
+- Drawn in white: a multiply tint recolours the dashes (the dark edge stays). Wrong slot on the sheet: tint 0xff1f3d, the expected topping inside at alpha 0.45.
+- Toppings sit centred in a slot at 80 px (scale 0.5 of the 160 px texture), smaller than the free-placement size (96 px), so the dashes stay visible around them.
+- Sheet: 8 slots on a circle of radius 132 px about the cake centre (cake at 480 px), first slot at the top, clockwise. At that radius 8 slots of 96 px just touch (pitch 101 px); 6 or 7 leave gaps. That circle fits the rond and the carre. For the other shapes (ovale, rectangle, etoile, coeur, licorne, triangle, losange, hexagone) check each slot centre against the shape mask and shrink the radius, squash the circle, or reduce the slot scale.
+
+## hint-card (400x460, assets/ui/)
+
+- White card with a yellow header band and a light-bulb medal on its top edge. Face: x 6..394, y 40..446, corner radius 36, darker base 8 px lower. Medal: disc r 44 centred (200,48). Header band: y 40..92.
+- Content area: x 30..370, y 108..430 (340 x 322).
+- It can be stretched in height only (3-slice: top 110, bottom 60); the medal forbids stretching the width.
+- Sheet: scale 0.95, centre (1050,350), right of the cake (cake moved to x 560). Three rows at frame y 162, 269, 376 (pitch 107). Toppings at 74 px (0.46), signs at scale 0.62. Row "A = B + 1": centres at x 80, 164, 248, 334. Counted row: toppings from x 110, pitch 78 (up to 4; for 5 use pitch 62 from x 76).
+
+## Signs — sym-equal (96x96), sym-plus1 and sym-minus1 (144x96), assets/ui/
+
+- Thick rounded strokes (15 px, dark edge, white halo, gloss line). Not tinted. equal blue, plus 1 green, minus 1 orange: the colour separates + from − at a glance.
+- sym-equal: bars x 20..76 at y 36 and y 60. sym-plus1 / sym-minus1: the sign is centred at (40,48) (arms 22), the digit 1 spans x 88..108, y 20..76.
+- Readable down to scale 0.5 (48 px high). Below that the gloss fills in.
+
+## rim-ticks — no file, drawn in code
+
+- The marks sit where each band edge crosses the cake outline, so they depend on the shape and on the number of bands (3 or 4): a fixed image cannot follow that. PaintScene already walks the mask column of each edge for the dotted lines (drawZoneGuides); the same walk gives the two crossings.
+- Recipe used on the sheet (frame units, in the cake's top container, above shape-<k>-line): for each of the n-1 edges, at the top and at the bottom crossing, a vertical tick from 9 units inside the outline to 15 units outside. Stroke 11, round caps, 0x4a2c2a; over it stroke 5, white. Same colours as the dotted lines.
+- No tick at the two ends of the width (on round shapes they are a single point). With tarte, start the tick at the outline (the crust rim hides the inner 19 units).

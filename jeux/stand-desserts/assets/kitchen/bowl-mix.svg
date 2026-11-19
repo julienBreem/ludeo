@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 360 260" width="360" height="260">
+<!-- colour mixing bowl (white, turquoise stripe), 3/4 view; inside opening = ellipse cx 180 cy 86 rx 148 ry 50; draw bowl-mix-liquid over it in the same frame -->
+<defs><linearGradient id="b" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#ffffff"/><stop offset="0.5" stop-color="#eef5fb"/><stop offset="1" stop-color="#bcd2e6"/></linearGradient><linearGradient id="r" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#d5e4f1"/></linearGradient><linearGradient id="i" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8fb0cf"/><stop offset="1" stop-color="#dbe8f4"/></linearGradient><linearGradient id="s" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#5fe0d6"/><stop offset="1" stop-color="#12a59c"/></linearGradient><linearGradient id="f" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d5e4f1"/><stop offset="1" stop-color="#9fbcd6"/></linearGradient><clipPath id="c"><path d="M22 86 C22 176 84 240 180 240 C276 240 338 176 338 86 Z"/></clipPath></defs>
+<ellipse cx="180" cy="246" rx="120" ry="12" fill="#0b4a70" opacity=".25"/>
+<path d="M112 228 H248 L258 246 Q260 252 252 252 H108 Q100 252 102 246 Z" fill="url(#f)" stroke="#4f86b8" stroke-width="3" stroke-linejoin="round"/>
+<path d="M22 86 C22 176 84 240 180 240 C276 240 338 176 338 86 Z" fill="url(#b)" stroke="#4f86b8" stroke-width="3" stroke-linejoin="round"/>
+<g clip-path="url(#c)"><path d="M10 150 C80 188 280 188 350 150" fill="none" stroke="url(#s)" stroke-width="20"/><path d="M10 139 C80 177 280 177 350 139" fill="none" stroke="#fff" stroke-width="3" opacity=".7"/></g>
+<path d="M48 136 C60 186 104 222 172 228" fill="none" stroke="#fff" stroke-width="12" stroke-linecap="round" opacity=".75"/>
+<path d="M6 70 C2 78 8 90 22 96 C60 150 300 150 338 96 C350 90 352 78 344 70 C300 6 60 6 6 70 Z" fill="url(#r)" stroke="#4f86b8" stroke-width="3" stroke-linejoin="round" transform="translate(0 0)"/>
+<ellipse cx="180" cy="86" rx="148" ry="50" fill="url(#i)" stroke="#4f86b8" stroke-width="2.5"/>
+<path d="M36 62 C70 34 124 24 176 24" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" opacity=".95"/>
+</svg>
