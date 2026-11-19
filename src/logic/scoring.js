@@ -26,17 +26,44 @@ export function judgeBake(gauge) {
   return state === 'dore' ? OK : fail(state);
 }
 
-export function judgeColor(coverage, order) {
-  if ((coverage[order.color] ?? 0) >= COVERAGE_OK) return OK;
-  const [top] = Object.entries(coverage).sort((a, b) => b[1] - a[1])[0] ?? [];
-  return top && top !== order.color ? fail('mauvaise-couleur') : fail('pas-couvert');
+export function judgeColor(cells, colorKeys, zones, glaze) {
+  for (let z = 0; z < glaze.length; z++) {
+    const counts = new Array(colorKeys.length + 1).fill(0);
+    let total = 0;
+    for (let i = 0; i < zones.length; i++) {
+      if (zones[i] !== z) continue;
+      total++;
+      const v = cells[i];
+      if (v > 0 && v <= colorKeys.length) counts[v]++;
+    }
+    if (!total) continue;
+    const want = colorKeys.indexOf(glaze[z]) + 1;
+    if (want > 0 && counts[want] / total >= COVERAGE_OK) continue;
+    let top = 0;
+    for (let k = 1; k < counts.length; k++) if (counts[k] > counts[top]) top = k;
+    if (top && top !== want) return { ok: false, reason: 'mauvaise-couleur', zone: z, color: colorKeys[top - 1] };
+    return { ok: false, reason: 'pas-couvert', zone: z };
+  }
+  return OK;
 }
 
-export function judgeToppings(placed, order) {
-  if (placed.some(k => k !== order.topping)) return fail('mauvais-topping');
-  if (placed.length < order.toppingCount) return fail('pas-assez');
-  if (placed.length > order.toppingCount) return fail('trop');
+export function judgeToppings(placed, toppings) {
+  const want = new Map(toppings.map(t => [t.key, t.count]));
+  const have = new Map();
+  for (const k of placed) have.set(k, (have.get(k) ?? 0) + 1);
+  for (const k of have.keys()) if (!want.has(k)) return { ok: false, reason: 'mauvais-topping', key: k };
+  for (const { key, count } of toppings) {
+    if ((have.get(key) ?? 0) < count) return { ok: false, reason: 'pas-assez', key };
+  }
+  for (const { key, count } of toppings) {
+    if ((have.get(key) ?? 0) > count) return { ok: false, reason: 'trop', key };
+  }
   return OK;
+}
+
+const BITES = [0, 1, 1, 2, 3, 4];
+export function bitesFor(coins) {
+  return BITES[coins] ?? (coins > 5 ? 4 : 0);
 }
 
 export function scoreRound(results) {
