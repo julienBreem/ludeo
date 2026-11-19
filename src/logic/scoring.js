@@ -47,6 +47,23 @@ export function judgeColor(cells, colorKeys, zones, glaze) {
   return OK;
 }
 
+// Paint bar: the share of the least-covered zone painted in any colour (colour-blind, so it tells
+// nothing about which colour goes where). Zones with no cells are ignored; 1 when none has any.
+// The bar is full at COVERAGE_OK, i.e. only when every zone could pass.
+export function minZoneCoverage(cells, zones, nZones) {
+  const total = new Array(nZones).fill(0);
+  const painted = new Array(nZones).fill(0);
+  for (let i = 0; i < zones.length; i++) {
+    const z = zones[i];
+    if (z < 0 || z >= nZones) continue;
+    total[z]++;
+    if (cells[i] > 0) painted[z]++;
+  }
+  let min = 1;
+  for (let z = 0; z < nZones; z++) if (total[z]) min = Math.min(min, painted[z] / total[z]);
+  return min;
+}
+
 export function judgeToppings(placed, toppings) {
   const want = new Map(toppings.map(t => [t.key, t.count]));
   const have = new Map();

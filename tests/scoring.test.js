@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { judgeDough, judgeShape, judgeBake, judgeColor, judgeToppings, bitesFor, scoreRound, STEPS } from '../src/logic/scoring.js';
+import { judgeDough, judgeShape, judgeBake, judgeColor, judgeToppings, minZoneCoverage, COVERAGE_OK, bitesFor, scoreRound, STEPS } from '../src/logic/scoring.js';
 import { bakeState } from '../src/logic/bake.js';
 import { zoneMap } from '../src/logic/zones.js';
 import { createRound } from '../src/logic/round.js';
@@ -56,6 +56,22 @@ test('a zone with no cells is satisfied', () => {
   for (let i = 0; i < all.length; i++) if (zones3[i] === 0) all[i] = 1; else if (zones3[i] === 2) all[i] = 3;
   assert.equal(judgeColor(all, KEYS, zones3, ['rose', 'violet', 'jaune']).ok, true);
   assert.equal(cells.length, SIZE * SIZE);
+});
+test('paint bar: the least-covered zone, in any colour', () => {
+  // zone 0 fully painted (wrong colour even), zone 1 at 70 %: the bar follows zone 1
+  const cells = paintZones(2, 0);
+  let n = 0;
+  for (let i = 0; i < cells.length; i++) if (zones2[i] === 1 && n < 14) { cells[i] = 3; n++; } // 14 of 20 cells
+  assert.equal(minZoneCoverage(cells, zones2, 2), 0.7);
+  assert.ok(minZoneCoverage(cells, zones2, 2) / COVERAGE_OK < 1, 'bar not full while a zone is at 70 %');
+  assert.equal(minZoneCoverage(paintZones(1, 2), zones2, 2), 1);
+  assert.equal(minZoneCoverage(paintZones(0, 0), zones2, 2), 0);
+});
+test('paint bar: zones with no cells are ignored', () => {
+  const zones3 = zoneMap(mask, SIZE, 3).map(z => (z === 1 ? -1 : z));
+  const all = new Uint8Array(SIZE * SIZE);
+  for (let i = 0; i < all.length; i++) if (zones3[i] >= 0) all[i] = 1;
+  assert.equal(minZoneCoverage(all, zones3, 3), 1);
 });
 const tops = [{ key: 'fraise', count: 2 }, { key: 'etoile', count: 3 }];
 test('toppings exact -> ok', () => assert.equal(judgeToppings(['fraise', 'etoile', 'fraise', 'etoile', 'etoile'], tops).ok, true));

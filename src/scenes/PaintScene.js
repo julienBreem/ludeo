@@ -9,7 +9,7 @@ import { getRound, getState } from '../game-state.js';
 import { ownedKeys } from '../logic/catalog.js';
 import { createPaintGrid, GRID, BRUSH_RADIUS } from '../logic/paint.js';
 import { zoneMap, zoneEdges } from '../logic/zones.js';
-import { judgeColor, COVERAGE_OK } from '../logic/scoring.js';
+import { judgeColor, minZoneCoverage, COVERAGE_OK } from '../logic/scoring.js';
 import { addStepBar } from '../ui/stepBar.js';
 import { addOrderReminder } from '../ui/orderReminder.js';
 import { drawCake, shapeMask, rimMask, FRAME } from '../ui/cakeView.js';
@@ -68,6 +68,7 @@ export class PaintScene extends Phaser.Scene {
     const nZones = Math.max(1, round.order.glaze.length);
     // Zones follow the silhouette's width (as on the order picture); cells under the rim count
     // in no zone.
+    this.nZones = nZones;
     this.zones = zoneMap(full, GRID, nZones);
     if (rim) for (let i = 0; i < this.zones.length; i++) if (!this.mask[i]) this.zones[i] = -1;
     this.edges = zoneEdges(full, GRID, nZones);
@@ -99,13 +100,12 @@ export class PaintScene extends Phaser.Scene {
   }
 
   // Dotted vertical lines at the zone edges, over the glaze (under the rim and outline), only
-  // where the column crosses the paintable top. White dashes with a soft dark edge.
+  // where the column crosses the paintable top. White dashes with a dark edge (still seen on white glaze).
   drawZoneGuides() {
     if (!this.edges.length) return;
     const g = this.add.graphics();
     const top = this.cake.top;
     top.addAt(g, top.getIndex(this.cake.glaze.parentContainer) + 1);
-    this.guides = g;
     for (const e of this.edges) {
       const a = Math.max(0, Math.ceil(e) - 1);
       const b = Math.min(GRID - 1, Math.floor(e));
@@ -129,7 +129,7 @@ export class PaintScene extends Phaser.Scene {
     const d = Math.min(DASH, step * 0.6);
     for (let i = 0; i < n; i++) {
       const y = ya + i * step + (step - d) / 2;
-      g.fillStyle(0x4a2c2a, 0.3).fillRoundedRect(x - 4.5, y - 2, 9, d + 4, 4.5);
+      g.fillStyle(0x4a2c2a, 0.55).fillRoundedRect(x - 4.5, y - 2, 9, d + 4, 4.5);
       g.fillStyle(0xffffff, 0.95).fillRoundedRect(x - 2.5, y, 5, d, 2.5);
     }
   }
@@ -160,16 +160,16 @@ export class PaintScene extends Phaser.Scene {
     this.updateBar();
   }
 
-  // Global coverage of the paintable top (all colours together, so it tells nothing about which
-  // colour goes where); the bar is full at COVERAGE_OK. Drawn in the selected pot's colour.
+  // The least-covered zone, painted in any colour (so it tells nothing about which colour goes
+  // where); the bar is full at COVERAGE_OK, i.e. only once every zone reaches it. Drawn in the
+  // selected pot's colour.
   updateBar() {
     const g = this.barFill;
     g.clear();
     if (!this.selected) return;
     const key = this.colorKeys[this.selected - 1];
-    const covs = this.grid.coverage(this.colorKeys);
-    let cov = 0;
-    for (const k of this.colorKeys) cov += covs[k];
+    const cov = minZoneCoverage(this.grid.cells, this.zones, this.nZones);
+    this.barValue = cov / COVERAGE_OK; // read by tests
     const f = Math.min(1, cov / COVERAGE_OK);
     const w = Math.max(BAR_H, f * BAR_W);
     if (f <= 0) return;
