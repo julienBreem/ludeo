@@ -216,7 +216,7 @@ export function openParent(root, { onClose } = {}) {
         h('p', {}, h('b', {}, g.name ?? g.id)),
         resetting.has(g.id)
           ? h('div', { class: 'p-row' },
-            h('span', {}, 'Effacer toute la progression de ce jeu (pièces, achats) ? Cela ne peut pas être annulé.'),
+            h('span', {}, 'Effacer toute la progression de ce jeu (pièces, achats) ? Les niveaux de la rubrique Difficulté et les résultats des phases sont gardés. Cela ne peut pas être annulé.'),
             button('Oui, effacer', () => {
               try { g.reset(globalThis.localStorage); } catch { /* storage refused: nothing to clear */ }
               resetting.delete(g.id); done.add(g.id); refresh('jeux');

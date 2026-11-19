@@ -134,6 +134,8 @@ test('phase recommendation, apply and ignore', () => {
   assert.match(rec.text, /Stand de desserts/);
   assert.match(rec.text, /Pâte/);
   assert.match(rec.text, /1/);
+  // M3: a reason the parent can check
+  assert.match(rec.text, /ratée 3 fois sur les 4 dernières parties/);
   const applied = applyRecommendation(c, rec.id, now, GAMES);
   assert.equal(phaseLevel(applied, 'stand-desserts', PATE), 1);
   assert.equal(applied.overrides['stand-desserts/pate'], 1);
@@ -141,6 +143,7 @@ test('phase recommendation, apply and ignore', () => {
   assert.ok(!recommendations(applied, now, GAMES).some(r => r.id.startsWith('phase:')));
   const ignored = ignoreRecommendation(c, rec);
   assert.equal(ignored.history['stand-desserts/pate'], undefined);
+  assert.deepEqual(ignored.ignored, c.ignored, 'M5: nothing written in ignored for a phase card');
   assert.ok(!recommendations(ignored, now, GAMES).some(r => r.id.startsWith('phase:')));
   // a new series brings it back
   const again = record(ignored, [false, false, false, false]);
@@ -158,13 +161,15 @@ test('niveau recommendation: per theme, apply, reappears when age changes', () =
   assert.ok(!recommendations(c, now, GAMES).some(r => r.id.startsWith('niveau:')));
   const seven = new Date(2027, 10, 19); // age 7 -> 2
   let recs = recommendations(c, seven, GAMES).filter(r => r.id.startsWith('niveau:'));
-  assert.equal(recs.length, THEMES.length);
+  // I5: only the themes a phase with levels uses (here nombres; moule's geometrie has levels: 1)
+  assert.deepEqual(recs.map(r => r.id), ['niveau:nombres']);
+  assert.ok(!recommendations(c, seven).some(r => r.id.startsWith('niveau:')), 'no games: no niveau cards');
   const rec = recs.find(r => r.id === 'niveau:nombres');
   assert.equal(rec.signature, '7');
   assert.match(rec.text, /7 ans/);
   const applied = applyRecommendation(c, 'niveau:nombres', seven, GAMES);
   assert.equal(themeLevel(applied, 'nombres'), 2);
-  assert.equal(recommendations(applied, seven, GAMES).filter(r => r.id.startsWith('niveau:')).length, THEMES.length - 1);
+  assert.equal(recommendations(applied, seven, GAMES).filter(r => r.id.startsWith('niveau:')).length, 0);
   // ignore, then the age changes
   const ign = ignoreRecommendation(c, rec);
   assert.ok(!recommendations(ign, seven, GAMES).some(r => r.id === 'niveau:nombres'));

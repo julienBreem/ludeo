@@ -11,7 +11,24 @@ function adjustablePhases(games) {
   return out;
 }
 
-// `games` (optional): [{id, name, phases: [{id, name, theme, levels}]}] from the registry; without it, no `phase` cards.
+// Themes that change something today: used by at least one phase that has levels (levels > 1).
+function usedThemes(games) {
+  const used = new Set();
+  for (const g of games ?? []) for (const p of g.phases ?? []) if ((p.levels ?? 3) > 1) used.add(p.theme);
+  return used;
+}
+
+// « ratée 3 fois sur les 4 dernières parties »: what the parent can check against the rule
+// (history.js phaseProposal: >= 3 failures among the last 4).
+function downReason(c, gameId, phaseId) {
+  const last = (c.history?.[phaseKey(gameId, phaseId)] ?? []).slice(-4);
+  const fails = last.filter(ok => !ok).length;
+  return `elle a été ratée ${fails} fois sur les ${last.length} dernières parties`;
+}
+
+// `games` (optional): [{id, name, phases: [{id, name, theme, levels}]}] from the registry; without
+// it, no `phase` cards and no `niveau` cards (a theme level is only proposed for a theme that a
+// phase with levels uses: the other themes change nothing yet).
 export function recommendations(c, now, games) {
   const out = [];
   if (!c.profile) {
@@ -34,8 +51,9 @@ export function recommendations(c, now, games) {
       });
     }
     const wanted = recommendedLevel(age);
+    const used = usedThemes(games);
     for (const t of THEMES) {
-      if (themeLevel(c, t.id) === wanted) continue;
+      if (!used.has(t.id) || themeLevel(c, t.id) === wanted) continue;
       out.push({
         id: `niveau:${t.id}`,
         text: `Pour ${ageLabel(age)}, nous conseillons le niveau ${wanted} en ${t.name.toLowerCase()} : ${t.levels[wanted - 1]}.`,
@@ -47,8 +65,8 @@ export function recommendations(c, now, games) {
     const p = phaseProposal(c, game.id, phase);
     if (!p) continue;
     const text = p.direction === 'down'
-      ? `Baisser la phase « ${phase.name} » du jeu « ${game.name} » au niveau ${p.to} : elle a été souvent ratée.`
-      : `Monter la phase « ${phase.name} » du jeu « ${game.name} » au niveau ${p.to} : elle a été réussie cinq fois de suite.`;
+      ? `Baisser la phase « ${phase.name} » du jeu « ${game.name} » au niveau ${p.to} : ${downReason(c, game.id, phase.id)}.`
+      : `Monter la phase « ${phase.name} » du jeu « ${game.name} » au niveau ${p.to} : elle a été réussie 5 fois de suite.`;
     out.push({ id: `phase:${phaseKey(game.id, phase.id)}`, text, signature: `${p.direction}${p.to}` });
   }
   if (!c.evening.enabled) {
@@ -82,13 +100,13 @@ export function applyRecommendation(c, id, now, games) {
   return c;
 }
 
-// Ignoring a phase proposal also clears that phase's history: it only comes back after a new series.
+// Ignoring a phase proposal clears that phase's history instead: it only comes back after a new
+// series (nothing is written in `ignored`, which phase cards never read).
 export function ignoreRecommendation(c, rec) {
-  const next = { ...c, ignored: { ...c.ignored, [rec.id]: rec.signature } };
   if (rec.id.startsWith('phase:')) {
     const history = { ...c.history };
     delete history[rec.id.slice('phase:'.length)];
-    next.history = history;
+    return { ...c, history };
   }
-  return next;
+  return { ...c, ignored: { ...c.ignored, [rec.id]: rec.signature } };
 }
