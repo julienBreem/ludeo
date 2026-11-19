@@ -2,7 +2,7 @@ import { DESSERTS, ownedKeys } from './catalog.js';
 
 export const ZONE_WEIGHTS = [0.5, 0.35, 0.15];
 export const KIND_WEIGHTS = [0.5, 0.35, 0.15];
-export const MAX_TOPPINGS = 8;
+export const MAX_TOPPINGS = 6;
 const MAX_COUNT = 4;
 
 const pick = (list, rng) => list[Math.floor(rng() * list.length)];

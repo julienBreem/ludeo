@@ -61,25 +61,27 @@ function relax(mask, pts, want) {
     const y = Math.floor(v);
     return x >= 0 && y >= 0 && x < GRID && y < GRID && mask[y * GRID + x] === 1;
   };
-  const p = pts.map(q => ({ ...q }));
+  let p = pts.map(q => ({ ...q }));
   for (let it = 0; it < 40; it++) {
     let moved = false;
+    const prev = p;
+    p = prev.map(q => ({ ...q })); // all points move from the same state, which keeps mirrored pairs mirrored
     for (let i = 0; i < p.length; i++) {
       let fx = 0;
       let fy = 0;
       for (let j = 0; j < p.length; j++) {
         if (i === j) continue;
-        const dx = p[i].u - p[j].u;
-        const dy = p[i].v - p[j].v;
+        const dx = prev[i].u - prev[j].u;
+        const dy = prev[i].v - prev[j].v;
         const d = Math.hypot(dx, dy) || 0.01;
         if (d < want) { fx += (dx / d) * (want - d) * 0.5; fy += (dy / d) * (want - d) * 0.5; }
       }
       if (!fx && !fy) continue;
-      const nu = p[i].u + fx;
-      const nv = p[i].v + fy;
+      const nu = prev[i].u + fx;
+      const nv = prev[i].v + fy;
       if (inside(nu, nv)) { p[i].u = nu; p[i].v = nv; moved = true; }
-      else if (inside(nu, p[i].v)) { p[i].u = nu; moved = true; }
-      else if (inside(p[i].u, nv)) { p[i].v = nv; moved = true; }
+      else if (inside(nu, prev[i].v)) { p[i].u = nu; moved = true; }
+      else if (inside(prev[i].u, nv)) { p[i].v = nv; moved = true; }
     }
     if (!moved) break;
   }
@@ -110,6 +112,66 @@ export function toppingSpots(mask, count) {
   }));
 }
 
+// One kind per spot, following the layout's symmetry: both points of a mirrored pair get the
+// same kind, and a kind's odd one goes on the axis. With several odd kinds the leftovers fill the
+// remaining spots in order (approximate symmetry).
+export function assignKinds(mask, spots, toppings) {
+  const ext = mask.length ? extremes(mask) : null;
+  const ax = ext ? ((ext.minX + ext.maxX + 1) / 2) * CELL - FRAME / 2 : 0;
+  const tol = CELL * 0.75;
+  const axisIdx = [];
+  const left = [];
+  const right = [];
+  spots.forEach((p, i) => {
+    if (Math.abs(p.x - ax) <= tol) axisIdx.push(i);
+    else (p.x < ax ? left : right).push(i);
+  });
+  const pairs = [];
+  const used = new Set();
+  for (const i of left) {
+    let bj = -1;
+    let bd = Infinity;
+    for (const j of right) {
+      if (used.has(j)) continue;
+      const dd = Math.hypot(spots[j].x - (2 * ax - spots[i].x), spots[j].y - spots[i].y);
+      if (dd < bd) { bd = dd; bj = j; }
+    }
+    if (bj >= 0 && bd <= tol * 2) { used.add(bj); pairs.push([i, bj]); } else axisIdx.push(i);
+  }
+  for (const j of right) if (!used.has(j)) axisIdx.push(j);
+  pairs.sort((a, b) => spots[a[0]].y - spots[b[0]].y || a[0] - b[0]);
+  const out = Array(spots.length).fill(null);
+  const odd = [];
+  let pi = 0;
+  for (const t of toppings) {
+    for (let k = 0; k < Math.floor(t.count / 2); k++) {
+      const pr = pairs[pi++];
+      if (pr) { out[pr[0]] = t.key; out[pr[1]] = t.key; } else odd.push(t.key, t.key);
+    }
+    if (t.count % 2) odd.push(t.key);
+  }
+  // odd ones: the axis first, then whatever is left
+  const rest = [];
+  axisIdx.sort((a, b) => a - b);
+  for (const i of axisIdx) rest.push(i);
+  for (; pi < pairs.length; pi++) rest.push(pairs[pi][0], pairs[pi][1]);
+  rest.sort((a, b) => (axisIdx.includes(a) ? 0 : 1) - (axisIdx.includes(b) ? 0 : 1) || a - b);
+  odd.forEach((key, n) => { if (rest[n] !== undefined) out[rest[n]] = key; });
+  return out;
+}
+
+function extremes(mask) {
+  let minX = Infinity;
+  let maxX = -Infinity;
+  for (let i = 0; i < mask.length; i++) {
+    if (!mask[i]) continue;
+    const x = i % GRID;
+    if (x < minX) minX = x;
+    if (x > maxX) maxX = x;
+  }
+  return { minX, maxX };
+}
+
 /**
  * idealCake(scene, order) -> Cake {dessert, shape, doughOk: true, bake: 'dore',
  *   glaze: {cells, size: GRID, colorKeys: order.glaze}, toppings: [{key, x, y}]}
@@ -121,8 +183,9 @@ export function idealCake(scene, order) {
   const zones = zoneMap(mask, GRID, Math.max(1, order.glaze.length));
   const cells = new Uint8Array(GRID * GRID);
   for (let i = 0; i < cells.length; i++) if (zones[i] >= 0) cells[i] = zones[i] + 1;
-  const keys = order.toppings.flatMap(t => Array(t.count).fill(t.key));
-  const spots = toppingSpots(mask, keys.length);
+  const total = order.toppings.reduce((n, t) => n + t.count, 0);
+  const spots = toppingSpots(mask, total);
+  const keys = assignKinds(mask, spots, order.toppings);
   return {
     dessert: order.dessert,
     shape: order.shape,

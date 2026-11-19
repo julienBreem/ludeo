@@ -4,7 +4,7 @@ import { DESSERTS, ownedKeys, starterOwned } from '../src/logic/catalog.js';
 import { makeRng } from '../src/logic/rng.js';
 import { generateOrder, MAX_TOPPINGS } from '../src/logic/order.js';
 
-test('2000 starter orders: owned only, distinct, sizes 1..3, total <= 8, all sizes reached', () => {
+test('2000 starter orders: owned only, distinct, sizes 1..3, total <= 6, all sizes reached', () => {
   const rng = makeRng(1); const owned = starterOwned();
   const seen = { dessert: new Set(), glaze: new Set(), kinds: new Set() };
   for (let i = 0; i < 2000; i++) {
@@ -22,7 +22,8 @@ test('2000 starter orders: owned only, distinct, sizes 1..3, total <= 8, all siz
       assert.ok(Number.isInteger(t.count) && t.count >= 1 && t.count <= 4);
       sum += t.count;
     }
-    assert.ok(sum <= MAX_TOPPINGS);
+    assert.equal(MAX_TOPPINGS, 6);
+    assert.ok(sum <= 6);
     seen.dessert.add(o.dessert); seen.glaze.add(o.glaze.length); seen.kinds.add(o.toppings.length);
   }
   assert.equal(seen.dessert.size, 3);
