@@ -13,6 +13,17 @@ const ROW_Y = [165, 325, 485, 645];
 const CARD_H = 140;
 const TEXT_STYLE = { fontFamily: 'Arial Black, Arial, sans-serif', color: '#222222' };
 
+// The awning and the garland are 1280-wide strips: shrunk whole onto a card they become a thin
+// line. The card shows a cropped, larger sample instead (a few scallops / flags).
+const DECO_CROP = { auvent: [0, 0, 480, 180], guirlande: [150, 30, 280, 140] };
+function decoFrame(scene, key) {
+  const crop = DECO_CROP[key];
+  if (!crop) return undefined;
+  const tex = scene.textures.get(`deco-${key}`);
+  if (!tex.has('card')) tex.add('card', 0, ...crop);
+  return 'card';
+}
+
 export class ShopScene extends Phaser.Scene {
   constructor() {
     super('Shop');
@@ -21,6 +32,7 @@ export class ShopScene extends Phaser.Scene {
   create() {
     this.cameras.main.setBackgroundColor(0xfce4ec);
     this.cards = null;
+    this.busy = false; // per-visit: a pending unlock from the last visit is dropped on shutdown
     this.coinIcon = this.add.image(W - 250, 60, 'coin').setScale(0.8).setDepth(500);
     this.coinText = this.add.text(W - 175, 60, '', { ...TEXT_STYLE, fontSize: '56px', stroke: '#ffffff', strokeThickness: 8 })
       .setOrigin(0, 0.5).setDepth(500);
@@ -33,7 +45,14 @@ export class ShopScene extends Phaser.Scene {
   render() {
     const state = getState();
     this.coinText.setText(String(state.coins));
-    if (this.cards) this.cards.destroy();
+    if (this.cards) {
+      // the bob/shake tweens target the cards' children: kill them, or they pile up forever
+      this.cards.each(card => {
+        this.tweens.killTweensOf(card);
+        card.each(child => this.tweens.killTweensOf(child));
+      });
+      this.cards.destroy();
+    }
     this.cards = this.add.container(0, 0);
     KINDS.forEach((kind, row) => {
       const items = ITEMS.filter(i => i.kind === kind && i.price > 0);
@@ -57,7 +76,7 @@ export class ShopScene extends Phaser.Scene {
     } else if (item.kind === 'topping') {
       c.add(fit(this.add.image(0, 0, `topping-${item.key}`), maxSize, maxSize));
     } else {
-      c.add(fit(this.add.image(0, 0, `deco-${item.key}`), 200, maxSize));
+      c.add(fit(this.add.image(0, 0, `deco-${item.key}`, decoFrame(this, item.key)), 210, maxSize + 16));
     }
   }
 
