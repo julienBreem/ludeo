@@ -25,3 +25,10 @@ const game = new Phaser.Game({
 });
 
 if (window.__errors) window.__game = game;
+
+// Offline play: relative path so it works from a sub-folder or sub-domain.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js', { type: 'module' }).catch(() => {});
+  });
+}

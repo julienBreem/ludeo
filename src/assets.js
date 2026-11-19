@@ -88,6 +88,8 @@ export const PRECACHE = [
   './',
   'index.html',
   'manifest.webmanifest',
+  'assets/icons/icon-192.png',
+  'assets/icons/icon-512.png',
   'vendor/phaser.min.js',
   'src/assets.js',
   'src/config.js',

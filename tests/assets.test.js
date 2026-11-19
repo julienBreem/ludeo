@@ -73,3 +73,27 @@ test('keys are unique', () => {
   const keys = ASSETS.map(a => a.key);
   assert.equal(new Set(keys).size, keys.length);
 });
+
+test('PWA: precache, icons and manifest', () => {
+  assert.ok(PRECACHE.includes('manifest.webmanifest'));
+  assert.ok(!PRECACHE.includes('sw.js'), 'sw.js must not cache itself');
+  for (const f of ['assets/icons/icon-192.png', 'assets/icons/icon-512.png']) {
+    assert.ok(fs.existsSync(path.join(ROOT, f)), `${f} is missing`);
+    assert.ok(PRECACHE.includes(f), `${f} not in PRECACHE`);
+  }
+  const m = JSON.parse(fs.readFileSync(path.join(ROOT, 'manifest.webmanifest'), 'utf8'));
+  assert.equal(m.display, 'fullscreen');
+  assert.equal(m.orientation, 'landscape');
+  assert.equal(m.start_url, './');
+  assert.equal(m.scope, './');
+  assert.equal(m.background_color, '#4fc3f7');
+  assert.equal(m.theme_color, '#4fc3f7');
+  for (const size of ['192x192', '512x512']) {
+    const icon = m.icons.find(i => i.sizes === size);
+    assert.ok(icon, `no ${size} icon`);
+    assert.equal(icon.purpose, 'any maskable');
+    assert.ok(PRECACHE.includes(icon.src));
+  }
+  const sw = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
+  assert.match(sw, /const CACHE_VERSION = 'v\d+'/);
+});
