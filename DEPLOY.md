@@ -55,3 +55,7 @@ Pour ajouter un jeu plus tard :
 ## 5. Tout remettre à zéro (réservé aux parents)
 
 Sur l'accueil, touchez la **roue dentée** en haut à droite (espace parent), puis la rubrique **Jeux** : **Remettre à zéro** efface la progression du jeu choisi (pièces, achats), après une confirmation.
+
+## 6. Difficulté (espace parent)
+
+La rubrique **Difficulté** de l'espace parent règle le niveau (1 à 3) de deux façons. D'abord **par thème** (lecture, nombres) : le niveau choisi vaut pour toutes les phases de ce thème, dans tous les jeux. Ensuite **par phase** : une phase peut avoir son **propre niveau** (par exemple la pâte du stand), qui prend alors le pas sur celui du thème ; « Comme le thème » le retire. Un changement compte à partir de la partie suivante. Les **propositions** apparaissent dans Recommandations (et la pastille rouge de la roue dentée) : l'application garde les 5 derniers résultats de chaque phase ; si 3 des 4 derniers sont ratés, elle propose de baisser la phase d'un niveau (« trop dur »), et après 5 réussites de suite, de la monter. **Appliquer** ne change que cette phase (son niveau propre) et efface son historique ; le thème et les autres phases ne bougent pas. Changer le niveau d'un thème efface aussi l'historique des phases qui le suivent.

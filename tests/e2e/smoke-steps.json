@@ -30,5 +30,13 @@
   {"do": "goHome", "shot": "home-back"},
   {"do": "evening", "shot": "evening-shop"},
   {"do": "forcedService", "score": 5, "now": "2026-11-19T20:00", "expectConfetti": false, "shot": "evening-service"},
-  {"do": "resetThenBack", "shot": "reset-back-stand"}
+  {"do": "resetThenBack", "shot": "reset-back-stand"},
+  {"do": "parentLevels", "themes": {"lecture": 1, "nombres": 1}},
+  {"do": "levelRound", "n": 1, "shot": "lvl1-dough"},
+  {"do": "parentLevels", "themes": {"lecture": 2, "nombres": 2}},
+  {"do": "levelRound", "n": 2, "shot": "lvl2-dough"},
+  {"do": "parentLevels", "themes": {"lecture": 3, "nombres": 3}},
+  {"do": "levelRound", "n": 3, "shot": "lvl3-dough"},
+  {"do": "parentLevels", "phase": 2},
+  {"do": "pateProposal", "shot": "pate-proposal"}
 ]

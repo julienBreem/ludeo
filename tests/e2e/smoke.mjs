@@ -541,6 +541,77 @@ const actions = {
     await waitScene('Stand');
   },
 
+  // Lot 1: from the home, the parent space sets the levels with real taps: `themes` = theme levels
+  // ({lecture: n, nombres: n}), `phase` = pâte's own level (n, or 'theme' for « Comme le thème »).
+  async parentLevels({ themes = {}, phase } = {}) {
+    await loadHome(URL);
+    await tapEl('#gear');
+    await waitFor('difficulty section', () => evaluate(`!!document.querySelector('#sec-difficulte [data-theme]')`));
+    for (const [t, n] of Object.entries(themes)) {
+      await tapEl(`#sec-difficulte [data-theme=${t}] [data-level="${n}"]`);
+      await waitFor(`${t} level ${n}`, () => evaluate(`JSON.parse(localStorage.getItem('collection.v1')).levels?.${t} === ${n}`));
+    }
+    if (phase !== undefined) {
+      await tapEl(`#sec-difficulte [data-phase=pate] [data-level="${phase}"]`);
+      await waitFor(`pâte level ${phase}`, () => evaluate(`(() => { const o = JSON.parse(localStorage.getItem('collection.v1')).overrides ?? {}; const v = Object.entries(o).find(([k]) => k.endsWith('/pate'))?.[1]; return ${phase === 'theme' ? 'v === undefined' : `v === ${phase}`}; })()`));
+    }
+    await tapEl('.p-head button');
+    await waitFor('parent closed', () => evaluate(`document.querySelector('#parent').hidden`));
+  },
+
+  // Home → tile → Stand → Dough at the levels set in the parent space: one pâte round played (the
+  // recipe is read, not forced), the Commande level read from the round.
+  async levelRound({ n, shot: name } = {}) {
+    await tap(await elCenter(TILE));
+    await waitFor('stand page', () => evaluate(`location.href === ${JSON.stringify(GAME_URL)}`).catch(() => false), 15000);
+    await waitFor('Phaser hook', () => evaluate(HOOK).catch(() => false), 15000);
+    await waitScene('Stand', 20000);
+    lastClient = null;
+    await actions.stand();
+    const lv = await sceneEval('Dough', 's => s.round.levels');
+    check(lv.commande === n && lv.pate === n, `the round plays at the levels set in the parent space (${JSON.stringify(lv)})`);
+    const rec = await sceneEval('Dough', 's => s.round.recipe');
+    const pre = Object.values(rec.prefilled ?? {}).some(v => v > 0);
+    if (n === 1) check(!pre && !rec.double, `N1 recipe: plain dice (${JSON.stringify(rec.target)})`);
+    if (n === 2) check(!pre && !rec.double && Object.values(rec.target).every(v => v <= 10), `N2 recipe: numbers up to 10 (${JSON.stringify(rec.target)})`);
+    if (n === 3) check(Object.values(rec.target).every(v => v <= 20), `N3 recipe: numbers up to 20 (${JSON.stringify(rec.target)})`);
+    await actions.dough({ shot: name });
+  },
+
+  // Three pâte failures at pâte level 2 (set in the parent space): the parent space proposes to lower
+  // the phase; Appliquer lowers pâte only (own level 1), the themes and the other phases stay.
+  async pateProposal({ shot: name } = {}) {
+    const read = () => evaluate(`(() => { const c = JSON.parse(localStorage.getItem('collection.v1')); return { levels: c.levels, overrides: c.overrides, history: Object.keys(c.history ?? {}) }; })()`);
+    const before = await read();
+    for (let i = 0; i < 3; i++) {
+      await actions.forcedService({ score: 0 });
+    }
+    await loadHome(URL);
+    await tapEl('#gear');
+    await waitFor('pâte proposal', () => evaluate(`!!document.querySelector('[data-reco^="phase:"][data-reco$="/pate"]')`));
+    const text = await evaluate(`document.querySelector('[data-reco^="phase:"][data-reco$="/pate"] p').textContent`);
+    check(/Baisser/.test(text) && /Pâte/.test(text) && /niveau 1/.test(text), `3 pâte failures: a « trop dur » proposal appears (${text})`);
+    check(await evaluate(`document.querySelectorAll('[data-reco^="phase:"]').length`) === 1, 'only the pâte phase is proposed');
+    if (name) await shot(name);
+    await tapEl('[data-reco^="phase:"][data-reco$="/pate"] .primary');
+    await waitFor('proposal applied', () => evaluate(`!document.querySelector('[data-reco^="phase:"]')`));
+    const after = await read();
+    const ov = Object.entries(after.overrides);
+    check(ov.length === 1 && ov[0][0].endsWith('/pate') && ov[0][1] === 1, `Appliquer set pâte's own level to 1 and nothing else (${JSON.stringify(after.overrides)})`);
+    check(JSON.stringify(after.levels) === JSON.stringify(before.levels), `the themes are unchanged (${JSON.stringify(after.levels)})`);
+    const shown = await evaluate(`document.querySelector('[data-phase=pate] .p-level').textContent`);
+    check(/niveau 1/.test(shown), `the parent space shows pâte at level 1 (${shown})`);
+    await tapEl('.p-head button');
+    await loadHome(URL);
+    await tap(await elCenter(TILE));
+    await waitFor('stand page', () => evaluate(`location.href === ${JSON.stringify(GAME_URL)}`).catch(() => false), 15000);
+    await waitFor('Phaser hook', () => evaluate(HOOK).catch(() => false), 15000);
+    await waitScene('Stand', 20000);
+    await actions.stand();
+    const lv = await sceneEval('Dough', 's => s.round.levels');
+    check(lv.pate === 1 && lv.commande === 3, `next round: pâte N1, the other phase unchanged (${JSON.stringify(lv)})`);
+  },
+
   // I1: the stand (fresh page) → home button → the parent resets the stand → back gesture
   // (history.back) → the stand must show 0 coins, not the old ones from the back-forward cache.
   async resetThenBack({ shot: name } = {}) {
