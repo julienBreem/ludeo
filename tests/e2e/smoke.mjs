@@ -1,7 +1,7 @@
 // End-to-end smoke test of the collection, in headless Chrome over CDP with real mouse gestures:
 // Home → parent space (profile of a 6-year-old, both recommendations applied: pace calme, evening
 // mode on) → the stand's tile → full rounds at calme pace (Stand → Dough → Mold → Bake → Paint →
-// Toppings → Service → Stand → …) → the stand's home button → the evening forced with ?now= (the
+// Toppings → Service → Stand → …) → the stand's home button → the evening forced with ?debug&now= (the
 // stand runs with the canvas filter and no confetti). Coins seeded in standDesserts.v1 must
 // survive. Fails on any console error/warning, uncaught exception, off-origin request, or a scene
 // that does not move on.
@@ -38,7 +38,7 @@ const URL = process.env.URL ?? 'http://localhost:8000/';
 const GAME_URL = new globalThis.URL('jeux/stand-desserts/index.html', URL).href;
 const TILE = '#tile-compter-observer';
 const SEED_COINS = 7; // seeded in standDesserts.v1 before the first visit; must survive everything
-const EVENING_NOW = '2026-11-19T20:00'; // ?now= values (shared/runtime.js clock)
+const EVENING_NOW = '2026-11-19T20:00'; // ?debug&now= values (shared/runtime.js clock)
 const DAY_NOW = '2026-11-19T12:00';
 const ORIGIN = new globalThis.URL(URL).origin;
 const CHROME = process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
@@ -261,9 +261,10 @@ const actions = {
   // Evening forced with ?now=: the home darkens, the stand runs with the canvas filter, the shop
   // still shows the coins, and a 5/5 service throws no confetti.
   async evening({ shot: name } = {}) {
-    await loadHome(`${URL}?now=${EVENING_NOW}`);
+    await loadHome(`${URL}?debug&now=${EVENING_NOW}`);
     check(await evaluate(`document.body.classList.contains('evening') && !document.getElementById('moon').hidden`), `home in evening mode (?now=${EVENING_NOW})`);
     const u = new globalThis.URL(GAME_URL);
+    u.searchParams.set('debug', '1');
     u.searchParams.set('now', EVENING_NOW);
     await send('Page.navigate', { url: u.href });
     await waitFor('Phaser hook', () => evaluate(HOOK).catch(() => false), 15000);
@@ -529,7 +530,7 @@ const actions = {
   // (?scene=Service&score=N), runs the Service checks, then goes on to the Stand.
   async forcedService({ score, now, expectConfetti, shot: name }) {
     const u = new globalThis.URL(GAME_URL);
-    if (now) u.searchParams.set('now', now);
+    if (now) { u.searchParams.set('debug', '1'); u.searchParams.set('now', now); }
     u.searchParams.set('scene', 'Service');
     u.searchParams.set('score', String(score));
     await send('Page.navigate', { url: u.href });

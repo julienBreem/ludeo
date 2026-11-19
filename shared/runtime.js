@@ -18,12 +18,14 @@ export function getCollection() {
   return loadCollection(storage());
 }
 
-// The clock. Debug only: a page opened with ?now=YYYY-MM-DDTHH:MM (local time) sees that time,
-// to check the evening look without waiting. Without the param it is the real clock.
+// The clock. Debug only: a page opened with ?debug&now=YYYY-MM-DDTHH:MM (local time) sees that
+// time, to check the evening look without waiting. ?now= alone is ignored, so a shared or saved
+// link cannot change the time by accident. Otherwise it is the real clock.
 export function clock() {
   try {
     // URLSearchParams: a URL built by script has the ':' encoded as %3A
-    const v = new URLSearchParams(globalThis.location?.search ?? '').get('now');
+    const q = new URLSearchParams(globalThis.location?.search ?? '');
+    const v = q.has('debug') ? q.get('now') : null;
     if (v && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(v)) {
       const d = new Date(v);
       if (!Number.isNaN(d.getTime())) return d;
