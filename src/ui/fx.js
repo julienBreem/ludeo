@@ -130,8 +130,8 @@ export function popIn(scene, target) {
   });
 }
 
-// Random eye blink every 2-5 s on container.eyes only: swap to client-eyes-closed for ~120 ms
-// (fallback on the v1 face image: a quick scaleY squash). Returns a stop function.
+// Random eye blink every 2-5 s on container.eyes only: swap to client-eyes-closed for ~120 ms.
+// Returns a stop function.
 export function blink(scene, container) {
   const eyes = container.eyes;
   let timer = null;
@@ -139,15 +139,9 @@ export function blink(scene, container) {
   const schedule = () => {
     timer = scene.time.delayedCall(2000 + Math.random() * 3000, () => {
       if (stopped || !eyes.active) return;
-      if (eyes.texture.key === 'client-eyes-open' && scene.textures.exists('client-eyes-closed')) {
+      if (eyes.texture.key === 'client-eyes-open') {
         eyes.setTexture('client-eyes-closed');
         scene.time.delayedCall(120, () => { if (eyes.active) eyes.setTexture('client-eyes-open'); });
-      } else if (eyes.texture.key.startsWith('face-')) {
-        const sy = eyes.scaleY;
-        scene.tweens.add({
-          targets: eyes, scaleY: sy * 0.15, duration: 70, yoyo: true, ease: 'Quad.easeInOut',
-          onComplete: () => { if (eyes.active) eyes.scaleY = sy; },
-        });
       }
       schedule();
     });
@@ -156,8 +150,7 @@ export function blink(scene, container) {
   return () => { stopped = true; timer?.remove(); };
 }
 
-// The mouth bobs (scaleY about its anchor) for `ms` while the client talks. No mouth layer
-// (v1 face fallback): nothing happens.
+// The mouth bobs (scaleY about its anchor) for `ms` while the client talks.
 export function talk(scene, container, ms = 1500) {
   const mouth = container.mouth;
   if (!mouth?.active) return null;
