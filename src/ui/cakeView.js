@@ -146,7 +146,7 @@ function syncMask(scene, maskImage, target) {
  * Extras on the returned container: .top (top-face container), .glaze (Graphics), .rim,
  * .side, .moldBack, .moldFront, .line, .maskImage (images or null; maskImage is the top face's
  * BitmapMask source), .standing (3/4 standing topping images), .setBakeGauge(g), .setGlaze(glaze).
- * 3/4 out of the mould with a shape, also .eat(bites, {onDone}) and .nibble({onDone}) (see addEating).
+ * 3/4 out of the mould with a shape, also .eat(bites, {onDone, fromLeft}) and .nibble({onDone, fromLeft}) (see addEating).
  */
 export function drawCake(scene, x, y, cake, { size = 400, bakeGauge, view = '3q', inMold = false } = {}) {
   const c = scene.add.container(x, y);
@@ -379,16 +379,20 @@ function addEating(scene, c, state) {
     c.eatenImage = img;
   };
 
-  // Erases everything right of x (frame units), with tooth scallops bulging left of it.
+  // dir: +1 eats from the right edge toward the left (default), -1 from the left edge.
+  let dir = 1;
+  // Erases everything beyond x on the eaten side (frame units), with tooth scallops bulging
+  // toward the part that is left.
   const eraseFrom = (x) => {
     const { g, tex, k } = snap;
     const toPx = v => (v + BOX / 2) * k;
     g.clear();
     g.fillStyle(0xffffff, 1);
-    g.fillRect(toPx(x), 0, BOX * k, BOX * k);
+    if (dir > 0) g.fillRect(toPx(x), 0, BOX * k, BOX * k);
+    else g.fillRect(0, 0, toPx(x), BOX * k);
     const step = jaw * 1.3;
     for (let y = -BOX / 2 + jaw * 0.4; y < BOX / 2; y += step) {
-      g.fillCircle(toPx(x + jaw * 0.25), toPx(y), jaw * k);
+      g.fillCircle(toPx(x + dir * jaw * 0.25), toPx(y), jaw * k);
     }
     tex.erase(g);
   };
@@ -401,8 +405,9 @@ function addEating(scene, c, state) {
   const oneBite = (done) => {
     eaten++;
     const last = eaten >= BITES;
-    const from = ext.right - (eaten - 1) * quarter + jaw * 1.4;
-    const to = ext.right - eaten * quarter;
+    const edge = dir > 0 ? ext.right : ext.left;
+    const from = edge - dir * ((eaten - 1) * quarter - jaw * 1.4);
+    const to = edge - dir * eaten * quarter;
     const sx = snap.img.scaleX;
     const sy = snap.img.scaleY;
     scene.tweens.addCounter({
@@ -411,7 +416,7 @@ function addEating(scene, c, state) {
       onComplete: () => {
         if (!snap.img.active) return;
         if (last) snap.tex.clear();
-        crumbAt(to + jaw * 0.3, 20, 8);
+        crumbAt(to + dir * jaw * 0.3, 20, 8);
         scene.tweens.add({
           targets: snap.img, scaleX: sx * 1.04, scaleY: sy * 0.96, duration: 90, yoyo: true,
           onComplete: () => { if (snap.img.active) snap.img.setScale(sx, sy); },
@@ -422,8 +427,10 @@ function addEating(scene, c, state) {
   };
 
   // eat(bites): plays `bites` more bites (total capped at 4); 4 eaten = nothing left.
-  // eat(0) is nibble(). onDone runs once after the last bite.
-  c.eat = (bites, { onDone } = {}) => {
+  // eat(0) is nibble(). onDone runs once after the last bite. fromLeft: bites start at the
+  // left edge (the eater stands on the left); taken from the first call.
+  c.eat = (bites, { onDone, fromLeft = false } = {}) => {
+    if (!snap && !busy) dir = fromLeft ? -1 : 1;
     const n = Math.max(0, Math.min(BITES - eaten, Math.floor(bites ?? 0)));
     if (n === 0 || busy) {
       if (!busy && (bites ?? 0) <= 0) return c.nibble({ onDone });
@@ -442,14 +449,15 @@ function addEating(scene, c, state) {
   };
 
   // A barely-there taste: the cake wobbles, two crumbs, nothing removed.
-  c.nibble = ({ onDone } = {}) => {
+  c.nibble = ({ onDone, fromLeft } = {}) => {
+    if (!snap && fromLeft !== undefined) dir = fromLeft ? -1 : 1;
     const a = c.angle;
     scene.tweens.add({
       targets: c, angle: a + 3, duration: 90, yoyo: true, repeat: 1, ease: 'Sine.easeInOut',
       onComplete: () => {
         if (!c.active) return;
         c.angle = a;
-        crumbAt(ext.right - quarter * 0.3, 10, 2);
+        crumbAt(dir > 0 ? ext.right - quarter * 0.3 : ext.left + quarter * 0.3, 10, 2);
         scene.time.delayedCall(BITE_GAP, () => onDone?.());
       },
     });

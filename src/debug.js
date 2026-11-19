@@ -1,6 +1,9 @@
 // Debug entry: index.html?scene=<SceneKey> opens that scene directly with a sample round
 // (heart gateau, golden, rose | violet glaze, 2 strawberries + 3 stars, order matching).
+// &score=N (0..5) also fills the round's results: the first N steps ok, the others failed
+// (&alt=1 picks the other colour/topping failure reasons), e.g. ?scene=Service&score=3.
 import { createRound } from './logic/round.js';
+import { STEPS } from './logic/scoring.js';
 import { generateClient } from './logic/client.js';
 import { setRound } from './game-state.js';
 import { idealCake } from './ui/orderCake.js';
@@ -33,10 +36,41 @@ export function sampleCake(scene) {
   return idealCake(scene, sampleOrder());
 }
 
+const FAILS = {
+  pate: { ok: false, reason: 'pas-melange' },
+  moule: { ok: false, reason: 'mauvaise-forme' },
+  cuisson: { ok: false, reason: 'pale' },
+  couleur: { ok: false, reason: 'mauvaise-couleur', zone: 1, color: 'jaune' },
+  toppings: { ok: false, reason: 'trop', key: 'etoile' },
+};
+const ALT_FAILS = {
+  couleur: { ok: false, reason: 'pas-couvert', zone: 0 },
+  toppings: { ok: false, reason: 'mauvais-topping', key: 'bougie' },
+};
+
+// Results with the first `score` steps ok (null: none set).
+export function sampleResults(score, alt = false) {
+  if (score === null) return {};
+  return Object.fromEntries(STEPS.map((s, i) => [s, i < score ? { ok: true } : ((alt && ALT_FAILS[s]) || FAILS[s])]));
+}
+
+function urlScore() {
+  try {
+    const q = new URLSearchParams(window.location.search);
+    const n = q.get('score');
+    if (n === null || !/^[0-5]$/.test(n)) return { score: null, alt: false };
+    return { score: Number(n), alt: q.get('alt') === '1' };
+  } catch {
+    return { score: null, alt: false };
+  }
+}
+
 export function installSampleRound(scene) {
   const round = createRound(sampleOrder());
   round.cake = sampleCake(scene);
   round.client = generateClient();
+  const { score, alt } = urlScore();
+  round.results = sampleResults(score, alt);
   setRound(round);
   return round;
 }
