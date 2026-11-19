@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 300 300" width="300" height="300">
+<!-- hair 4: side-parted fringe with a ponytail; light grey values only (tinted in code) -->
+<defs><linearGradient id="h" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e2e2e2"/><stop offset="1" stop-color="#9c9c9c"/></linearGradient></defs>
+<g fill="url(#h)" stroke="#5a5a5a" stroke-width="3" stroke-linejoin="round"><path d="M226 62 C262 52 290 82 286 122 C283 154 272 178 258 204 C254 184 250 170 244 158 C252 128 250 100 230 88 Z"/>
+<path d="M60 124 C52 66 96 28 150 28 C204 28 248 66 240 124 C232 108 222 96 208 88 C172 96 130 86 104 62 C90 80 70 100 60 124 Z"/></g>
+<path d="M226 60 C238 62 244 74 238 88" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round"/><path d="M226 60 C238 62 244 74 238 88" fill="none" stroke="#5a5a5a" stroke-width="13" stroke-linecap="round" opacity=".35"/><path d="M226 60 C238 62 244 74 238 88" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round"/>
+<path d="M118 50 C134 40 152 38 170 42" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round" opacity=".85"/>
+<path d="M266 84 C276 100 276 124 268 150" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" opacity=".7"/>
+<path d="M262 190 C266 172 270 160 272 144" fill="none" stroke="#5a5a5a" stroke-width="3" stroke-linecap="round" opacity=".5"/>
+</svg>

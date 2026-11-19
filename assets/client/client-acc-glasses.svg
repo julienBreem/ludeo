@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 300 300" width="300" height="300">
+<!-- accessory: round glasses centred on the eye line (y 128), arms reach the ears; untinted -->
+<g fill="#bfe9ff" fill-opacity=".28" stroke="#a3124c" stroke-width="7" stroke-linecap="round"><circle cx="114" cy="128" r="27"/><circle cx="186" cy="128" r="27"/><path d="M141 124 Q150 116 159 124 M87 122 L62 116 M213 122 L238 116" fill="none"/></g>
+<g fill="none" stroke="#ff5c93" stroke-width="3" stroke-linecap="round"><circle cx="114" cy="128" r="27"/><circle cx="186" cy="128" r="27"/><path d="M141 124 Q150 116 159 124 M87 122 L62 116 M213 122 L238 116"/></g>
+<path d="M97 116 Q104 106 116 105 M169 116 Q176 106 188 105" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".85"/>
+</svg>
