@@ -91,7 +91,12 @@ body.has-moon #moon { background-image: var(--moon); }
   animation: float calc(3.2s * var(--anim)) ease-in-out infinite;
   transition: transform 0.15s;
 }
-.tile.has-art { background-image: var(--art); }
+/* A category's tile: its art is a complete 4:3 card (rounded, with its own darker base, see the
+   art-geometry notes), shown whole at up to 528x396. The fallback keeps the card's shape. */
+.tile:not(.small) { width: min(66vmin, 528px); height: auto; aspect-ratio: 4 / 3; border-radius: 9% / 12%; }
+.tile.has-art:not(.small) { background: var(--art) center / contain no-repeat; box-shadow: none; }
+/* A game's tile (list of a category's games): its picture on the usual pink tile. */
+.tile.small.has-art { background: var(--art) center / 74% no-repeat, linear-gradient(var(--tile-a), var(--tile-b)); }
 /* fallback picture: a big white disc with a smaller one, until the art loads */
 .tile:not(.has-art)::after {
   content: ""; position: absolute; left: 25%; top: 25%; width: 50%; height: 50%; border-radius: 50%;
