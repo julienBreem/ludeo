@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { addCoins, canBuy, buy } from '../src/logic/economy.js';
-import { defaultState } from '../src/logic/save.js';
+import { addCoins, canBuy, buy } from '../jeux/stand-desserts/src/logic/economy.js';
+import { defaultState } from '../jeux/stand-desserts/src/logic/save.js';
 
 test('buy deducts price and adds item', () => {
   const s = { ...defaultState(), coins: 10 };

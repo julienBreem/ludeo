@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { bakeRate, createBakeTimer, MAX_DT, GREEN_MIN, GREEN_MAX } from '../src/logic/bake.js';
+import { bakeRate, createBakeTimer, MAX_DT, GREEN_MIN, GREEN_MAX } from '../jeux/stand-desserts/src/logic/bake.js';
 
 const near = (a, b, eps = 1e-9) => assert.ok(Math.abs(a - b) < eps, `${a} vs ${b}`);
 

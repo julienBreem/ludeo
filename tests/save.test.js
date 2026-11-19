@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { STORAGE_KEY, defaultState, loadState, saveState, resetState } from '../src/logic/save.js';
-import { starterOwned } from '../src/logic/catalog.js';
+import { STORAGE_KEY, defaultState, loadState, saveState, resetState } from '../jeux/stand-desserts/src/logic/save.js';
+import { starterOwned } from '../jeux/stand-desserts/src/logic/catalog.js';
 
 function fakeStorage() {
   const m = new Map();

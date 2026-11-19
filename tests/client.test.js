@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { makeRng } from '../src/logic/rng.js';
+import { makeRng } from '../jeux/stand-desserts/src/logic/rng.js';
 import {
   generateClient, sameClient, HAIRS, HAIR_COLORS, SKINS, SHIRTS, ACCESSORIES, ANIMALS, CAP_HAIRS,
-} from '../src/logic/client.js';
+} from '../jeux/stand-desserts/src/logic/client.js';
 
 test('never the same client twice in a row over 5000 draws', () => {
   const rng = makeRng(1); let prev = null;

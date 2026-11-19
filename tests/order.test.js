@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { DESSERTS, ownedKeys, starterOwned } from '../src/logic/catalog.js';
-import { makeRng } from '../src/logic/rng.js';
-import { generateOrder, MAX_TOPPINGS } from '../src/logic/order.js';
+import { DESSERTS, ownedKeys, starterOwned } from '../jeux/stand-desserts/src/logic/catalog.js';
+import { makeRng } from '../jeux/stand-desserts/src/logic/rng.js';
+import { generateOrder, MAX_TOPPINGS } from '../jeux/stand-desserts/src/logic/order.js';
 
 test('2000 starter orders: owned only, distinct, sizes 1..3, total <= 6, all sizes reached', () => {
   const rng = makeRng(1); const owned = starterOwned();

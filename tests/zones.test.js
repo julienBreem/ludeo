@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { zoneMap, zoneEdges, layoutToppings } from '../src/logic/zones.js';
+import { zoneMap, zoneEdges, layoutToppings } from '../jeux/stand-desserts/src/logic/zones.js';
 
 const SIZE = 20;
 function rectMask(x0, x1, y0, y1) {

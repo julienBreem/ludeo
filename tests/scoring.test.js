@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { judgeDough, judgeShape, judgeBake, judgeColor, judgeToppings, minZoneCoverage, COVERAGE_OK, bitesFor, scoreRound, STEPS } from '../src/logic/scoring.js';
-import { bakeState } from '../src/logic/bake.js';
-import { zoneMap } from '../src/logic/zones.js';
-import { createRound } from '../src/logic/round.js';
+import { judgeDough, judgeShape, judgeBake, judgeColor, judgeToppings, minZoneCoverage, COVERAGE_OK, bitesFor, scoreRound, STEPS } from '../jeux/stand-desserts/src/logic/scoring.js';
+import { bakeState } from '../jeux/stand-desserts/src/logic/bake.js';
+import { zoneMap } from '../jeux/stand-desserts/src/logic/zones.js';
+import { createRound } from '../jeux/stand-desserts/src/logic/round.js';
 
 const order = { dessert: 'gateau', shape: 'coeur', glaze: ['rose'], toppings: [{ key: 'fraise', count: 3 }] };
 test('dough exact + stirred is ok', () => assert.deepEqual(judgeDough({ oeuf: 2, farine: 1, sucre: 1, beurre: 1 }, 1, 'gateau'), { ok: true }));

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { maskFromAlpha, createPaintGrid, dominantColor, GRID, BRUSH_RADIUS } from '../src/logic/paint.js';
+import { maskFromAlpha, createPaintGrid, dominantColor, GRID, BRUSH_RADIUS } from '../jeux/stand-desserts/src/logic/paint.js';
 
 test('constants', () => { assert.equal(GRID, 64); assert.equal(BRUSH_RADIUS, 4); });
 

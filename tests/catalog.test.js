@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { INGREDIENTS, DESSERTS, ITEMS, starterOwned, ownedKeys, itemById } from '../src/logic/catalog.js';
-import { makeRng } from '../src/logic/rng.js';
+import { INGREDIENTS, DESSERTS, ITEMS, starterOwned, ownedKeys, itemById } from '../jeux/stand-desserts/src/logic/catalog.js';
+import { makeRng } from '../jeux/stand-desserts/src/logic/rng.js';
 
 test('every recipe ingredient exists and each recipe leaves at least one intruder', () => {
   for (const d of Object.values(DESSERTS)) {

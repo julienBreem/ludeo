@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createStirTracker, TURNS_NEEDED } from '../src/logic/stir.js';
+import { createStirTracker, TURNS_NEEDED } from '../jeux/stand-desserts/src/logic/stir.js';
 
 function circle(t, from, to, step = 0.2, r = 100) {
   const dir = to >= from ? 1 : -1;

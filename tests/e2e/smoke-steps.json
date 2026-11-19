@@ -1,5 +1,5 @@
 [
-  {"do": "start"},
+  {"do": "start", "shot": "home"},
   {"do": "stand", "shot": "r1-stand"},
   {"do": "dough", "shot": "r1-dough"},
   {"do": "mold", "shot": "r1-mold"},

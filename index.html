@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#4fc3f7">
+<link rel="icon" href="shared/icons/icon-192.png">
+<title>Jeux</title>
+<!-- Temporary home of the collection: one big tile per game, no text (Task 4 replaces it). -->
+<style>
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: #4fc3f7; overflow: hidden; touch-action: manipulation;
+    display: flex; align-items: center; justify-content: center;
+    -webkit-tap-highlight-color: transparent; user-select: none;
+  }
+  .tile {
+    display: block; width: min(52vmin, 420px); height: min(52vmin, 420px);
+    border-radius: 18%; overflow: hidden; background: #fff;
+    border: 8px solid #fff; box-shadow: 0 12px 0 rgba(0, 0, 0, 0.18);
+    transition: transform 0.15s;
+  }
+  .tile:active { transform: scale(0.95); }
+  .tile img { display: block; width: 100%; height: 100%; }
+</style>
+</head>
+<body>
+<a class="tile" id="tile-stand-desserts" href="jeux/stand-desserts/index.html" aria-label="Stand de desserts">
+  <img src="shared/icons/icon-512.png" alt="" draggable="false">
+</a>
+<script>
+  // Offline play: relative path so it works from a sub-folder or sub-domain.
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js', { type: 'module' }).catch(() => {});
+    });
+  }
+</script>
+</body>
+</html>

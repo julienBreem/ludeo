@@ -1,16 +1,16 @@
-// End-to-end smoke test: plays full rounds in headless Chrome over CDP with real mouse gestures
-// (Stand → Dough → Mold → Bake → Paint → Toppings → Service → Stand → …) and fails on any console
+// End-to-end smoke test: opens the collection home, taps the stand's tile, then plays full rounds
+// in headless Chrome over CDP with real mouse gestures (Home → Stand → Dough → Mold → Bake → Paint → Toppings → Service → Stand → …) and fails on any console
 // error/warning, uncaught exception, off-origin request, or a scene that does not move on.
 //
 // Not part of `npm test` (its glob only picks tests/**/*.test.js). No dependencies (Node ≥ 22,
 // for the global WebSocket). To run, from the repo root:
 //
-//   python3 -m http.server 8000 &          # serve the game
+//   python3 -m http.server 8000 &          # serve the collection
 //   node tests/e2e/smoke.mjs [outDir]      # steps: tests/e2e/smoke-steps.json
 //   kill %1
 //
-// Env: CHROME=<path to Chrome> (default: macOS Google Chrome), URL=<game url>
-// (default http://localhost:8000/index.html). Screenshots go to outDir (default: a temp folder).
+// Env: CHROME=<path to Chrome> (default: macOS Google Chrome), URL=<collection home url>
+// (default http://localhost:8000/; the stand is at jeux/stand-desserts/index.html below it). Screenshots go to outDir (default: a temp folder).
 // Exit code 0 = pass, 1 = fail.
 //
 // The game state is read (never written) through a hook on Phaser's SceneManager.update that
@@ -20,16 +20,18 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { DESSERTS, INGREDIENTS } from '../../src/logic/catalog.js';
-import { GREEN_MIN, GREEN_MAX } from '../../src/logic/bake.js';
-import { COLOR_HEX } from '../../src/config.js';
-import { bitesFor } from '../../src/logic/scoring.js';
-import { BRUSH_RADIUS } from '../../src/logic/paint.js';
+import { DESSERTS, INGREDIENTS } from '../../jeux/stand-desserts/src/logic/catalog.js';
+import { GREEN_MIN, GREEN_MAX } from '../../jeux/stand-desserts/src/logic/bake.js';
+import { COLOR_HEX } from '../../jeux/stand-desserts/src/config.js';
+import { bitesFor } from '../../jeux/stand-desserts/src/logic/scoring.js';
+import { BRUSH_RADIUS } from '../../jeux/stand-desserts/src/logic/paint.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const outDir = process.argv[2] ?? fs.mkdtempSync(path.join(os.tmpdir(), 'stand-smoke-'));
 const stepsFile = process.argv[3] ?? path.join(HERE, 'smoke-steps.json');
-const URL = process.env.URL ?? 'http://localhost:8000/index.html';
+const URL = process.env.URL ?? 'http://localhost:8000/';
+const GAME_URL = new globalThis.URL('jeux/stand-desserts/index.html', URL).href;
+const TILE = '#tile-stand-desserts';
 const ORIGIN = new globalThis.URL(URL).origin;
 const CHROME = process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const PORT = 9334;
@@ -170,9 +172,16 @@ const EATEN_INK = `s => new Promise(resolve => {
 
 // ---- one action per scene ------------------------------------------------------------------------
 const actions = {
-  async start() {
+  // Home → tap the stand's tile (a real tap on its centre) → the stand's page.
+  async start({ shot: name } = {}) {
     await send('Page.navigate', { url: URL });
-    await waitFor('Phaser hook', () => evaluate(HOOK), 15000);
+    await waitFor('home tile', () => evaluate(`document.readyState === 'complete' && !!document.querySelector('${TILE}')`), 15000);
+    const c = await evaluate(`(() => { const r = document.querySelector('${TILE}').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`);
+    if (name) await shot(name);
+    await tap(c);
+    await waitFor('stand page', () => evaluate(`location.href === ${JSON.stringify(GAME_URL)}`).catch(() => false), 15000);
+    log('  ok: home tile opens', GAME_URL);
+    await waitFor('Phaser hook', () => evaluate(HOOK).catch(() => false), 15000);
     await waitScene('Stand', 20000);
     lastClient = null;
   },
@@ -416,7 +425,7 @@ const actions = {
   // Opens the Service directly with the debug sample round and a forced score
   // (?scene=Service&score=N), runs the Service checks, then goes on to the Stand.
   async forcedService({ score, shot: name }) {
-    const u = new globalThis.URL(URL);
+    const u = new globalThis.URL(GAME_URL);
     u.searchParams.set('scene', 'Service');
     u.searchParams.set('score', String(score));
     await send('Page.navigate', { url: u.href });
