@@ -134,8 +134,9 @@ async function moveTo(...points) {
   await sleep(40);
 }
 
-// Dough multi-grab: presses the shelf ingredient at x and holds until the hand holds n (one more
-// every 600 ms x the pace's anim factor); returns what the hand holds, the mouse still pressed.
+// Dough multi-grab: presses the shelf ingredient at x and holds until the hand holds n (the second
+// after 1 s, then one more every 600 ms, x the pace's anim factor); returns what the hand holds,
+// the mouse still pressed.
 async function grabMany(x, n) {
   await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y: 725, buttons: 0 });
   const t0 = Date.now();
@@ -144,8 +145,8 @@ async function grabMany(x, n) {
   if (n > 1) {
     await waitFor(`hand holds 2`, () => evaluate(`window.__sm.getScene('Dough').drag?.n >= 2`), 15000);
     const first = Date.now() - t0;
-    // calme pace (anim x1.5): the second one comes after ~900 ms, not 600
-    if (first < 800) throw new Error(`check failed: long press picked the second one after ${first} ms (calme: ~900 ms)`);
+    // calme pace (anim x1.5): the second one comes after ~1.5 s (a still press of 1 s takes 1)
+    if (first < 1300) throw new Error(`check failed: long press picked the second one after ${first} ms (calme: ~1500 ms)`);
     log(`  ok: long press: one more after ${first} ms (calme pace)`);
     await waitFor(`hand holds ${n}`, () => evaluate(`window.__sm.getScene('Dough').drag?.n >= ${n}`), 15000);
   }
@@ -455,12 +456,13 @@ const actions = {
   // mould among 4; N2 checks the clue (true of the ordered shape only), lights a corner, then taps
   // the ordered mould; N3 turns each piece (taps) and drags it into a place it fits. Every level
   // must be judged right.
-  async mold({ level, shot: name } = {}) {
+  // wrong: N1/N2 choose another mould; N3 leave the last piece a near miss (✓ still lights).
+  async mold({ level, wrong = false, shot: name } = {}) {
     await waitScene('Mold');
     const n = await sceneEval('Mold', 's => s.level');
     if (level !== undefined) check(n === level, `Moule plays level ${level} (${n})`);
     if (n === 3) {
-      await actions.tangram({ shot: name });
+      await actions.tangram({ shot: name, wrong });
     } else {
       const ex = await sceneEval('Mold', 's => s.ex');
       check(ex.choices.length === 4 && ex.choices.includes(order.shape), `N${n}: 4 moulds with the ordered one (${ex.choices.join(', ')})`);
@@ -475,7 +477,8 @@ const actions = {
           check(await sceneEval('Mold', `s => s.cards[${JSON.stringify(order.shape)}].lit.size`) === 1, 'N2: a tapped corner glows');
         }
       }
-      const [x, y] = await sceneEval('Mold', `s => { const c = s.cards[${JSON.stringify(order.shape)}].card; return [c.x, c.y + 118]; }`);
+      const pick = wrong ? ex.choices.find(k => k !== order.shape) : order.shape;
+      const [x, y] = await sceneEval('Mold', `s => { const c = s.cards[${JSON.stringify(pick)}].card; return [c.x, c.y + 118]; }`);
       await tap([x, y]);
       await waitFor('pour done', () => sceneEval('Mold', 's => s.chosen && !s.pouring'));
       if (name) await shot(name);
@@ -483,12 +486,15 @@ const actions = {
     await tap(OK_BTN);
     await waitScene('Bake');
     const res = await sceneEval('Bake', 's => s.round.results.moule');
-    check(res?.ok === true, `Moule N${n} judged right (${JSON.stringify(res)})`);
+    if (wrong) check(res?.ok === false && res.reason === (n === 3 ? 'pieces' : 'mauvaise-forme'), `Moule N${n} wrong: judged wrong (${JSON.stringify(res)})`);
+    else check(res?.ok === true, `Moule N${n} judged right (${JSON.stringify(res)})`);
   },
 
   // Moule N3: for each piece, the fewest taps to a turn that fits a free place, then a drag there
   // (a little off: it must snap). A first drag to the screen's corner checks it stays on screen.
-  async tangram({ shot: name } = {}) {
+  // Piece 0 first gets a near miss (dropped 1.4 x the snap distance off its place): no snap, the
+  // place's outline glows. wrong: the last piece is left as such a near miss (✓ must still light).
+  async tangram({ shot: name, wrong = false } = {}) {
     const count = await sceneEval('Mold', 's => s.pieces.length');
     check(count >= 2 && count <= 3, `N3: ${count} pieces`);
     const p0 = await sceneEval('Mold', 's => [s.pieces[0].img.x, s.pieces[0].img.y]');
@@ -506,6 +512,22 @@ const actions = {
       }
       const r = (info.rot / 90 + turns) % 4;
       const [hx, hy] = info.homes[info.fits[r].find(j => !info.filled.includes(j))];
+      const snapPx = await sceneEval('Mold', 's => s.snapPx');
+      const miss = [hx + snapPx * 1.4, hy];
+      if (i === 0 || (wrong && i === count - 1)) {
+        await drag([[info.x, info.y], miss]);
+        await sleep(150);
+        const st = await sceneEval('Mold', `s => ({ placed: s.pieces[${i}].place, hint: !!s.hintImg, ok: s.bar.validateButton.input.enabled })`);
+        check(st.placed === null && st.hint, `N3: a near miss does not snap and the place glows (${JSON.stringify(st)})`);
+        if (name && i === 0) await shot(`${name}-nearmiss`);
+        await sleep(1500);
+        if (wrong && i === count - 1) {
+          check(st.ok, 'N3: ✓ lights with the last piece a near miss');
+          break;
+        }
+        info.x = miss[0];
+        info.y = miss[1];
+      }
       if (i === 0) {
         await drag([[info.x, info.y], [(info.x + hx) / 2, (info.y + hy) / 2]]);
         if (name) await shot(`${name}-half`);
@@ -516,23 +538,25 @@ const actions = {
       await waitFor(`piece ${i} snapped`, () => sceneEval('Mold', `s => s.pieces[${i}].place !== null`), 3000);
     }
     await sleep(400);
-    check(await sceneEval('Mold', 's => s.bar.validateButton.input.enabled'), 'N3: ✓ once every piece is in place');
+    check(await sceneEval('Mold', 's => s.bar.validateButton.input.enabled'), wrong ? 'N3: ✓ with a piece near its place' : 'N3: ✓ once every piece is in place');
     if (name) await shot(name);
   },
 
   // Bake at the round's Cuisson level (read from the scene): the heat of the dessert, then
   // N1 out in the green, N2 out when the hand is on the dessert's number, N3 the alarm dragged to
   // the start + the duration, out when it rings. `level` checks the round plays that level.
-  async bake({ doubleTap = false, level, shot: name } = {}) {
+  // wrong: 'heat' (one flame off, the right time: never golden), 'time' (N2: out one number late).
+  async bake({ doubleTap = false, level, wrong = null, shot: name } = {}) {
     await waitScene('Bake');
     const n = await sceneEval('Bake', 's => s.level');
     if (level !== undefined) check(n === level, `Cuisson plays level ${level} (${n})`);
-    const heat = DESSERTS[order.dessert].heat;
+    const want = DESSERTS[order.dessert].heat;
+    const heat = wrong === 'heat' ? (want === 3 ? 2 : want + 1) : want;
     await tap([[900, 1030, 1160][heat - 1], 290]);
     if (n === 3) {
       const bt = await sceneEval('Bake', 's => s.bt');
       check(Number.isInteger(bt.start) && bt.start >= 1 && bt.start <= 10 && bt.duration === 1, `N3 start ${bt.start} h, ${bt.duration} h`);
-      check(await sceneEval('Bake', 's => !s.go.input.enabled'), 'N3: ▶ waits for the alarm');
+      check(await sceneEval('Bake', 's => !s.go.input.enabled && !!s.alarmPulse'), 'N3: ▶ waits for the alarm, the bell pulses');
       const alarm = rightAlarm(bt);
       const pt = (h, r = 110) => [BAKE_DIAL[0] + r * Math.sin((h / 12) * 2 * Math.PI), BAKE_DIAL[1] - r * Math.cos((h / 12) * 2 * Math.PI)];
       await drag([pt(bt.start + 6, 90), pt(alarm + 2), pt(alarm + 0.3)]);
@@ -555,14 +579,17 @@ const actions = {
       const mid = (GREEN_MIN + GREEN_MAX) / 2;
       await waitFor('golden', () => sceneEval('Bake', `s => s.timer && s.timer.gauge() >= ${mid}`), 30000);
     } else if (n === 2) {
-      const num = LEVEL_NUMBERS[order.dessert];
-      await waitFor(`hand on ${num}`, () => sceneEval('Bake', `s => s.timer && s.timer.elapsed() >= ${num}`), 30000);
+      const num = LEVEL_NUMBERS[order.dessert] + (wrong === 'time' ? 1 : 0);
+      await waitFor(`hand on ${num}`, () => sceneEval('Bake', `s => s.timer && s.timer.elapsed() >= ${num}`), 60000);
+      if (name) await shot(`${name}-hand`);
     } else {
       await waitFor('alarm rings', () => sceneEval('Bake', 's => s.rang'), 40000);
     }
     await tap(BAKE_GO);
     const st = await sceneEval('Bake', 's => s.finalState');
-    check(st === 'dore', `N${n}: taken out golden (${st})`);
+    if (wrong === 'heat') check(st === (heat > want ? 'brule' : 'pale'), `N${n}: wrong flames at the right time: ${st}, not golden`);
+    else if (wrong === 'time') check(st === 'brule', `N${n}: out one number late: ${st}`);
+    else check(st === 'dore', `N${n}: taken out golden (${st})`);
     await sleep(800);
     if (name) await shot(name);
     await tap(OK_BTN);
