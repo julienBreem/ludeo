@@ -8,7 +8,7 @@ import { addStepBar } from '../ui/stepBar.js';
 import { addOrderReminder } from '../ui/orderReminder.js';
 import { addIconButton } from '../ui/button.js';
 import { drawCake } from '../ui/cakeView.js';
-import { goNext } from '../ui/flow.js';
+import { goNext, restart } from '../ui/flow.js';
 import { steam, smoke, heatRise } from '../ui/fx.js';
 
 const OVEN_X = 420;
@@ -30,6 +30,8 @@ const HEAT_BOX = 120;
 const GO_X = 1030;
 const GO_Y = 520;
 const RISE_END = GREEN_MIN;
+// ▶ and the oven mitt are the same button: a double tap must not start and take out at once.
+const TAKE_OUT_GUARD_MS = 700;
 
 export class BakeScene extends Phaser.Scene {
   constructor() {
@@ -45,9 +47,18 @@ export class BakeScene extends Phaser.Scene {
     this.phase = 'idle'; // idle -> ready (heat chosen) -> baking -> out
     this.timer = null;
     this.heatBtns = [];
+    this.startedAt = 0;
+    this.finalGauge = null;
+    this.unmolded = null;
+    this.glowTween = null;
+    this.heatEvent = null;
 
     this.cameras.main.setBackgroundColor(0xffebee);
     const reminder = addOrderReminder(this, round.order);
+    // divider, so the topping digit does not seem to count the flames
+    const sep = this.add.graphics();
+    sep.fillStyle(OUTLINE, 0.25).fillRoundedRect(-3, -34, 6, 68, 3);
+    reminder.append(sep, 34);
     for (let i = 0; i < this.target; i++) {
       const f = this.add.image(0, 0, 'flame');
       f.setScale(56 / f.height);
@@ -67,7 +78,7 @@ export class BakeScene extends Phaser.Scene {
     this.go = addIconButton(this, GO_X, GO_Y, 'icon-go', () => this.onGo(), { size: 150 });
     this.setGoEnabled(false);
 
-    this.bar = addStepBar(this, { onRestart: () => this.scene.restart(), onValidate: () => this.validate() });
+    this.bar = addStepBar(this, { onRestart: () => restart(this), onValidate: () => this.validate() });
   }
 
   setRise(g) {
@@ -137,11 +148,12 @@ export class BakeScene extends Phaser.Scene {
 
   onGo() {
     if (this.phase === 'ready') this.startBaking();
-    else if (this.phase === 'baking') this.takeOut();
+    else if (this.phase === 'baking' && this.time.now - this.startedAt >= TAKE_OUT_GUARD_MS) this.takeOut();
   }
 
   startBaking() {
     this.phase = 'baking';
+    this.startedAt = this.time.now;
     this.timer = createBakeTimer(this.heat, this.target);
     this.heatBtns.forEach((b) => { b.zone.disableInteractive(); });
     this.heatBtns.forEach((b, i) => { if (i + 1 !== this.heat) b.box.setAlpha(0.45); });
@@ -192,7 +204,7 @@ export class BakeScene extends Phaser.Scene {
   }
 
   validate() {
-    if (this.phase !== 'out') return;
+    if (this.phase !== 'out') return false;
     const g = this.finalGauge;
     this.round.results.cuisson = judgeBake(g);
     this.round.cake.bake = bakeState(g);

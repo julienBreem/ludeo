@@ -8,6 +8,21 @@ const HEIGHT = 96;
 const CELL = 84; // width given to one icon
 const ICON = 72;
 const PAD = 12;
+const MINI = 92; // display size of the mini dessert cake
+const MINI_RES = 2; // its cached texture is drawn at 2x for sharpness
+
+// The mini cake is a full drawCake with a BitmapMask (extra full-screen passes every frame).
+// It is drawn once per dessert into a texture, cached for the whole game, and shown as an image.
+function miniCakeKey(scene, dessert) {
+  const key = `reminder-cake-${dessert}`;
+  if (scene.textures.exists(key)) return key;
+  const s = MINI * MINI_RES;
+  const cake = drawCake(scene, s / 2, s / 2, { dessert, shape: 'rond', bake: 'dore', toppings: [] }, { size: s });
+  const tex = scene.textures.addDynamicTexture(key, s, s);
+  tex.draw(cake);
+  cake.destroy();
+  return key;
+}
 
 // The returned container has .stripWidth and .append(gameObject, width = CELL), which adds an
 // item at the right end of the strip and widens it (Bake uses it for the target flames).
@@ -36,9 +51,8 @@ export function addOrderReminder(scene, order) {
   };
 
   // dessert: a small round 3/4 cake of that dessert (the shape is shown next to it)
-  const mini = drawCake(scene, 0, 0, { dessert: order.dessert, shape: 'rond', bake: 'dore', toppings: [] }, { size: 92 });
+  const mini = scene.add.image(0, -6, miniCakeKey(scene, order.dessert)).setScale(1 / MINI_RES);
   const holder = scene.add.container(0, 0, [mini]);
-  mini.y = -6;
   c.append(holder);
   const silhouette = scene.add.container(0, 0, [
     icon(`shape-${order.shape}-fill`, 80).setTint(0xe6e6e6),
