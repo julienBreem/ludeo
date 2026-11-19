@@ -6,12 +6,16 @@
 // the 5th, like the egg box's rows), a structure that helps her see a quantity, not a count. N1: the
 // card shows dice; N2: digits and one "a + b"; N3: one complement (what is already in the bowl sits
 // on the tray, the card shows the total "n" with the tray and its number; the complement is never
-// doubled), sometimes one column "n" with « ×2 » under it, sums. The 5-egg carton is on the shelf at
-// N2-N3.
+// doubled), sometimes one column "n" with « ×2 » under it, sums.
+// Multi-grab (spec 2 bis): a long press on a shelf ingredient makes the hand pick up one more every
+// ~0.6 s (x the pace's anim factor), never more than the board can still take of that kind; above
+// the hand, what she holds as dice dots (N1) or a digit (N2-N3). Dropped in the bowl, they are all
+// poured, one quickly after the other (each empty to the board); dropped anywhere else, they all go
+// back to the shelf. A short press and drag takes one.
 import { W, H, OUTLINE, BATTER } from '../config.js';
 import { getRound } from '../game-state.js';
 import { INGREDIENTS } from '../logic/catalog.js';
-import { makeRecipe, pourCap } from '../logic/recipe.js';
+import { makeRecipe, pourCap, grabLimit } from '../logic/recipe.js';
 import { createStirTracker } from '../logic/stir.js';
 import { judgeDough } from '../logic/scoring.js';
 import { addStepBar } from '../ui/stepBar.js';
@@ -33,7 +37,11 @@ const RING_RX = 262 * BS;
 const RING_RY = 76 * BS;
 const SHELF_Y = 725;
 const ICON = 112;
-const BOX5_W = 184; // egg-box-5 on the shelf (200x120 frame at 0.92)
+const HELD = ICON * 1.15; // an ingredient in her hand
+const GRAB_MS = 600; // long press: one more every GRAB_MS x anim factor
+const GRAB_ZONE = ICON / 2 + 12; // the press stays a long press while the pointer is on the item
+const PILE_MAX = 3; // copies drawn behind the held ingredient
+const POUR_GAP = 140; // ms between two ingredients of one pour
 const WHISK_SCALE = 0.8;
 const WHISK_HOME = { x: 640, y: 470 };
 const LEVEL_MAX = 8;
@@ -54,12 +62,8 @@ const PILL_FILL = 0xe4d9ff;
 const PILL_LINE = 0x6a3fd6;
 const FONT = 'Arial Black, Arial, sans-serif';
 
-// Shelf x of each item: the six ingredients, and at N2-N3 the 5-egg carton after the egg.
-function shelfLayout(level) {
-  if (level < 2) return INGREDIENTS.map((key, i) => ({ key, x: 250 + i * 156 }));
-  const rest = INGREDIENTS.filter(k => k !== 'oeuf').map((key, i) => ({ key, x: 556 + i * 122 }));
-  return [{ key: 'oeuf', x: 222 }, { key: 'oeuf5', x: 376 }, ...rest];
-}
+// Shelf x of each ingredient.
+const SHELF = INGREDIENTS.map((key, i) => ({ key, x: 250 + i * 156 }));
 
 // Board frame point -> screen.
 const boardX = fx => BOARD.x + (fx - 210) * BOARD.s;
@@ -108,7 +112,7 @@ export class DoughScene extends Phaser.Scene {
       .sort((a, b) => INGREDIENTS.indexOf(a) - INGREDIENTS.indexOf(b));
     this.tracker = createStirTracker(OPEN_X, OPEN_Y);
     this.batterColor = BATTER;
-    this.drag = null;
+    this.drag = null; // { key, hand, pile, badge, homeX, id, n, grabbing, timer }
     this.stirring = false;
     this.lastAngle = null;
     // per-run fields set only in some runs (Phaser reuses the scene instance)
@@ -147,11 +151,9 @@ export class DoughScene extends Phaser.Scene {
     this.add.rectangle(W / 2, H - 70, W, 140, 0xc98a4b).setDepth(1);
     this.add.rectangle(W / 2, H - 140, W, 10, 0xe0a766).setDepth(1);
     this.shelf = {};
-    for (const { key, x } of shelfLayout(this.level)) {
+    for (const { key, x } of SHELF) {
       this.shelf[key] = x;
-      const img = key === 'oeuf5'
-        ? this.add.image(x, SHELF_Y, 'egg-box-5').setScale(BOX5_W / 200)
-        : this.add.image(x, SHELF_Y, `ing-${key}`).setDisplaySize(ICON, ICON);
+      const img = this.add.image(x, SHELF_Y, `ing-${key}`).setDisplaySize(ICON, ICON);
       img.setDepth(5).setInteractive({ useHandCursor: true });
       img.on('pointerdown', p => this.startDrag(p, key, x));
     }
@@ -295,12 +297,64 @@ export class DoughScene extends Phaser.Scene {
     }
   }
 
+  // Press on a shelf ingredient: the hand holds one; while the press stays on the item, one more
+  // every GRAB_MS (x anim factor), up to what the board can still take of that kind.
   startDrag(p, key, homeX) {
     if (this.drag || this.stirring) return;
-    const img = key === 'oeuf5'
-      ? this.add.image(p.x, p.y, 'egg-box-5').setScale((BOX5_W / 200) * 1.1).setDepth(40)
-      : this.add.image(p.x, p.y, `ing-${key}`).setDisplaySize(ICON * 1.15, ICON * 1.15).setDepth(40);
-    this.drag = { key, img, homeX, id: p.id };
+    const hand = this.add.container(p.x, p.y).setDepth(40);
+    const pile = this.add.container(0, 0);
+    const badge = this.add.container(0, -HELD / 2 - 34);
+    hand.add([pile, badge]);
+    this.drag = { key, hand, pile, badge, homeX, id: p.id, n: 1, grabbing: true, timer: null };
+    this.drawHand();
+    this.drag.timer = this.time.addEvent({ delay: dur(GRAB_MS), loop: true, callback: () => this.grabOne() });
+  }
+
+  grabOne() {
+    const d = this.drag;
+    if (!d?.grabbing) return;
+    if (d.n >= grabLimit(d.key, this.added)) return;
+    d.n += 1;
+    this.drawHand();
+    this.tweens.killTweensOf(d.badge);
+    d.badge.setScale(1.3);
+    this.tweens.add({ targets: d.badge, scale: 1, duration: dur(160), ease: 'Quad.easeOut' });
+  }
+
+  stopGrab() {
+    const d = this.drag;
+    if (!d) return;
+    d.grabbing = false;
+    d.timer?.remove();
+    d.timer = null;
+  }
+
+  // The hand: the ingredient with up to PILE_MAX copies behind it, and above it what she holds:
+  // die faces at N1 (by fives, like the egg box rows), a digit at N2-N3.
+  drawHand() {
+    const { key, n, pile, badge } = this.drag;
+    pile.removeAll(true);
+    for (let i = Math.min(n - 1, PILE_MAX); i >= 0; i--) {
+      pile.add(this.add.image(-i * 12, -i * 9, `ing-${key}`).setDisplaySize(HELD, HELD));
+    }
+    badge.removeAll(true);
+    const g = this.add.graphics();
+    badge.add(g);
+    if (this.level <= 1) {
+      const faces = [];
+      for (let left = n; left > 0; left -= 5) faces.push(Math.min(5, left));
+      const size = 52;
+      const w = faces.length * (size + 6) - 6 + 16;
+      g.fillStyle(0xffffff, 1).fillRoundedRect(-w / 2, -size / 2 - 8, w, size + 16, 14);
+      g.lineStyle(4, OUTLINE, 1).strokeRoundedRect(-w / 2, -size / 2 - 8, w, size + 16, 14);
+      faces.forEach((f, i) => {
+        badge.add(this.add.image((i - (faces.length - 1) / 2) * (size + 6), 0, `dice-${f}`).setDisplaySize(size, size));
+      });
+    } else {
+      g.fillStyle(0xffffff, 1).fillCircle(0, 0, 30);
+      g.lineStyle(4, OUTLINE, 1).strokeCircle(0, 0, 30);
+      badge.add(this.add.text(0, 1, String(n), { fontFamily: FONT, fontSize: '34px', color: INK }).setOrigin(0.5));
+    }
   }
 
   startStir(p) {
@@ -347,23 +401,26 @@ export class DoughScene extends Phaser.Scene {
   }
 
   onMove(p) {
-    if (this.drag && p.id === this.drag.id) this.drag.img.setPosition(p.x, p.y);
-    else if (this.stirring) this.moveWhisk(p);
+    const d = this.drag;
+    if (d && p.id === d.id) {
+      d.hand.setPosition(p.x, p.y);
+      // leaving the shelf item ends the long press: she holds what she has
+      if (d.grabbing && (Math.abs(p.x - d.homeX) > GRAB_ZONE || Math.abs(p.y - SHELF_Y) > GRAB_ZONE)) this.stopGrab();
+    } else if (this.stirring) this.moveWhisk(p);
   }
 
   onUp(p) {
     if (this.drag && p.id === this.drag.id) {
-      const { key, img, homeX } = this.drag;
+      this.stopGrab();
+      const { key, hand, homeX, n } = this.drag;
       this.drag = null;
-      const box5 = key === 'oeuf5';
-      const ing = box5 ? 'oeuf' : key;
-      if (inside(p.x, p.y, DROP_RX, DROP_RY) && this.hasRoom(ing, box5 ? 5 : 1)) {
-        if (box5) this.addEggBox(img);
-        else this.addIngredient(key, img);
+      if (inside(p.x, p.y, DROP_RX, DROP_RY) && this.hasRoom(key, n)) {
+        this.pour(key, n, hand);
       } else {
+        // anywhere else: all of them go back to the shelf
         this.tweens.add({
-          targets: img, x: homeX, y: SHELF_Y, duration: 220, ease: 'Quad.easeOut',
-          onComplete: () => img.destroy(),
+          targets: hand, x: homeX, y: SHELF_Y, scale: 0.9, duration: dur(260), ease: 'Quad.easeOut',
+          onComplete: () => hand.destroy(),
         });
       }
     } else if (this.stirring) {
@@ -392,41 +449,38 @@ export class DoughScene extends Phaser.Scene {
     this.bar.setValidateEnabled(true);
   }
 
-  addIngredient(key, img) {
-    const first = this.count(key, 1);
+  // Pours the n ingredients of key in her hand: the hand goes over the bowl, then they fall one
+  // quickly after the other (an egg cracks), each empty flying to the board as it lands.
+  pour(key, n, hand) {
+    const first = this.count(key, n);
+    hand.list[1].setVisible(false); // the badge (what she held) goes
     const surfaceY = OPEN_Y + 8 * BS;
-    const land = () => {
-      img.destroy();
-      if (key === 'farine' || key === 'sucre') flourPuff(this, OPEN_X, surfaceY - 30);
-      else splash(this, OPEN_X, surfaceY - 10, key === 'chocolat' ? TINT.chocolat : 0xffe9ae);
-      this.raiseBatter(key);
-      this.addEmpty(key);
-      if (first) this.firstPour();
+    const fall = (i) => {
+      const img = this.add.image(OPEN_X, OPEN_Y - 70, `ing-${key}`).setDisplaySize(HELD, HELD).setDepth(40);
+      const land = () => {
+        img.destroy();
+        if (key === 'farine' || key === 'sucre') flourPuff(this, OPEN_X, surfaceY - 30);
+        else splash(this, OPEN_X, surfaceY - 10, key === 'chocolat' ? TINT.chocolat : 0xffe9ae);
+        this.raiseBatter(key);
+        this.addEmpty(key);
+        if (first && i === 0) this.firstPour();
+      };
+      if (key === 'oeuf') this.crackEgg(img, land);
+      else {
+        this.tweens.add({
+          targets: img, y: surfaceY - 20, scale: img.scale * 0.5, alpha: 0, duration: 220, ease: 'Quad.easeIn', onComplete: land,
+        });
+      }
     };
     this.tweens.add({
-      targets: img, x: OPEN_X, y: OPEN_Y - 70, duration: 180, ease: 'Quad.easeOut',
-      onComplete: () => (key === 'oeuf' ? this.crackEgg(img, land) : this.tweens.add({
-        targets: img, y: surfaceY - 20, scale: img.scale * 0.5, alpha: 0, duration: 220, ease: 'Quad.easeIn', onComplete: land,
-      })),
-    });
-  }
-
-  // The 5-egg carton: five eggs at once, five shells into the egg boxes one after the other.
-  addEggBox(img) {
-    const first = this.count('oeuf', 5);
-    const surfaceY = OPEN_Y + 8 * BS;
-    this.tweens.add({
-      targets: img, x: OPEN_X, y: OPEN_Y - 60, duration: 180, ease: 'Quad.easeOut',
-      onComplete: () => this.tweens.add({
-        targets: img, y: surfaceY - 10, scale: img.scale * 0.6, alpha: 0, duration: dur(260), ease: 'Quad.easeIn',
-        onComplete: () => {
-          img.destroy();
-          splash(this, OPEN_X, surfaceY - 10, 0xffe9ae);
-          this.raiseBatter('oeuf');
-          for (let k = 0; k < 5; k++) this.time.delayedCall(dur(k * 90), () => this.addEmpty('oeuf'));
-          if (first) this.firstPour();
-        },
-      }),
+      targets: hand, x: OPEN_X, y: OPEN_Y - 70, duration: 180, ease: 'Quad.easeOut',
+      onComplete: () => {
+        hand.destroy();
+        for (let i = 0; i < n; i++) {
+          if (i === 0) fall(0);
+          else this.time.delayedCall(dur(i * POUR_GAP), () => fall(i));
+        }
+      },
     });
   }
 
