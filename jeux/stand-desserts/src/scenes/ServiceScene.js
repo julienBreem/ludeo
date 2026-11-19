@@ -6,7 +6,9 @@
 // for the parent's level proposals. At Commande N2 / N3 a card at the bottom repeats the order's
 // words / sentence, with the words of the failed points marked. When the dough's quantities were
 // wrong, the recipe comes back at the top left: per kind what was needed (with the operation) and
-// what she poured.
+// what she poured. Moule N2: the mould she needed with the clue; N3: the mould's pieces put
+// together. Cuisson N2 / N3: beside the pale / burnt cake, the timer on the number or the clock with
+// the alarm on the hour she had to set.
 import { W, H, TOUCH, COLOR_HEX, OUTLINE, BATTER, TOP_SQUASH } from '../config.js';
 import { getRound, getState, updateState } from '../game-state.js';
 import { addIconButton } from '../ui/button.js';
@@ -24,6 +26,9 @@ import { dur } from '../ui/pace.js';
 import { orderSentenceParts, orderWordParts, failedElements } from '../logic/orderText.js';
 import { ensureWordTextures, flowParts } from '../ui/words.js';
 import { recordPhaseResult } from '../../../../shared/runtime.js';
+import { rightAlarm } from '../logic/bake.js';
+import { ensureTimerTextures, pivotOrigin } from '../ui/timerArt.js';
+import { clueRow, moldColors } from '../ui/moldArt.js';
 import { ID } from '../../collection.js';
 
 const CLIENT_X = 300;
@@ -64,6 +69,8 @@ const DOUGH_X = 20;
 const DOUGH_Y = 14;
 const DOUGH_MAX_W = W - 330 - DOUGH_X;
 const DOUGH_REASONS = ['intrus', 'manque', 'trop'];
+const DEG = Math.PI / 180;
+const DIAL_PX = 84; // Cuisson recap: the small timer / clock
 const GOOD = { fill: 0xc8f2c2, line: 0x2e7d32 };
 const BAD = { fill: 0xffcdd2, line: 0xc62828 };
 const TEXT_STYLE = { fontFamily: 'Arial Black, Arial, sans-serif', color: '#222222' };
@@ -483,15 +490,27 @@ export class ServiceScene extends Phaser.Scene {
         break;
       }
       case 'mauvaise-forme': {
+        const ex = this.round.moldEx;
+        if (ex?.level === 2 && ex.clue && ex.shape === o.shape) {
+          this.expectedMold(c, o.shape, ex.clue, x);
+          break;
+        }
         const shape = cake.shape ?? o.shape;
         c.add(this.fit(`shape-${shape}-fill`, 80, x).setTint(0xe6e6e6));
         c.add(this.fit(`shape-${shape}-line`, 80, x));
         break;
       }
-      case 'pale':
-      case 'brule':
-        c.add(this.miniCake({ ...base, bake: reason }, x));
+      case 'pieces':
+        this.assembledPieces(c, o.shape, x);
         break;
+      case 'pale':
+      case 'brule': {
+        const bt = this.round.bakeTarget;
+        const dial = bt?.kind === 'number' || bt?.kind === 'clock';
+        c.add(this.miniCake({ ...base, bake: reason }, dial ? x - 48 : x));
+        if (dial) this.expectedDial(c, bt, x + 82);
+        break;
+      }
       case 'mauvaise-couleur': {
         const zone = res.zone ?? 0;
         const want = o.glaze[zone];
@@ -537,6 +556,55 @@ export class ServiceScene extends Phaser.Scene {
         return null;
     }
     return c;
+  }
+
+  // Moule N2: the mould she needed (3/4) and, on a small card, the clue that told it.
+  expectedMold(c, shape, clue, x) {
+    const k = 96 / FRAME;
+    const mx = x - 52;
+    c.add(this.add.image(mx, 4, `mold-${shape}-back`).setScale(k));
+    c.add(this.add.image(mx, 4, `mold-${shape}-front`).setScale(k));
+    const { items, w } = clueRow(this, clue, 40);
+    const cw = w + 18;
+    const cx = x + 30 + cw / 2;
+    const bg = this.add.graphics();
+    bg.fillStyle(0xffffff, 1).fillRoundedRect(cx - cw / 2, -30, cw, 60, 14);
+    bg.lineStyle(4, 0x66bb6a, 1).strokeRoundedRect(cx - cw / 2, -30, cw, 60, 14);
+    c.add(bg);
+    for (const it of items) { it.x += cx; c.add(it); }
+  }
+
+  // Moule N3: the pieces put together in their places (the textures of this round's exercise),
+  // or the mould seen from above when they are gone.
+  assembledPieces(c, shape, x) {
+    const k = 88 / FRAME;
+    const ex = this.round.moldEx;
+    const pieces = ex?.shape === shape ? ex.pieces ?? [] : [];
+    if (pieces.length && pieces.every(p => this.textures.exists(p.key))) {
+      for (const p of pieces) c.add(this.add.image(x + (p.cx - FRAME / 2) * k, (p.cy - FRAME / 2) * k, p.key).setScale(k));
+      return;
+    }
+    c.add(this.fit(`shape-${shape}-fill`, 88, x).setTint(moldColors(shape).main));
+    c.add(this.fit(`shape-${shape}-line`, 88, x));
+  }
+
+  // Cuisson N2: the numbered timer with its hand on the number; N3: the clock with the alarm hand
+  // on the hour she had to set (the hour hand is left out: it would hide it).
+  expectedDial(c, bt, x) {
+    ensureTimerTextures(this);
+    const layer = (key, k) => this.add.image(0, 0, key).setOrigin(...pivotOrigin(key)).setScale(k);
+    const faceKey = bt.kind === 'number' ? 'timer-face-numbers' : 'clock-face';
+    const handKey = bt.kind === 'number' ? 'timer-hand' : 'clock-alarm-hand';
+    const face = layer(faceKey, 1);
+    const k = DIAL_PX / Math.max(face.width, face.height);
+    face.setScale(k);
+    const hand = layer(handKey, k);
+    hand.setRotation(bt.kind === 'number' ? bt.number * 60 * DEG : rightAlarm(bt) * 30 * DEG);
+    // the pivot sits below the frame's centre (the clock's bells): centre the frame on the row
+    const py = (pivotOrigin(faceKey)[1] - 0.5) * face.displayHeight + 4;
+    face.setPosition(x, py);
+    hand.setPosition(x, py);
+    c.add([face, hand]);
   }
 
   payout() {

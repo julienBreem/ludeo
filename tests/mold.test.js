@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { makeMoldExercise } from '../jeux/stand-desserts/src/logic/moldExercise.js';
 import { SHAPE_PROPS, clueHolds } from '../jeux/stand-desserts/src/logic/shapes.js';
-import { cutTangram } from '../jeux/stand-desserts/src/logic/tangram.js';
+import { cutTangram, cutSide, pieceFits, pieceMasks } from '../jeux/stand-desserts/src/logic/tangram.js';
 import { ITEMS, itemById, starterOwned, ownedKeys } from '../jeux/stand-desserts/src/logic/catalog.js';
 import { loadState, STORAGE_KEY } from '../jeux/stand-desserts/src/logic/save.js';
 import { makeRng } from '../jeux/stand-desserts/src/logic/rng.js';
@@ -41,10 +41,21 @@ function mask(fn) {
   for (let y = 0; y < SIZE; y++) for (let x = 0; x < SIZE; x++) if (fn(x + 0.5, y + 0.5)) m[y * SIZE + x] = 1;
   return m;
 }
-const triangleMask = mask((x, y) => y > 8 && y < 56 && Math.abs(x - 32) < (y - 8) * 0.6);
-const losangeMask = mask((x, y) => Math.abs(x - 32) / 26 + Math.abs(y - 32) / 20 <= 1);
-const rectMask = mask((x, y) => x > 6 && x < 58 && y > 16 && y < 48);
-const hexMask = mask((x, y) => Math.abs(y - 32) < 24 && Math.abs(x - 32) + Math.abs(y - 32) / 2 < 30);
+const triangleP = (x, y) => y > 8 && y < 56 && Math.abs(x - 32) < (y - 8) * 0.6;
+const losangeP = (x, y) => Math.abs(x - 32) / 26 + Math.abs(y - 32) / 20 <= 1;
+const rectP = (x, y) => x > 6 && x < 58 && y > 16 && y < 48;
+const hexP = (x, y) => Math.abs(y - 32) < 24 && Math.abs(x - 32) + Math.abs(y - 32) / 2 < 30;
+// a rectangle with rounded corners (radius 6 cells), like the art's
+const roundRectP = (x, y) => {
+  if (!rectP(x, y)) return false;
+  const cx = Math.min(Math.max(x, 12), 52), cy = Math.min(Math.max(y, 22), 42);
+  return Math.hypot(x - cx, y - cy) <= 6;
+};
+const triangleMask = mask(triangleP);
+const losangeMask = mask(losangeP);
+const rectMask = mask(rectP);
+const hexMask = mask(hexP);
+const roundRectMask = mask(roundRectP);
 
 for (const level of [1, 2, 3]) {
   test(`level ${level}: 500 exercises are well formed`, () => {
@@ -109,6 +120,85 @@ test('N3 exercise carries pieces when given a mask', () => {
   const ex = makeMoldExercise({ shape: 'rectangle' }, 3, Object.keys(SHAPE_PROPS), makeRng(1), { mask: rectMask, size: SIZE });
   assert.ok(ex.pieces.length >= 2);
   assert.equal(cutTangram(new Uint8Array(SIZE * SIZE), SIZE, 'carre'), null);
+});
+
+test('cutSide puts every cell centre in its own piece', () => {
+  const rng = makeRng(3);
+  for (const [m, shape] of [[triangleMask, 'triangle'], [losangeMask, 'losange'], [rectMask, 'rectangle'], [hexMask, 'hexagone']]) {
+    for (let i = 0; i < 40; i++) {
+      const pieces = cutTangram(m, SIZE, shape, rng);
+      const side = cutSide(pieces[0].cut);
+      pieces.forEach((p, k) => {
+        assert.equal(p.index, k);
+        for (const c of p.cells) assert.equal(side((c % SIZE) + 0.5, Math.floor(c / SIZE) + 0.5), k);
+      });
+    }
+  }
+});
+
+// A cut of a known kind: the first piece list cutTangram returns with that cut.
+function cutOf(m, shape, kind, parts = 2) {
+  const rng = makeRng(11);
+  for (let i = 0; i < 400; i++) {
+    const pieces = cutTangram(m, SIZE, shape, rng);
+    if (pieces[0].cut.kind === kind && pieces.length === parts) return pieces;
+  }
+  throw new Error(`no ${kind} cut`);
+}
+
+// The pieces as the scene sees them: the shape sampled 4 times finer than the cut grid, each point
+// given to its piece by cutSide (straight cut lines).
+function fineMasks(pred, pieces, k = 4) {
+  const n = SIZE * k;
+  const side = cutSide(pieces[0].cut);
+  const owner = new Int8Array(n * n).fill(-1);
+  for (let y = 0; y < n; y++) {
+    for (let x = 0; x < n; x++) {
+      const u = (x + 0.5) / k, v = (y + 0.5) / k;
+      const e = 0.25 / k; // a point right on a cut line belongs to neither piece (as in the scene)
+      const sides = [side(u - e, v - e), side(u + e, v + e), side(u + e, v - e), side(u - e, v + e)];
+      if (pred(u, v) && sides.every(q => q === sides[0])) owner[y * n + x] = sides[0];
+    }
+  }
+  return pieceMasks(owner, n, pieces.length);
+}
+const fitsOf = (pred, m, shape, kind, parts) => pieceFits(fineMasks(pred, cutOf(m, shape, kind, parts)));
+
+test('pieceFits: which turned piece fills which place', () => {
+  // halves of a sharp rectangle: each half fits both places upright or upside down, never on its side
+  const rect = fitsOf(rectP, rectMask, 'rectangle', 'v');
+  assert.deepEqual(rect[0][0].sort(), [0, 1]);
+  assert.deepEqual(rect[0][2].sort(), [0, 1]);
+  assert.deepEqual(rect[0][1], []);
+  assert.deepEqual(rect[1][3], []);
+  // rounded corners: a half turned upside down is the other half only
+  const round = fitsOf(roundRectP, roundRectMask, 'rectangle', 'h');
+  assert.deepEqual(round[0][0], [0]);
+  assert.deepEqual(round[0][2], [1]);
+  assert.deepEqual(round[1][2], [0]);
+  // rounded thirds: the middle one fits only its own place (upright or upside down), the outer
+  // ones each other's upside down
+  const thirds = fitsOf(roundRectP, roundRectMask, 'rectangle', 'v', 3);
+  assert.deepEqual(thirds[1][0], [1]);
+  assert.deepEqual(thirds[1][2], [1]);
+  assert.deepEqual(thirds[0][2], [2]);
+  // halves of a triangle (vertical cut) are mirror images: only their own place, upright
+  const tri = fitsOf(triangleP, triangleMask, 'triangle', 'v');
+  for (const i of [0, 1]) {
+    assert.deepEqual(tri[i][0], [i]);
+    for (const r of [1, 2, 3]) assert.deepEqual(tri[i][r], []);
+  }
+  // diagonal halves of a losange: the other place, upside down
+  const los = fitsOf(losangeP, losangeMask, 'losange', 'd1');
+  assert.deepEqual(los[0][2], [1]);
+  assert.deepEqual(los[1][2], [0]);
+  assert.deepEqual(los[0][1], []);
+  // every piece of every cut fits its own place upright
+  const rng = makeRng(8);
+  for (let i = 0; i < 30; i++) {
+    const p = cutTangram(hexMask, SIZE, 'hexagone', rng);
+    pieceFits(fineMasks(hexP, p)).forEach((f, k) => assert.ok(f[0].includes(k)));
+  }
 });
 
 test('zones and toppings work on triangle and losange masks', () => {

@@ -31,6 +31,8 @@ import { GREEN_MIN, GREEN_MAX, LEVEL_NUMBERS, rightAlarm } from '../../jeux/stan
 import { COLOR_HEX } from '../../jeux/stand-desserts/src/config.js';
 import { bitesFor } from '../../jeux/stand-desserts/src/logic/scoring.js';
 import { BRUSH_RADIUS } from '../../jeux/stand-desserts/src/logic/paint.js';
+import { clueHolds } from '../../jeux/stand-desserts/src/logic/shapes.js';
+import { NOUNS } from '../../jeux/stand-desserts/src/logic/orderText.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const outDir = process.argv[2] ?? fs.mkdtempSync(path.join(os.tmpdir(), 'stand-smoke-'));
@@ -325,7 +327,7 @@ const actions = {
     log('  ok: Shop -> Stand');
   },
 
-  // Buys the star mold (8 coins, first card of the shapes row), leaves within the 450 ms purchase
+  // Buys the star mold (8 coins, found by its picture in the shapes row), leaves within the 450 ms purchase
   // lock, comes back: the Shop must accept taps again (busy reset per visit) and no bob tween of
   // the destroyed cards may survive the re-render.
   async shopBuy({ shot: name } = {}) {
@@ -334,7 +336,13 @@ const actions = {
     await waitScene('Shop');
     const before = await sceneEval('Shop', 's => ({ coins: Number(s.coinText.text), tweens: s.tweens.getTweens().length })');
     check(before.coins >= 8, `${before.coins} coins before buying`);
-    await tap([548, 165]);
+    // the star mould's card (the shapes row also lists the licorne, losange and hexagone)
+    const star = await sceneEval('Shop', `s => {
+      const has = o => /^mold-etoile/.test(o.texture?.key ?? '') || (o.list ?? []).some(has);
+      const card = s.cards.list.find(has);
+      return card ? [card.x, card.y] : null; }`);
+    check(!!star, `the star mould is on sale (${star})`);
+    await tap(star);
     await sleep(80);
     const after = await sceneEval('Shop', 's => ({ coins: Number(s.coinText.text), busy: s.busy, tweens: s.tweens.getTweens().filter(t => t.isActive() || t.isPlaying()).length, bobs: s.tweens.getTweens().filter(t => t.repeat === -1).length, alive: s.tweens.getTweens().filter(t => t.repeat === -1).every(t => t.targets.every(o => o.active)) })');
     check(after.coins === before.coins - 8, `bought: ${before.coins} -> ${after.coins} coins`);
@@ -379,14 +387,73 @@ const actions = {
     await waitScene('Mold');
   },
 
-  async mold({ shot: name } = {}) {
+  // Mould at the round's Moule level (read from the scene; `level` checks it): N1 taps the ordered
+  // mould among 4; N2 checks the clue (true of the ordered shape only), lights a corner, then taps
+  // the ordered mould; N3 turns each piece (taps) and drags it into a place it fits. Every level
+  // must be judged right.
+  async mold({ level, shot: name } = {}) {
     await waitScene('Mold');
-    const x = await sceneEval('Mold', `s => s.cards[${JSON.stringify(order.shape)}].card.x`);
-    await tap([x, 540]);
-    await waitFor('pour done', () => sceneEval('Mold', 's => s.chosen && !s.pouring'));
-    if (name) await shot(name);
+    const n = await sceneEval('Mold', 's => s.level');
+    if (level !== undefined) check(n === level, `Moule plays level ${level} (${n})`);
+    if (n === 3) {
+      await actions.tangram({ shot: name });
+    } else {
+      const ex = await sceneEval('Mold', 's => s.ex');
+      check(ex.choices.length === 4 && ex.choices.includes(order.shape), `N${n}: 4 moulds with the ordered one (${ex.choices.join(', ')})`);
+      if (n === 2) {
+        check(ex.choices.every(k => clueHolds(ex.clue, k) === (k === order.shape)), `N2 clue ${JSON.stringify(ex.clue)} fits ${order.shape} only`);
+        const words = await sceneEval('Mold', 's => s.children.list.filter(o => o.depth === 400).flatMap(c => (c.list ?? [])).flatMap(o => (o.list ?? [o])).map(o => o.text).filter(Boolean).join(" ")');
+        check(words.includes('?') && !words.includes(NOUNS.shape[order.shape].word), `N2: the strip hides the shape (${words})`);
+        const corners = await sceneEval('Mold', `s => s.cornerScreen(${JSON.stringify(order.shape)})`);
+        if (corners.length) {
+          await tap(corners[0]);
+          await sleep(300);
+          check(await sceneEval('Mold', `s => s.cards[${JSON.stringify(order.shape)}].lit.size`) === 1, 'N2: a tapped corner glows');
+        }
+      }
+      const [x, y] = await sceneEval('Mold', `s => { const c = s.cards[${JSON.stringify(order.shape)}].card; return [c.x, c.y + 118]; }`);
+      await tap([x, y]);
+      await waitFor('pour done', () => sceneEval('Mold', 's => s.chosen && !s.pouring'));
+      if (name) await shot(name);
+    }
     await tap(OK_BTN);
     await waitScene('Bake');
+    const res = await sceneEval('Bake', 's => s.round.results.moule');
+    check(res?.ok === true, `Moule N${n} judged right (${JSON.stringify(res)})`);
+  },
+
+  // Moule N3: for each piece, the fewest taps to a turn that fits a free place, then a drag there
+  // (a little off: it must snap). A first drag to the screen's corner checks it stays on screen.
+  async tangram({ shot: name } = {}) {
+    const count = await sceneEval('Mold', 's => s.pieces.length');
+    check(count >= 2 && count <= 3, `N3: ${count} pieces`);
+    const p0 = await sceneEval('Mold', 's => [s.pieces[0].img.x, s.pieces[0].img.y]');
+    await drag([p0, [1279, 799]]);
+    const kept = await sceneEval('Mold', 's => [s.pieces[0].img.x, s.pieces[0].img.y]');
+    check(kept[0] < 1280 - 40 && kept[1] < 800 - 40, `N3: a piece dragged to the corner stays on screen (${kept})`);
+    for (let i = 0; i < count; i++) {
+      const info = await sceneEval('Mold', `s => { const p = s.pieces[${i}]; return { x: p.img.x, y: p.img.y, rot: p.rot,
+        fits: s.ex.pieces[${i}].fits, filled: [...s.filled.keys()], homes: s.ex.pieces.map((_, j) => s.home(j)) }; }`);
+      const free = r => info.fits[r].some(j => !info.filled.includes(j));
+      const turns = [0, 1, 2, 3].find(t => free((info.rot / 90 + t) % 4));
+      for (let t = 0; t < turns; t++) {
+        await tap([info.x, info.y]);
+        await sleep(500);
+      }
+      const r = (info.rot / 90 + turns) % 4;
+      const [hx, hy] = info.homes[info.fits[r].find(j => !info.filled.includes(j))];
+      if (i === 0) {
+        await drag([[info.x, info.y], [(info.x + hx) / 2, (info.y + hy) / 2]]);
+        if (name) await shot(`${name}-half`);
+        await drag([[(info.x + hx) / 2, (info.y + hy) / 2], [hx + 12, hy - 8]]);
+      } else {
+        await drag([[info.x, info.y], [hx + 12, hy - 8]]);
+      }
+      await waitFor(`piece ${i} snapped`, () => sceneEval('Mold', `s => s.pieces[${i}].place !== null`), 3000);
+    }
+    await sleep(400);
+    check(await sceneEval('Mold', 's => s.bar.validateButton.input.enabled'), 'N3: ✓ once every piece is in place');
+    if (name) await shot(name);
   },
 
   // Bake at the round's Cuisson level (read from the scene): the heat of the dessert, then

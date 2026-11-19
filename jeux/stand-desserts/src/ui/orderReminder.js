@@ -7,6 +7,8 @@
 // gentle bounce of the cake. Light is never added over the top face or the toppings, whose
 // colours are the order: only the side band (dough, bake) and the outline (mould) get a pulsing
 // additive fill.
+// Moule N2-N3 (hideShape): the strip must not tell the shape. The words / sentence show « ? » in
+// place of the shape's word; the picture (Commande N1) is replaced by the shape pictogram and « ? ».
 import { TOP_SQUASH, BACKDROP } from '../config.js';
 import { FRAME, TOPPING_SIZE } from './cakeView.js';
 import { idealCake, orderCakeKey, orderSig, ORDER_PX } from './orderCake.js';
@@ -98,10 +100,11 @@ const WORDS_MAX_H = 168;
 
 // Commande N2 / N3: the card shows the words (N2, by category with pictograms) or the sentence
 // (N3) instead of the picture; the step's words get a pulsing marker.
-function addWordReminder(scene, order, step, level) {
+function addWordReminder(scene, order, step, level, hideShape) {
   ensureWordTextures(scene);
   const kind = STEP_KIND[step];
-  const parts = level >= 3 ? orderSentenceParts(order) : orderWordParts(order);
+  let parts = level >= 3 ? orderSentenceParts(order) : orderWordParts(order);
+  if (hideShape) parts = parts.map(p => (p.kind === 'forme' ? { ...p, text: '?' } : p));
   const mark = p => !!kind && p.kind === kind;
   let text = null;
   for (const [i, fit] of WORDS_FITS.entries()) {
@@ -126,14 +129,32 @@ function addWordReminder(scene, order, step, level) {
   return c;
 }
 
+// The picture card without the cake: the shape pictogram and a pulsing « ? ».
+function addHiddenShapeCard(scene) {
+  ensureWordTextures(scene);
+  const c = scene.add.container(X, Y).setDepth(400);
+  const bg = scene.add.graphics();
+  bg.fillStyle(0x000000, 0.15).fillRoundedRect(3, 5, CARD_W, CARD_H, 22);
+  bg.fillStyle(BACKDROP, 1).fillRoundedRect(0, 0, CARD_W, CARD_H, 22);
+  const pict = scene.add.image(CARD_W * 0.3, CARD_H / 2, 'pict-forme').setDisplaySize(84, 84);
+  const q = scene.add.text(CARD_W * 0.68, CARD_H / 2, '?', {
+    fontFamily: 'Arial Black, Arial, sans-serif', fontSize: '96px', color: '#1f2a44',
+  }).setOrigin(0.5);
+  c.add([bg, pict, q]);
+  c.glow = scene.tweens.add({ targets: q, alpha: { from: 0.45, to: 1 }, duration: 650, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+  return c;
+}
+
 /**
- * addOrderReminder(scene, order, step: 'pate'|'moule'|'cuisson'|'couleur'|'toppings', level = 1)
- *   -> Container
+ * addOrderReminder(scene, order, step: 'pate'|'moule'|'cuisson'|'couleur'|'toppings', level = 1,
+ *   {hideShape = false}) -> Container
  * The card sits at the top-left, depth 400. Its pulse is a tween owned by the scene. `level` is
- * the round's Commande level: 1 shows the cake, 2 the words, 3 the sentence.
+ * the round's Commande level: 1 shows the cake, 2 the words, 3 the sentence. hideShape (Moule
+ * N2-N3): the shape is not shown (« ? »).
  */
-export function addOrderReminder(scene, order, step, level = 1) {
-  if (level >= 2) return addWordReminder(scene, order, step, level);
+export function addOrderReminder(scene, order, step, level = 1, { hideShape = false } = {}) {
+  if (level >= 2) return addWordReminder(scene, order, step, level, hideShape);
+  if (hideShape) return addHiddenShapeCard(scene);
   const c = scene.add.container(X, Y).setDepth(400);
   const bg = scene.add.graphics();
   bg.fillStyle(0x000000, 0.15).fillRoundedRect(3, 5, CARD_W, CARD_H, 22);

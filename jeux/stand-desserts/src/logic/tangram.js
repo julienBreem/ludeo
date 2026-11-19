@@ -69,7 +69,17 @@ function cutFns(kind, bb, parts) {
 }
 
 /**
- * cutTangram(mask, size, shape, rng) -> Array<{cells: number[], polygon: [u,v][], rotation}> | null
+ * cutSide(cut) -> (u, v) -> piece index
+ * The piece a point of the mask grid (continuous cell units, u right, v down) falls in, for the
+ * `cut` a piece carries: the scene draws the pieces from the real shape texture with it, so the
+ * cut edges are straight lines and not the cells' staircase.
+ */
+export function cutSide({ kind, parts, bb }) {
+  return cutFns(kind, bb, parts);
+}
+
+/**
+ * cutTangram(mask, size, shape, rng) -> Array<{cells: number[], polygon: [u,v][], rotation, cut, index}> | null
  * 2 pieces (vertical/horizontal cut through the centre; diagonal too for carre/losange); 3 pieces
  * (two parallel cuts) only for hexagone and rectangle, half of the time.
  */
@@ -85,11 +95,96 @@ export function cutTangram(mask, size, shape, rng = Math.random) {
     const groups = Array.from({ length: parts }, () => []);
     for (let i = 0; i < mask.length; i++) if (mask[i]) groups[fn((i % size) + 0.5, Math.floor(i / size) + 0.5)].push(i);
     if (groups.some(g => !g.length)) continue;
-    return groups.map(cells => ({
+    const cut = { kind: kinds[(start + a) % kinds.length], parts, bb };
+    return groups.map((cells, index) => ({
       cells,
       polygon: outline(cells, size),
       rotation: rng() < 0.4 ? 0 : ROTATIONS[1 + Math.floor(rng() * 3)],
+      cut,
+      index,
     }));
   }
   return null;
+}
+
+// A piece as a binary picture cropped to its bounding box: {w, h, set} (set = y * w + x of the
+// points inside).
+function crop(points) {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const [x, y] of points) {
+    if (x < x0) x0 = x; if (x > x1) x1 = x;
+    if (y < y0) y0 = y; if (y > y1) y1 = y;
+  }
+  const w = x1 - x0 + 1, h = y1 - y0 + 1;
+  const set = new Set();
+  for (const [x, y] of points) set.add((y - y0) * w + (x - x0));
+  return { w, h, set };
+}
+
+/**
+ * pieceMasks(owner, n, count) -> Array<{w, h, set}>
+ * owner: an n x n map (Int8Array or array) giving for each point the piece it belongs to (-1:
+ * outside the shape, or right on a cut line), sampled finer than the cut grid so that the cut
+ * lines are straight (the scene samples the real texture: rounded corners count). One cropped picture per piece 0..count-1.
+ */
+export function pieceMasks(owner, n, count) {
+  const pts = Array.from({ length: count }, () => []);
+  for (let i = 0; i < owner.length; i++) {
+    const k = owner[i];
+    if (k >= 0 && k < count) pts[k].push([i % n, Math.floor(i / n)]);
+  }
+  return pts.map(crop);
+}
+
+// The picture turned `turns` quarter turns clockwise (screen axes: x right, y down).
+function turn(p, turns) {
+  let { w, h, set } = p;
+  for (let t = 0; t < turns; t++) {
+    const next = new Set();
+    for (const k of set) {
+      const x = k % w, y = Math.floor(k / w);
+      next.add(x * h + (h - 1 - y)); // (x, y) -> (h - 1 - y, x) in an h x w picture
+    }
+    [w, h, set] = [h, w, next];
+  }
+  return { w, h, set };
+}
+
+const SHIFT = 2; // points: pictures are compared at the best of these small offsets (rasterising)
+
+// Share of points that differ between two pictures laid centred on each other, at the best small
+// offset (a shape drawn half a pixel off, or a bounding box one point larger, is no difference).
+function mismatch(a, b) {
+  if (Math.abs(a.w - b.w) > 2 * SHIFT || Math.abs(a.h - b.h) > 2 * SHIFT) return 1;
+  const ox = Math.floor((b.w - a.w) / 2), oy = Math.floor((b.h - a.h) / 2);
+  let best = Infinity;
+  for (let dy = -SHIFT; dy <= SHIFT; dy++) {
+    for (let dx = -SHIFT; dx <= SHIFT; dx++) {
+      let common = 0;
+      for (const k of a.set) {
+        const x = (k % a.w) + ox + dx, y = Math.floor(k / a.w) + oy + dy;
+        if (x >= 0 && y >= 0 && x < b.w && y < b.h && b.set.has(y * b.w + x)) common++;
+      }
+      best = Math.min(best, a.set.size + b.set.size - 2 * common);
+    }
+  }
+  return best / Math.max(a.set.size, b.set.size);
+}
+
+// Share of differing points still taken as "the same piece" (sampling at the edges). The art's
+// rectangle turned upside down differs by its rounded corners (a half: about 4 %; a middle third
+// against an outer one: about 3 %): it does not fit the other way round.
+export const FIT_TOLERANCE = 0.02;
+
+/**
+ * pieceFits(masks, tolerance) -> fits[i][r] = indices j (r = 0..3 quarter turns clockwise)
+ * masks: pieceMasks(). Piece i turned r quarter turns looks like piece j, so it may fill j's
+ * place: a half of a square turned upside down is the other half. Every i fits its own place at
+ * r = 0.
+ */
+export function pieceFits(masks, tolerance = FIT_TOLERANCE) {
+  return masks.map((m, i) => [0, 1, 2, 3].map((r) => {
+    const turned = turn(m, r);
+    return masks.map((_, j) => j).filter(j => (r === 0 && j === i) || mismatch(turned, masks[j]) <= tolerance);
+  }));
 }

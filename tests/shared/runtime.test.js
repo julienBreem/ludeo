@@ -104,10 +104,10 @@ const ALL_ONE = { commande: 1, pate: 1, moule: 1, cuisson: 1, couleur: 1, toppin
 test('phaseLevels: theme level, then the phase override; phases without levels stay at 1', () => {
   withStorage(memoryStorage(), () => {
     assert.deepEqual(phaseLevels('stand-desserts'), ALL_ONE);
-    updateCollection(c => ({ ...c, levels: { nombres: 2, lecture: 3, geometrie: 3 } }));
-    assert.deepEqual(phaseLevels('stand-desserts'), { ...ALL_ONE, commande: 3, pate: 2 });
-    updateCollection(c => ({ ...c, overrides: { 'stand-desserts/pate': 3, 'stand-desserts/moule': 2 } }));
-    assert.deepEqual(phaseLevels('stand-desserts'), { ...ALL_ONE, commande: 3, pate: 3 });
+    updateCollection(c => ({ ...c, levels: { nombres: 2, lecture: 3, geometrie: 3, 'couleurs-fractions': 3 } }));
+    assert.deepEqual(phaseLevels('stand-desserts'), { ...ALL_ONE, commande: 3, pate: 2, moule: 3 });
+    updateCollection(c => ({ ...c, overrides: { 'stand-desserts/pate': 3, 'stand-desserts/moule': 2, 'stand-desserts/couleur': 2 } }));
+    assert.deepEqual(phaseLevels('stand-desserts'), { ...ALL_ONE, commande: 3, pate: 3, moule: 2 });
     assert.deepEqual(phaseLevels('inconnu'), {});
   });
 });
@@ -127,7 +127,7 @@ test('recordPhaseResult saves results only for scored phases that have levels', 
     recordPhaseResult('stand-desserts', 'pate', false, 1);
     recordPhaseResult('stand-desserts', 'pate', true, 1);
     recordPhaseResult('stand-desserts', 'commande', false, 1); // no point of its own
-    recordPhaseResult('stand-desserts', 'moule', false, 1); // not educational yet
+    recordPhaseResult('stand-desserts', 'couleur', false, 1); // not educational yet
     recordPhaseResult('stand-desserts', 'nope', false, 1);
     recordPhaseResult('inconnu', 'pate', false, 1);
     assert.deepEqual(getCollection().history, { 'stand-desserts/pate': [false, true] });

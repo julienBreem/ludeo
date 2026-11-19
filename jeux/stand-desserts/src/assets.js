@@ -197,6 +197,7 @@ export const PRECACHE = [
   'src/ui/client.js',
   'src/ui/flow.js',
   'src/ui/fx.js',
+  'src/ui/moldArt.js',
   'src/ui/orderCake.js',
   'src/ui/orderReminder.js',
   'src/ui/pace.js',
