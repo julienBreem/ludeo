@@ -79,7 +79,7 @@ test('default greenFactor is 1 and leaves the timer unchanged', () => {
 // ---- levels (theme temps) ----------------------------------------------------------------------
 import {
   bakeTarget, bakeWindow, judgeAmount, amountGauge, createTimeTimer, heatFactor, bakeState,
-  LEVEL_NUMBERS, NUMBER_TOL, NUMBER_UNIT_MS, NUMBER_MAX, CLOCK_TOL, HOUR_MS, CLOCK_EXTRA,
+  LEVEL_NUMBERS, NUMBER_EARLY, NUMBER_LATE, NUMBER_UNIT_MS, timedGauge, judgeTimed, NUMBER_MAX, CLOCK_TOL, HOUR_MS, CLOCK_EXTRA,
   angleToAlarm, alarmDelay, rightAlarm, clockHours, HALF_HOURS,
 } from '../jeux/stand-desserts/src/logic/bake.js';
 import { DESSERTS } from '../jeux/stand-desserts/src/logic/catalog.js';
@@ -115,13 +115,14 @@ test('N3: start on a whole hour 1..10, 1 h; ½ h only with halfHours', () => {
   assert.deepEqual([...durs].sort(), [0.5, 1]);
 });
 
-test('N2 / N3 windows are symmetric around the target and scale with greenWindow', () => {
+test('N2 window leans late, N3 is symmetric; both scale with greenWindow', () => {
   for (const gw of PACES) {
     for (const d of Object.keys(DESSERTS)) {
       const w = bakeWindow(bakeTarget(d, 2), { greenWindow: gw });
       near(w.center, LEVEL_NUMBERS[d]);
-      near(w.center - w.lo, NUMBER_TOL * gw);
-      near(w.hi - w.center, NUMBER_TOL * gw);
+      near(w.center - w.lo, NUMBER_EARLY * gw);
+      near(w.hi - w.center, NUMBER_LATE * gw);
+      assert.ok(w.hi - w.center > w.center - w.lo, 'more time after the number than before');
     }
     for (const duration of [1, 0.5]) {
       const w = bakeWindow({ kind: 'clock', heat: 2, start: 3, duration }, { greenWindow: gw });
@@ -133,7 +134,23 @@ test('N2 / N3 windows are symmetric around the target and scale with greenWindow
   }
   // a pace below 1 never narrows the window
   const w = bakeWindow(bakeTarget('gateau', 2), { greenWindow: 0.5 });
-  near(w.tol, NUMBER_TOL);
+  near(w.hi - w.center, NUMBER_LATE);
+});
+
+test('N2: after the hand reaches the number she has about 1.5 s (2.25 x that at calme)', () => {
+  for (const [anim, gw, least] of [[1, 1, 1450], [1.5, 1.5, 3300]]) {
+    for (const n of Object.values(LEVEL_NUMBERS)) {
+      const target = { kind: 'number', heat: 2, number: n };
+      const w = bakeWindow(target, { greenWindow: gw });
+      const t = createTimeTimer(target, 2, { anim });
+      let ms = 0;
+      while (t.elapsed() < n) { t.tick(16); ms += 16; }
+      let after = 0;
+      while (judgeTimed(t.amount(), w, 2, 2) === 'dore') { t.tick(16); after += 16; }
+      assert.ok(after >= least, `n ${n} anim ${anim}: ${after} ms after the hand reached it`);
+      assert.ok(ms >= n * NUMBER_UNIT_MS * anim - 32, 'the hand is slower at calme');
+    }
+  }
 });
 
 test('N2 tolerance: a neighbour number is always wrong, the target always right', () => {
@@ -202,6 +219,47 @@ test('N2: one number per 3 s at any heat, the cake cooks by heat; the hand stops
   near(right.elapsed() - before, 100 / NUMBER_UNIT_MS, 1e-9); // clamped frame
   for (let i = 0; i < 10000; i++) right.tick(100);
   assert.equal(right.elapsed(), NUMBER_MAX);
+});
+
+test('I3: wrong flames are never golden, whatever the time (N2 and N3, every pace)', () => {
+  for (const gw of PACES) {
+    for (const d of Object.keys(DESSERTS)) {
+      const want = DESSERTS[d].heat;
+      for (const target of [bakeTarget(d, 2), { ...bakeTarget(d, 3, { rng: () => 0.3 }) }]) {
+        const w = bakeWindow(target, { greenWindow: gw });
+        for (const heat of [1, 2, 3]) {
+          for (let a = 0; a <= 15; a += 0.01) {
+            const st = judgeTimed(a, w, heat, want);
+            assert.equal(st, bakeState(timedGauge(a, w, heat, want)), 'the look is the judgement');
+            if (heat === want) assert.equal(st, judgeAmount(a, w));
+            else assert.notEqual(st, 'dore', `${d} ${target.kind} heat ${heat} amount ${a.toFixed(2)}`);
+          }
+        }
+      }
+    }
+  }
+  // the review's cases: a wrong alarm masked by too few flames
+  const t3 = { kind: 'clock', heat: 2, start: 4, duration: 1 };
+  const timer = createTimeTimer(t3, 1, { stopAt: alarmDelay(4, 6) }); // 1 flame (x0.5), alarm +1 h too late (2 h)
+  while (!timer.done()) timer.tick(16);
+  assert.equal(judgeTimed(timer.amount(), bakeWindow(t3), 1, 2), 'pale');
+  const tarte = { kind: 'clock', heat: 3, start: 2, duration: 1 };
+  const t2 = createTimeTimer(tarte, 1, { stopAt: alarmDelay(2, 6) }); // 1 flame (x0.25), alarm +4 h: stops at 3 h
+  while (!t2.done()) t2.tick(16);
+  assert.equal(judgeTimed(t2.amount(), bakeWindow(tarte), 1, 3), 'pale');
+  // N2 at calme, 1 flame, never taken out
+  const g2 = bakeTarget('gateau', 2);
+  const t4 = createTimeTimer(g2, 1, { anim: 1.5 });
+  while (!t4.done()) t4.tick(16);
+  assert.notEqual(judgeTimed(t4.amount(), bakeWindow(g2, { greenWindow: 1.5 }), 1, 2), 'dore');
+});
+
+test('N3: the oven stopped by the cap is not the alarm ringing', () => {
+  const target = { kind: 'clock', heat: 2, start: 2, duration: 1 };
+  assert.equal(createTimeTimer(target, 2, { stopAt: 1 }).alarmReached, true);
+  assert.equal(createTimeTimer(target, 2, { stopAt: 1 + CLOCK_EXTRA }).alarmReached, true);
+  assert.equal(createTimeTimer(target, 2, { stopAt: 5 }).alarmReached, false);
+  assert.equal(createTimeTimer(target, 2).alarmReached, false);
 });
 
 test('amountGauge: the cake looks as judged (window -> green band), monotonic, 0..1', () => {

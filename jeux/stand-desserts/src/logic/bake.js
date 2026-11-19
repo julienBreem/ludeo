@@ -47,9 +47,15 @@ export function createBakeTimer(heat, target, { greenFactor = 1 } = {}) {
 // ---- Levels (theme `temps`) -------------------------------------------------------------------
 // N1: the gauge above, on a round timer with a green sector. N2: a timer numbered 1..5, bake until
 // the dessert's number. N3: a clock; she sets the alarm to the start time + the duration.
-// N2 and N3 measure TIME (the hand shows the time gone by), the cake cooks by time x heat factor
-// (the wrong heat makes it pale or burnt at the right time, as at N1). The judgement window is
-// symmetric around the target: target ± tol x greenWindow (pace calme widens it).
+// N2 and N3 measure TIME (the hand shows the time gone by), the cake cooks by time x heat factor.
+// The rule for her (heat and time judged apart, so two mistakes never cancel out): the cake is
+// golden only with the right flames AND the right time. Wrong flames are never golden: too few
+// leave it pale, too many burn it, whatever the time, unless the time alone already gives the
+// other look (out far too early: pale; far too late: burnt). With the right flames the time
+// decides: too early pale, too late burnt. (timedGauge / judgeTimed)
+// Windows: N2 leans late (a child waits to SEE the hand on the number): [n - 0.2, n + 0.5] x
+// greenWindow; N3 is symmetric, start + duration ± CLOCK_TOL x greenWindow. Pace calme also slows
+// the hand (one number = NUMBER_UNIT_MS x anim, one hour = HOUR_MS x anim).
 
 export function heatFactor(heat, target) {
   return HEAT_FACTOR[heat - target] ?? 1;
@@ -57,8 +63,11 @@ export function heatFactor(heat, target) {
 
 // N2: the number to bake until, per dessert.
 export const LEVEL_NUMBERS = { cupcake: 2, gateau: 3, tarte: 4 };
-export const NUMBER_TOL = 0.35; // of a number (invisible tolerance)
-export const NUMBER_UNIT_MS = 3000; // one number on the dial, at any heat
+// Invisible tolerance, of a number: before / after it. NUMBER_LATE x the largest greenWindow (1.5)
+// stays under 1, so the next number is always wrong.
+export const NUMBER_EARLY = 0.2;
+export const NUMBER_LATE = 0.5;
+export const NUMBER_UNIT_MS = 3000; // one number on the dial, at any heat, x the pace anim factor
 export const NUMBER_MAX = 5; // the hand stops on the 5 (the timer art runs 300°: 0..5)
 // N3: hours. CLOCK_TOL x the largest greenWindow stays under ½ h, so an alarm set ½ h off is
 // always wrong.
@@ -89,8 +98,14 @@ export function bakeWindow(target, { greenWindow = 1 } = {}) {
     return { lo: GREEN_MIN, hi: GREEN_MAX, center: (GREEN_MIN + GREEN_MAX) / 2, tol: (GREEN_MAX - GREEN_MIN) / 2 };
   }
   const gw = greenWindow > 1 ? greenWindow : 1;
-  const center = target.kind === 'number' ? target.number : target.duration;
-  const tol = (target.kind === 'number' ? NUMBER_TOL : CLOCK_TOL) * gw;
+  if (target.kind === 'number') {
+    const center = target.number;
+    const lo = center - NUMBER_EARLY * gw;
+    const hi = center + NUMBER_LATE * gw;
+    return { lo, hi, center, tol: (hi - lo) / 2 };
+  }
+  const center = target.duration;
+  const tol = CLOCK_TOL * gw;
   return { lo: center - tol, hi: center + tol, center, tol };
 }
 
@@ -111,13 +126,30 @@ export function amountGauge(amount, win) {
   return Math.min(1, Math.max(0, g));
 }
 
+// The cake's look at N2 / N3 for an amount baked (time x heat factor) with flames `heat` for a
+// target asking `target.heat`: as amountGauge, but wrong flames never look golden (a gauge that
+// would be in the green band goes just under it with too few flames, just over it with too many).
+export function timedGauge(amount, win, heat, targetHeat) {
+  const g = amountGauge(amount, win);
+  if (heat === targetHeat || g < GREEN_MIN || g > GREEN_MAX) return g;
+  return heat < targetHeat ? GREEN_MIN - 0.03 : GREEN_MAX + 0.03;
+}
+
+// N2 / N3 judgement (the rule above): 'pale' | 'dore' | 'brule', always the look of timedGauge.
+export function judgeTimed(amount, win, heat, targetHeat) {
+  return bakeState(timedGauge(amount, win, heat, targetHeat));
+}
+
 // N2 / N3 timer: elapsed() = the time on the dial (numbers / hours), amount() = elapsed x heat
-// factor (what the cake got). Stops at `max` (or earlier with stopAt, the N3 alarm). Frames are
-// clamped like createBakeTimer (a sleeping tablet never burns the cake).
+// factor (what the cake got). Stops at `max` (or earlier with stopAt, the N3 alarm: alarmReached
+// tells whether it stops there, or at the cap first). Both units x the pace anim factor. Frames
+// are clamped like createBakeTimer (a sleeping tablet never burns the cake).
 export function createTimeTimer(target, heat, { anim = 1, stopAt = null } = {}) {
-  const unit = target.kind === 'number' ? NUMBER_UNIT_MS : HOUR_MS * (anim > 0 ? anim : 1);
+  const k = anim > 0 ? anim : 1;
+  const unit = (target.kind === 'number' ? NUMBER_UNIT_MS : HOUR_MS) * k;
   const max = target.kind === 'number' ? NUMBER_MAX : target.duration + CLOCK_EXTRA;
-  const end = stopAt !== null && stopAt > 0 ? Math.min(stopAt, max) : max;
+  const alarmReached = stopAt !== null && stopAt > 0 && stopAt <= max;
+  const end = alarmReached ? stopAt : max;
   const factor = heatFactor(heat, target.heat);
   let t = 0;
   return {
@@ -129,6 +161,7 @@ export function createTimeTimer(target, heat, { anim = 1, stopAt = null } = {}) 
     amount() { return t * factor; },
     done() { return t >= end; },
     end,
+    alarmReached,
   };
 }
 

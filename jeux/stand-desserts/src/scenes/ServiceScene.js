@@ -19,7 +19,7 @@ import { goNext } from '../ui/flow.js';
 import { STEPS, scoreRound, bitesFor } from '../logic/scoring.js';
 import { GRID } from '../logic/paint.js';
 import { zoneEdges } from '../logic/zones.js';
-import { INGREDIENTS } from '../logic/catalog.js';
+import { INGREDIENTS, DESSERTS } from '../logic/catalog.js';
 import { fixedRecipe, toPour } from '../logic/recipe.js';
 import { addCoins } from '../logic/economy.js';
 import { dur } from '../ui/pace.js';
@@ -70,7 +70,7 @@ const DOUGH_Y = 14;
 const DOUGH_MAX_W = W - 330 - DOUGH_X;
 const DOUGH_REASONS = ['intrus', 'manque', 'trop'];
 const DEG = Math.PI / 180;
-const DIAL_PX = 84; // Cuisson recap: the small timer / clock
+const DIAL_PX = 124; // Cuisson recap: the small timer / clock (its numbers must read)
 const GOOD = { fill: 0xc8f2c2, line: 0x2e7d32 };
 const BAD = { fill: 0xffcdd2, line: 0xc62828 };
 const TEXT_STYLE = { fontFamily: 'Arial Black, Arial, sans-serif', color: '#222222' };
@@ -505,10 +505,16 @@ export class ServiceScene extends Phaser.Scene {
         break;
       case 'pale':
       case 'brule': {
+        // the wrong flames: the flames she needed; else (N2 / N3) the time she needed
         const bt = this.round.bakeTarget;
+        if (res.wrongHeat) {
+          c.add(this.miniCake({ ...base, bake: reason }, x - 48));
+          this.expectedFlames(c, DESSERTS[o.dessert].heat, x + 82);
+          break;
+        }
         const dial = bt?.kind === 'number' || bt?.kind === 'clock';
-        c.add(this.miniCake({ ...base, bake: reason }, dial ? x - 48 : x));
-        if (dial) this.expectedDial(c, bt, x + 82);
+        c.add(this.miniCake({ ...base, bake: reason }, dial ? x - 56 : x));
+        if (dial) this.expectedDial(c, bt, x + 92);
         break;
       }
       case 'mauvaise-couleur': {
@@ -586,6 +592,20 @@ export class ServiceScene extends Phaser.Scene {
     }
     c.add(this.fit(`shape-${shape}-fill`, 88, x).setTint(moldColors(shape).main));
     c.add(this.fit(`shape-${shape}-line`, 88, x));
+  }
+
+  // Cuisson, wrong heat: the flames she needed, on a small white card (as the Bake scene's card).
+  expectedFlames(c, n, x) {
+    const w = 26 + n * 30;
+    const bg = this.add.graphics();
+    bg.fillStyle(0xffffff, 1).fillRoundedRect(x - w / 2, -32, w, 64, 14);
+    bg.lineStyle(4, 0x66bb6a, 1).strokeRoundedRect(x - w / 2, -32, w, 64, 14);
+    c.add(bg);
+    for (let i = 0; i < n; i++) {
+      const f = this.add.image(x + (i - (n - 1) / 2) * 30, 0, 'flame');
+      f.setScale(46 / f.height);
+      c.add(f);
+    }
   }
 
   // Cuisson N2: the numbered timer with its hand on the number; N3: the clock with the alarm hand

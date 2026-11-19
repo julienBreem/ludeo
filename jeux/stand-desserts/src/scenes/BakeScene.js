@@ -3,15 +3,18 @@
 // N1: a round timer with a green sector (the gauge: take out in the green).
 // N2: a timer numbered 1..5; the card says « 3 » (digit + dice): take out when the hand is on 3.
 // N3: a clock; the card shows the start time on a small clock and « + 1 h »: she drags the red alarm
-//     hand to the end time, starts, the hour hand runs (1 h ≈ 6 s x pace), the alarm rings and the
-//     oven stops; she takes the cake out. A wrong alarm bakes it too little / too long.
-// The heat (flames) is chosen at every level.
+//     hand to the end time (the bell and the alarm hand pulse until she does), starts, the hour
+//     hand runs (1 h ≈ 6 s x pace), the alarm rings and the oven stops; she takes the cake out. A
+//     wrong alarm bakes it too little / too long; one never reached (3 h or more away) stops the
+//     oven after duration + CLOCK_EXTRA without ringing.
+// The heat (flames) is chosen at every level. N2/N3: golden only with the right flames AND the
+// right time (logic/bake.js judgeTimed: wrong flames are never golden).
 import { OUTLINE } from '../config.js';
 import { getRound } from '../game-state.js';
 import { DESSERTS } from '../logic/catalog.js';
 import {
-  createBakeTimer, bakeState, GREEN_MIN, GREEN_MAX, HALF_HOURS, bakeTarget, bakeWindow, judgeAmount,
-  amountGauge, createTimeTimer, angleToAlarm, alarmDelay, clockHours,
+  createBakeTimer, bakeState, GREEN_MIN, GREEN_MAX, HALF_HOURS, bakeTarget, bakeWindow, judgeTimed,
+  timedGauge, createTimeTimer, angleToAlarm, alarmDelay, clockHours,
 } from '../logic/bake.js';
 import { ensureTimerTextures, pivotOrigin, TIMER_RUN, CLOCK_MIN_SCALE } from '../ui/timerArt.js';
 import { debugFlag } from '../debug.js';
@@ -91,6 +94,15 @@ export class BakeScene extends Phaser.Scene {
     this.alarm = this.bt.kind === 'clock' ? this.bt.start : null; // N3: on the start time until she sets it
     this.rang = false;
     this.dragging = false;
+    // per-run objects (Phaser reuses the scene): never the last run's
+    this.ringTween = null;
+    this.alarmPulse = null;
+    this.alarmHandPulse = null;
+    this.alarmZone = null;
+    this.alarmHand = null;
+    this.alarmIcon = null;
+    this.sector = null;
+    this.timeCard = null;
 
     this.cameras.main.setBackgroundColor(0xffebee);
     ensureTimerTextures(this);
@@ -278,9 +290,32 @@ export class BakeScene extends Phaser.Scene {
     this.updateGo();
   }
 
-  // ▶ once the heat is chosen (and at N3 the alarm set).
+  // ▶ once the heat is chosen (and at N3 the alarm set). N3: while the heat is chosen but the
+  // alarm is not set, the bell and the alarm hand pulse (that is what ▶ waits for).
   updateGo() {
     if (this.phase === 'ready') this.setGoEnabled(this.alarmSet());
+    this.pulseAlarm(this.phase === 'ready' && !this.alarmSet());
+  }
+
+  pulseAlarm(on) {
+    if (!this.alarmIcon) return;
+    if (on && !this.alarmPulse) {
+      const k = this.alarmIcon.scaleX;
+      this.alarmPulse = this.tweens.add({
+        targets: this.alarmIcon, scale: { from: k, to: k * 1.2 }, duration: dur(450), yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+      });
+      this.alarmPulse.baseScale = k;
+      this.alarmHandPulse = this.tweens.add({
+        targets: this.alarmHand, alpha: { from: 1, to: 0.45 }, duration: dur(450), yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+      });
+    } else if (!on && this.alarmPulse) {
+      this.alarmPulse.stop();
+      this.alarmIcon.setScale(this.alarmPulse.baseScale);
+      this.alarmPulse = null;
+      this.alarmHandPulse?.stop();
+      this.alarmHandPulse = null;
+      this.alarmHand.setAlpha(1);
+    }
   }
 
   setGoEnabled(on) {
@@ -303,6 +338,7 @@ export class BakeScene extends Phaser.Scene {
       this.timer = createTimeTimer(this.bt, this.heat, { anim: factors().anim, stopAt });
     }
     this.alarmZone?.disableInteractive();
+    this.pulseAlarm(false);
     this.dragging = false;
     this.heatBtns.forEach((b) => { b.zone.disableInteractive(); });
     this.heatBtns.forEach((b, i) => { if (i + 1 !== this.heat) b.box.setAlpha(0.45); });
@@ -313,7 +349,7 @@ export class BakeScene extends Phaser.Scene {
 
   // The cake's gauge now (N1: the timer's; N2/N3: what the time x heat gave, on the same scale).
   gauge() {
-    return this.bt.kind === 'sector' ? this.timer.gauge() : amountGauge(this.timer.amount(), this.win);
+    return this.bt.kind === 'sector' ? this.timer.gauge() : timedGauge(this.timer.amount(), this.win, this.heat, this.target);
   }
 
   update(time, delta) {
@@ -326,31 +362,40 @@ export class BakeScene extends Phaser.Scene {
     else if (this.bt.kind === 'number') this.hand.setRotation(this.timer.elapsed() * 60 * DEG);
     else {
       this.showClock(this.timer.elapsed());
-      if (this.timer.done() && !this.rang) this.ring();
+      if (this.timer.done() && !this.rang) {
+        if (this.timer.alarmReached) this.ring();
+        else this.stopOven();
+      }
     }
   }
 
-  // N3: the hour hand reached the alarm (or the oven ran its longest): the oven stops, the alarm
-  // rings (pictures only, no sound) and the mitt calls her.
-  ring() {
+  // N3: the oven stops (the alarm rang, or it ran its longest): the glow goes down and the mitt
+  // calls her.
+  stopOven() {
     this.rang = true;
     this.heatEvent?.remove();
     this.glowTween?.stop();
     this.tweens.add({ targets: this.glow, alpha: 0.06, duration: 300 });
+    const b = this.go.scaleX;
+    this.ringTween = this.tweens.add({ targets: this.go, scale: b * 1.1, duration: dur(400), yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+  }
+
+  // N3: the hour hand reached the alarm: the oven stops and the alarm rings (pictures only, no
+  // sound).
+  ring() {
+    this.stopOven();
     const k = this.alarmIcon.scaleX;
     this.tweens.add({ targets: this.alarmIcon, angle: { from: -14, to: 14 }, duration: 90, yoyo: true, repeat: 7, onComplete: () => this.alarmIcon.setAngle(0) });
     this.tweens.add({ targets: this.alarmIcon, scale: k * 1.25, duration: dur(300), yoyo: true });
     this.alarmHand.setTint(0xffcdd2);
     this.tweens.add({ targets: this.alarmHand, alpha: { from: 1, to: 0.4 }, duration: 180, yoyo: true, repeat: 3, onComplete: () => this.alarmHand.setAlpha(1).clearTint() });
-    const b = this.go.scaleX;
-    this.ringTween = this.tweens.add({ targets: this.go, scale: b * 1.1, duration: dur(400), yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
   }
 
   takeOut() {
     this.phase = 'out';
     const g = this.gauge();
     this.finalGauge = g;
-    this.finalState = this.bt.kind === 'sector' ? bakeState(g) : judgeAmount(this.timer.amount(), this.win);
+    this.finalState = this.bt.kind === 'sector' ? bakeState(g) : judgeTimed(this.timer.amount(), this.win, this.heat, this.target);
     this.ringTween?.stop();
     this.heatEvent?.remove();
     this.glowTween?.stop();
@@ -383,7 +428,8 @@ export class BakeScene extends Phaser.Scene {
   validate() {
     if (this.phase !== 'out') return false;
     const state = this.finalState;
-    this.round.results.cuisson = state === 'dore' ? { ok: true } : { ok: false, reason: state };
+    // the heat she chose: the Service recap shows the flames when they were wrong
+    this.round.results.cuisson = state === 'dore' ? { ok: true } : { ok: false, reason: state, heat: this.heat, wrongHeat: this.heat !== this.target };
     this.round.cake.bake = state;
     goNext(this);
   }
