@@ -14,6 +14,7 @@ Après la première vraie partie, le parent veut un jeu où **l'enfant observe e
 4. **Glaçage de 1 à 3 couleurs**, par zones.
 5. **Bandeau du haut = le gâteau commandé en miniature**, l'élément de l'étape en cours mis en valeur.
 6. **Toppings de 1 à 3 sortes** par commande, chacune avec son nombre.
+7. **Au service, le gâteau est plus ou moins mangé** selon la réussite.
 
 ## Non-objectifs
 
@@ -67,6 +68,17 @@ Après la première vraie partie, le parent veut un jeu où **l'enfant observe e
 - Remplace la bande d'icônes : **le gâteau commandé en miniature** (3/4), avec l'élément de l'étape en cours **mis en valeur** (lueur pulsée ou léger rebond) :
   - pâte → le flanc ; moule → le contour ; cuisson → tout le gâteau (sa couleur dorée) ; glaçage → les zones ; toppings → les toppings.
 - La chaleur à viser (flammes) est affichée **près du four**, plus dans le bandeau : comme la recette dans l'écran de la pâte, c'est une consigne, pas une devinette — l'enjeu de la cuisson reste de sortir le gâteau au bon moment.
+
+### Service : le gâteau plus ou moins mangé
+
+- Le client mange une part du gâteau **proportionnelle à la réussite**, en bouchées successives (chaque bouchée retire un morceau du gâteau en 3/4, avec des miettes) :
+  - **5/5** : il mange **tout** — il ne reste que l'assiette et quelques miettes ;
+  - **4/5** : 3 bouchées (il en laisse un petit bout) ;
+  - **3/5** : 2 bouchées ;
+  - **1–2/5** : 1 petite bouchée ;
+  - **0/5** : il goûte du bout des lèvres et repousse l'assiette.
+  (Barème proposé par l'auteur.)
+- Les bouchées ont lieu avant la révélation des ✅/❌ ; les toppings disparaissent avec les morceaux mangés. L'expression du client suit (contente / bof / fâchée).
 
 ### Clients
 
