@@ -94,3 +94,15 @@ Stack, all at the cake centre:
 
 - plate: 480x280, drawn with the cake's 0.55 squash. Well centre 240,136 (well radii 182 x 96). Draw the plate under the cake and place the cake so that cake-frame point (200,264) — the centre of its base at scale 1 — lands on the well centre; scale that offset with the cake.
 - crumbs: 200x80, one golden cluster, untinted; scale, rotate or flip copies.
+
+# Home art (collection home screen) — geometry and placement
+
+Branch feat/art-home. Six SVGs in shared/assets/, all S2. Numbers below are in the 1280x800 home frame, as composed on the approved sheet.
+
+- home-bg-day / home-bg-evening (1280x800): the same landscape. Sun drawn in the day one at (640,112), r 56. Hill tops at about y 560..640, 640..730 and 700..780; cottage at about x 1040..1110, y 540..612. The middle is empty for the tiles. The evening one has no sun and no moon; its stars and fireflies are still (nothing blinks).
+- moon (200x200): evening only, drawn over home-bg-evening at x 560, y 32, scale 0.8 (160 px), so it sits where the day sun is.
+- Avatar: white disc r 84 centred at (116,108) with a soft shadow 6 px lower; inner disc r 76 filled #ffe9a8, used as the clip. The client parts (300x300 frame) are stacked at scale 0.56 with frame point (150,140) on the disc centre: head and shoulders show.
+- icon-gear (160x160): top-left corner at (1150,34), scale 0.62 (about 100 px). Red dot: r 13, #ff1f5a, white 4 px ring, centred at (1238,46) (the disc's top right).
+- cat-compter-observer (480x360): a complete card (rx 44, darker base 8 px lower), no extra tile background needed. Shown at scale 1.1 (528x396), centred horizontally, top at y 250.
+- icon-home (160x160): complete glossy disc like the stand icons (turquoise); icon-gear is grey-blue on purpose (parent button).
+- Evening: the backgrounds and the moon are drawn for the evening and take no filter. Avatar, tile and gear were dimmed on the sheet with saturate .75 then RGB x .84/.76/.76; the home's real filter should stay close to that.
