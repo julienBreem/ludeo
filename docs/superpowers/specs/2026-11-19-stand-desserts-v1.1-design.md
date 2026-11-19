@@ -42,7 +42,7 @@ Après la première vraie partie, le parent veut un jeu où **l'enfant observe e
 - 1 couleur = tout le dessus ; 2 = **moitié gauche / moitié droite** ; 3 = **trois bandes verticales** de même largeur, calculées sur la largeur de la silhouette du moule (marche pour toutes les formes).
 - Pendant le glaçage, de **fines lignes en pointillé** montrent les limites des zones sur le gâteau.
 - Notation : chaque zone doit être couverte à **85 %** par sa couleur. Point « couleur » gagné seulement si **toutes** les zones sont justes. Raisons d'échec : `mauvaise-couleur` (une zone est surtout d'une autre couleur) ou `pas-couvert`.
-- La barre de remplissage suit la **couverture globale** du dessus (toutes couleurs confondues), pour ne rien révéler sur les couleurs (décision de l'auteur).
+- La barre de remplissage suit **la zone la moins couverte** (toutes couleurs confondues) : elle n'est pleine que quand chaque zone atteint 85 %, sans rien révéler sur les couleurs (validé par le parent après la relecture).
 - La couverture d'une zone se mesure sur **sa propre surface** (silhouette ∩ bande). Les pointillés sont un **repère, pas une barrière** : la peinture traverse les limites, et déborder d'une mauvaise couleur peut faire rater la zone voisine.
 - Plusieurs pots par étape : elle choisit un pot, peint, en choisit un autre ; chaque cellule garde la dernière couleur posée (déjà le cas en v1).
 
