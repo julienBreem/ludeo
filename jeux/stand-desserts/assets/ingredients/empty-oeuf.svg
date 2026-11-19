@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 120 120" width="120" height="120">
+<!-- oeuf, used: half shell with a cracked rim, empty inside (sits in an egg-box cell at scale 0.5) -->
+<defs><radialGradient id="g" cx="0.35" cy="0.3" r="0.8"><stop offset="0" stop-color="#fffdf6"/><stop offset="0.6" stop-color="#ffeccb"/><stop offset="1" stop-color="#eebf86"/></radialGradient><linearGradient id="i" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d9a569"/><stop offset="1" stop-color="#f6dcb4"/></linearGradient></defs>
+<ellipse cx="62" cy="108" rx="34" ry="6" fill="#0b4a70" opacity=".22"/>
+<g transform="rotate(-6 60 70)">
+<path d="M20 60 L28 34 L40 50 L50 28 L61 46 L71 27 L81 49 L92 33 L100 60 Q60 78 20 60 Z" fill="url(#i)" stroke="#c98d4e" stroke-width="3" stroke-linejoin="round"/>
+<path d="M20 60 L31 47 L42 61 L52 46 L62 62 L72 47 L82 61 L91 49 L100 60 C100 90 84 106 60 106 C36 106 20 90 20 60 Z" fill="url(#g)" stroke="#c98d4e" stroke-width="3" stroke-linejoin="round"/>
+<path d="M31 70 C33 82 39 91 47 96" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" opacity=".85"/>
+<path d="M72 62 L76 72 L70 80" fill="none" stroke="#c98d4e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity=".8"/>
+</g>
+</svg>

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 200 64" width="200" height="64">
+<!-- word label, 9-slice: corners 26 px (left/right 26, top 26, bottom 30); text area x 18..182, y 6..52 -->
+<defs></defs>
+<rect x="2" y="8" width="196" height="54" rx="22" fill="#6fa6d6"/>
+<rect x="2" y="2" width="196" height="54" rx="22" fill="#fff" stroke="#6fa6d6" stroke-width="3"/>
+<path d="M26 9.500 H174" fill="none" stroke="#e3f1fb" stroke-width="5" stroke-linecap="round"/>
+</svg>

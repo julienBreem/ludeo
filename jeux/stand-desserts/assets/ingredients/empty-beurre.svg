@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 120 120" width="120" height="120">
+<!-- beurre, used: the wrapping paper open and empty, with the print of the block and a few smears -->
+<defs><linearGradient id="p" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#dfe9f3"/></linearGradient><linearGradient id="f" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff6a8"/><stop offset="1" stop-color="#ffe066"/></linearGradient><linearGradient id="s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe974"/><stop offset="1" stop-color="#ffc21f"/></linearGradient></defs>
+<ellipse cx="60" cy="100" rx="52" ry="8" fill="#0b4a70" opacity=".22"/>
+<path d="M6 86 L30 42 Q32 38 37 38 L108 36 Q116 36 113 43 L92 86 Q90 90 85 90 L11 92 Q4 92 6 86 Z" fill="#b8cbdd" transform="translate(0 5)"/>
+<path d="M6 86 L30 42 Q32 38 37 38 L108 36 Q116 36 113 43 L92 86 Q90 90 85 90 L11 92 Q4 92 6 86 Z" fill="url(#p)" stroke="#7fb2dd" stroke-width="3" stroke-linejoin="round"/>
+<path d="M18 84 L37 47 L104 45 L85 82 Z" fill="none" stroke="#ffc21f" stroke-width="4" stroke-linejoin="round"/>
+<path d="M34 76 L47 54 L92 53 L79 75 Z" fill="url(#f)" stroke="#e0a400" stroke-width="2.5" stroke-dasharray="5 5" stroke-linejoin="round"/>
+<path d="M50 68 C56 62 62 70 68 64 C72 60 78 62 80 60" fill="none" stroke="url(#s)" stroke-width="7" stroke-linecap="round"/>
+<path d="M113 43 L108 36 L96 36 Q100 48 107 55 Z" fill="#cfdeed" stroke="#7fb2dd" stroke-width="3" stroke-linejoin="round"/>
+<path d="M6 86 L11 92 L24 92 Q20 80 12 75 Z" fill="#cfdeed" stroke="#7fb2dd" stroke-width="3" stroke-linejoin="round"/>
+<circle cx="100" cy="92" r="4.500" fill="#ffc21f" stroke="#c88a00" stroke-width="2"/><circle cx="110" cy="84" r="3" fill="#ffc21f" stroke="#c88a00" stroke-width="2"/>
+<path d="M26 60 L34 45" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".9"/>
+</svg>

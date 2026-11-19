@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 260 120" width="260" height="120">
+<!-- small tray for what is already in the bowl (lilac, like the bowl): items stand on the well, base line about y 62, x 44..216 -->
+<defs><linearGradient id="r" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e4d9ff"/><stop offset="1" stop-color="#b9a2ff"/></linearGradient><linearGradient id="w" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#cdbcff"/><stop offset="1" stop-color="#f1ebff"/></linearGradient><filter id="f" x="-10%" y="-30%" width="120%" height="170%"><feGaussianBlur stdDeviation="4"/></filter></defs>
+<ellipse cx="130" cy="72" rx="118" ry="42" fill="#0b4a70" opacity=".25" filter="url(#f)"/>
+<ellipse cx="130" cy="64" rx="124" ry="48" fill="#6a3fd6"/>
+<ellipse cx="130" cy="54" rx="124" ry="48" fill="url(#r)" stroke="#6a3fd6" stroke-width="3"/>
+<ellipse cx="130" cy="56" rx="102" ry="35" fill="url(#w)" stroke="#9c7dff" stroke-width="2.5"/>
+<path d="M30 40 C46 22 82 12 124 10" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" opacity=".85"/>
+</svg>
