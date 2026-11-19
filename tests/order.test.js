@@ -66,7 +66,7 @@ test('parseOrderParam (debug order): valid, defaults, rejects unknown or malform
     toppings: [{ key: 'fraise', count: 2 }, { key: 'bougie', count: 1 }, { key: 'chantilly', count: 3 }],
   });
   assert.equal(parseOrderParam('rond/rose/fraise:1/tarte').dessert, 'tarte');
-  for (const bad of [null, '', 'rond', 'rond/rose', 'triangle/rose/fraise:1', 'rond/noir/fraise:1', 'rond/rose-rose/fraise:1',
+  for (const bad of [null, '', 'rond', 'rond/rose', 'pentagone/rose/fraise:1', 'rond/noir/fraise:1', 'rond/rose-rose/fraise:1',
     'rond/rose/fraise:7', 'rond/rose/fraise', 'rond/rose/fraise:1-fraise:2', 'rond/rose/fraise:1/pizza', 'rond/rose/fraise:1/gateau/x',
     'rond/rose-violet-jaune-blanc/fraise:1', 'rond/rose/fraise:1-bougie:1-bonbon:1-etoile:1']) {
     assert.equal(parseOrderParam(bad), null, String(bad));

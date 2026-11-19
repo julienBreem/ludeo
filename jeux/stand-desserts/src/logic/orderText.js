@@ -15,6 +15,11 @@ export const NOUNS = {
     coeur: { word: 'cœur', g: 'm' },
     etoile: { word: 'étoile', g: 'f' },
     licorne: { word: 'licorne', g: 'f' },
+    triangle: { word: 'triangle', g: 'm' },
+    rectangle: { word: 'rectangle', g: 'm' },
+    ovale: { word: 'ovale', g: 'm' },
+    losange: { word: 'losange', g: 'm' },
+    hexagone: { word: 'hexagone', g: 'm' },
   },
   color: {
     rose: { m: 'rose', f: 'rose' },

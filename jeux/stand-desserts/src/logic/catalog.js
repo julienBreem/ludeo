@@ -7,7 +7,7 @@ export const DESSERTS = {
 };
 
 const CATALOG = {
-  shape: { rond: 0, carre: 0, coeur: 0, etoile: 8, licorne: 16 },
+  shape: { rond: 0, carre: 0, coeur: 0, triangle: 0, rectangle: 0, ovale: 0, etoile: 8, licorne: 16, losange: 10, hexagone: 14 },
   color: { rose: 0, violet: 0, jaune: 0, blanc: 0, bleu: 10, vert: 12 },
   topping: { fraise: 0, pepites: 0, vermicelles: 0, bougie: 0, etoile: 8, bonbon: 12, chantilly: 14 },
   deco: { guirlande: 10, auvent: 15, pancarte: 20 },

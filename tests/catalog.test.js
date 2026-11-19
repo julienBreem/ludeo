@@ -11,7 +11,7 @@ test('every recipe ingredient exists and each recipe leaves at least one intrude
 });
 test('starter set matches the spec', () => {
   const s = starterOwned();
-  assert.deepEqual(ownedKeys(s, 'shape'), ['rond','carre','coeur']);
+  assert.deepEqual(ownedKeys(s, 'shape'), ['rond','carre','coeur','triangle','rectangle','ovale']);
   assert.deepEqual(ownedKeys(s, 'color'), ['rose','violet','jaune','blanc']);
   assert.deepEqual(ownedKeys(s, 'topping'), ['fraise','pepites','vermicelles','bougie']);
   assert.deepEqual(ownedKeys(s, 'deco'), []);
