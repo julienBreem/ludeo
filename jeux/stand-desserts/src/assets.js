@@ -1,5 +1,5 @@
-// Every SVG the game loads. `file` is relative to the site root; `w`/`h` are the
-// sizes to rasterise at (they match each file's viewBox).
+// Every SVG the game loads. `file` is relative to the game folder (jeux/stand-desserts/);
+// `w`/`h` are the sizes to rasterise at (they match each file's viewBox).
 export const ASSETS = [
   // ingredients
   { key: 'ing-beurre', file: 'assets/ingredients/ing-beurre.svg', w: 160, h: 160 },
@@ -106,15 +106,11 @@ export const ASSETS = [
   { key: 'icon-shop', file: 'assets/ui/icon-shop.svg', w: 160, h: 160 },
 ];
 
-// Everything the service worker must cache for offline play.
+// Every file of this game the service worker must cache for offline play, relative to the
+// game folder (collection.js prefixes them; the home, vendor/ and the icons are the collection's).
 // The src/ list is explicit: add each new module here (tests/assets.test.js checks it).
 export const PRECACHE = [
-  './',
   'index.html',
-  'manifest.webmanifest',
-  'assets/icons/icon-192.png',
-  'assets/icons/icon-512.png',
-  'vendor/phaser.min.js',
   'src/assets.js',
   'src/config.js',
   'src/debug.js',
