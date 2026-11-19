@@ -65,7 +65,7 @@ Ensuite, **la commande complète reste affichée en petit en haut de tous les é
 
 **1. Pâte.** Une recette en images (ingrédient + « ×N ») est affichée. Une étagère propose les bons ingrédients **et des intrus**. Elle **fait glisser** chaque ingrédient dans le bol. Puis un fouet apparaît : elle **mélange en faisant des cercles** avec le doigt. Réussi si : ingrédients et quantités exacts, aucun intrus, et assez mélangé. Sinon la pâte reste visiblement ratée (grumeleuse) jusqu'au service.
 
-**2. Moule.** 3–4 moules proposés ; elle touche le bon, la pâte coule dedans. Mauvais moule = la forme servie n'est pas celle demandée.
+**2. Moule.** 3–4 **vrais moules** proposés (moules en silicone colorés et brillants, vus en 3/4, avec bord et fond — pas une simple forme) ; elle touche le bon, la pâte coule dedans et le remplit. Le dessert cuit **dans son moule** et est **démoulé** à la sortie du four. Mauvais moule = la forme servie n'est pas celle demandée.
 
 **3. Cuisson.** La recette indique une chaleur cible (1–3 flammes). Elle règle la chaleur, lance le four, le dessert **gonfle et dore en direct**. Une jauge monte : jaune (pas cuit) → vert (parfait) → marron (brûlé). Elle appuie sur « Sortir ! ». Une chaleur trop forte fait monter la jauge plus vite (fenêtre verte plus courte) ; trop faible, plus lentement. Résultat visible : pâle, doré ou brûlé.
 
