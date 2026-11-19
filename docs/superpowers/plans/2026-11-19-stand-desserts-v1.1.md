@@ -14,7 +14,7 @@
 
 - All v1 Global Constraints still hold (see `docs/superpowers/plans/2026-11-19-stand-desserts.md`): no ads/links/off-origin requests, no sound, no text needed to play, targets ≥ 96 px, ≤ 60 live particles, no npm deps, relative paths, every new src/*.js and asset in PRECACHE, local save only, style S2.
 - **No aid that counts or reads for the child** (future educational version): the strip/bubble show the cake, never "×N" digits for toppings or colour names.
-- Order shape: `{ dessert, shape, glaze: string[] (1–3 distinct, left→right), toppings: Array<{key, count}> (1–3 distinct kinds, count ≥ 1, total ≤ 8) }`.
+- Order shape: `{ dessert, shape, glaze: string[] (1–3 distinct, left→right), toppings: Array<{key, count}> (1–3 distinct kinds, count ≥ 1, total ≤ 6) }`.
 - Zones: 1 = whole top; 2 = left/right halves; 3 = three equal vertical bands — across the shape silhouette's x-extent on the 64×64 grid. Per-zone coverage ≥ `COVERAGE_OK` (0.85) of the zone's own cells.
 - Bites by coins: 5 → everything (4 bites, plate + crumbs), 4 → 3, 3 → 2, 1–2 → 1, 0 → a nibble and the plate is pushed away.
 - Client: ~1 in 5 is an animal; never the same client twice in a row.
@@ -28,9 +28,9 @@
 
 ## Review Focus
 
-1. Orders with 3 zones / 3 kinds never repeat a colour or a topping kind and never exceed 8 toppings, including with only the starter set owned. *(T1 test)*
+1. Orders with 3 zones / 3 kinds never repeat a colour or a topping kind and never exceed 6 toppings, including with only the starter set owned. *(T1 test)*
 2. A zone with no cells (thin silhouettes: licorne horn band, star tips) must not divide by zero or fail the order; an empty zone counts as satisfied. *(T1 test)*
-3. The ideal-cake topping layout places up to 8 toppings inside the silhouette without overlap, even on a small/thin mask. *(T1 test)*
+3. The ideal-cake topping layout places up to 6 toppings inside the silhouette without overlap, even on a small/thin mask. *(T1 test)*
 4. The same client never appears twice in a row over thousands of draws. *(T1 test)*
 5. After a 5/5 round nothing of the cake (toppings included) remains visible; after 0/5 the cake is intact. *(T7 smoke check)*
 
@@ -45,7 +45,7 @@
 
 **Interfaces:**
 - Produces:
-  - `order.js`: `ZONE_WEIGHTS = [0.5, 0.35, 0.15]`, `KIND_WEIGHTS = [0.5, 0.35, 0.15]`, `MAX_TOPPINGS = 8`; `generateOrder(owned, rng = Math.random): Order` (Order per Global Constraints). Counts drawn 1..4 each, redraw all counts while total > 8. Kinds/colours drawn without replacement from owned.
+  - `order.js`: `ZONE_WEIGHTS = [0.5, 0.35, 0.15]`, `KIND_WEIGHTS = [0.5, 0.35, 0.15]`, `MAX_TOPPINGS = 6`; `generateOrder(owned, rng = Math.random): Order` (Order per Global Constraints). Counts drawn 1..4 each, redraw all counts while total > 6. Kinds/colours drawn without replacement from owned.
   - `zones.js`:
     - `zoneMap(mask: Uint8Array, size: number, n: 1|2|3): Int8Array` — −1 outside mask; else band index `min(n−1, floor((x − minX) * n / (maxX − minX + 1)))` where minX/maxX are the mask's extreme columns.
     - `zoneEdges(mask, size, n): number[]` — the n−1 band boundaries in cell x units (for the dotted lines).
@@ -60,7 +60,7 @@
 
 ```js
 // order
-test('2000 starter orders: owned only, distinct, sizes 1..3, total ≤ 8, all sizes reached', () => { /* glaze.length∈1..3, new Set(glaze).size===glaze.length, toppings kinds distinct, each count 1..4, sum ≤ 8; seen glaze sizes {1,2,3} and kind sizes {1,2,3} */ });
+test('2000 starter orders: owned only, distinct, sizes 1..3, total ≤ 6, all sizes reached', () => { /* glaze.length∈1..3, new Set(glaze).size===glaze.length, toppings kinds distinct, each count 1..4, sum ≤ 6; seen glaze sizes {1,2,3} and kind sizes {1,2,3} */ });
 test('zone weights roughly 50/35/15', () => { /* 10000 orders, share of size 1 within ±0.03 of 0.5 */ });
 // zones
 test('zoneMap halves a 10-wide square', () => { /* mask columns 3..12 → cells x 3..7 zone 0, 8..12 zone 1 */ });
@@ -156,7 +156,7 @@ Then: update `src/assets.js` (ASSETS + PRECACHE), `tests/assets.test.js` (new ke
 **Files:** Modify `src/scenes/PaintScene.js`, `src/scenes/ToppingsScene.js`.
 
 **Interfaces:** Consumes `zoneMap`, `zoneEdges`, `judgeColor`, `judgeToppings` (T1).
-- Paint: dotted vertical lines at `zoneEdges(mask, GRID, order.glaze.length)` drawn over the top-down cake (guides only, painting crosses them); the bar shows **global** coverage (all colours) of the top; ✓ → `results.couleur = judgeColor(grid.cells, colorKeys, zones, order.glaze)`; `cake.glaze` as v1.
+- Paint: dotted vertical lines at `zoneEdges(mask, GRID, order.glaze.length)` drawn over the top-down cake (guides only, painting crosses them); the bar follows the **least-covered zone** (share of that zone painted in any colour, full only when every zone reaches `COVERAGE_OK`; amended after the final review); ✓ → `results.couleur = judgeColor(grid.cells, colorKeys, zones, order.glaze)`; `cake.glaze` as v1.
 - Toppings: all owned kinds on the shelf; sparkle once when every ordered kind count is exact and nothing else is placed; ✓ → `results.toppings = judgeToppings(keys, order.toppings)`.
 
 - [ ] **Step 1:** Implement. **Step 2:** CDP checks: 2-zone order painted right → ok; colours swapped → mauvaise-couleur; 3 kinds exact → ok + sparkle; extra kind → mauvais-topping. Perf: paint move handler still < 1 ms. **Step 3:** `npm test`; commit `feat: glaze zones and multi-kind toppings`.
