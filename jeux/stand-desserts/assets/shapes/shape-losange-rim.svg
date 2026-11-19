@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 400 400" width="400" height="400">
+<!-- losange: tart crust rim, a raised lip just inside the outline of the top face (about 19px wide), raw crust colour (bake tint in code). Top-down frame: goes in the squashed top container, over the glaze, under shape-losange-line and the toppings; tarte only -->
+<defs><path id="p" d="M183.7 54.2 Q200 34 216.3 54.2 L317.7 179.8 Q334 200 317.7 220.2 L216.3 345.8 Q200 366 183.7 345.8 L82.3 220.2 Q66 200 82.3 179.8 Z"/><clipPath id="c"><use xlink:href="#p"/></clipPath></defs>
+<g clip-path="url(#c)" fill="none" stroke-linejoin="round"><use xlink:href="#p" stroke="#5a2a10" stroke-width="52" stroke-opacity=".16"/><use xlink:href="#p" stroke="#c2924c" stroke-width="42" /><use xlink:href="#p" stroke="#eccb92" stroke-width="37" /><use xlink:href="#p" stroke="#fff3d6" stroke-width="27" /><use xlink:href="#p" stroke="#f4d9a8" stroke-width="15" /><use xlink:href="#p" stroke="#dcb988" stroke-width="5" /><use xlink:href="#p" stroke="#b98a48" stroke-width="37" stroke-opacity=".5" stroke-dasharray="3 16"/></g>
+</svg>

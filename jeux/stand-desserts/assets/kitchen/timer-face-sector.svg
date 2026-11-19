@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 400 400" width="400" height="400">
+<!-- kitchen timer, level 1 face: body and blank dial (no green; the green sector is timer-sector, same frame). Pivot 200,196; the run is 300 degrees clockwise from the top mark -->
+<defs><radialGradient id="rim" cx="0.38" cy="0.28" r="0.9"><stop offset="0" stop-color="#ff8a70"/><stop offset="0.55" stop-color="#ff4a2e"/><stop offset="1" stop-color="#d42a12"/></radialGradient><radialGradient id="dial" cx="0.4" cy="0.3" r="0.9"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#e3eef8"/></radialGradient></defs>
+<circle cx="200" cy="206" r="186" fill="#9c1c0a"/>
+<circle cx="200" cy="196" r="186" fill="url(#rim)" stroke="#9c1c0a" stroke-width="3"/>
+<path d="M52 150 C70 88 124 42 190 34" fill="none" stroke="#fff" stroke-width="10" stroke-linecap="round" opacity=".65"/>
+<circle cx="200" cy="199" r="153" fill="#9c1c0a" opacity=".55"/>
+<circle cx="200" cy="196" r="150" fill="url(#dial)" stroke="#9c1c0a" stroke-width="3"/>
+<path d="M185 15 H215 L200 39 Z" fill="#fff" stroke="#9c1c0a" stroke-width="3" stroke-linejoin="round"/><path d="M200 66 L200 53 M265 83.4 L271.5 72.2 M312.6 131 L323.8 124.5 M330 196 L343 196 M312.6 261 L323.8 267.5 M265 308.6 L271.5 319.8 M200 326 L200 339 M135 308.6 L128.5 319.8 M87.4 261 L76.2 267.5 M70 196 L57 196 M87.4 131 L76.2 124.5" fill="none" stroke="#7d93ab" stroke-width="6" stroke-linecap="round"/>
+</svg>
