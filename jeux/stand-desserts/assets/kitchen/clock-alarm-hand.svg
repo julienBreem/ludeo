@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 80 200" width="80" height="200">
+<!-- clock alarm hand (magenta), pointing up: a thin hand that stops before the numbers, and a round knob (white ring, reads the same at any angle) that rides on the rim of the clock. Pivot 40,188 (origin 0.5, 0.94); hand tip 98 px from the pivot; knob centre 40,26 (162 px from the pivot, radius 21). Drawn under clock-hour-hand -->
+<defs><radialGradient id="k" cx="0.38" cy="0.3" r="0.9"><stop offset="0" stop-color="#ff9df2"/><stop offset="1" stop-color="#d81bd0"/></radialGradient></defs>
+<path d="M40 188 V98" fill="none" stroke="#fff" stroke-width="15" stroke-linecap="round" opacity=".9"/>
+<path d="M40 188 V98" fill="none" stroke="#8a0f86" stroke-width="10" stroke-linecap="round"/>
+<path d="M40 186 V99" fill="none" stroke="#e23fdc" stroke-width="5" stroke-linecap="round"/>
+<path d="M29 42 H51 L40 58 Z" fill="#d81bd0" stroke="#8a0f86" stroke-width="3" stroke-linejoin="round"/>
+<circle cx="40" cy="26" r="23.500" fill="#fff" opacity=".9"/>
+<circle cx="40" cy="26" r="21" fill="url(#k)" stroke="#8a0f86" stroke-width="3"/>
+<circle cx="40" cy="26" r="11" fill="none" stroke="#fff" stroke-width="5"/><circle cx="40" cy="26" r="3.500" fill="#fff"/><path d="M27 20 C29 14 33 10 39 9" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".7"/>
+</svg>

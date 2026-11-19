@@ -153,3 +153,48 @@ Branch feat/art-edu1. 20 new SVGs, all S2, none meant to be tinted. Layout numbe
 
 - icon-eye: complete glossy disc like the other icons (yellow, the one hue no other button uses).
 - pict-*: neutral grey category pictograms (three shapes; a pot with a drip; a star and a cherry), drawn inside the frame with about 4 px margin. Sheet: scale 0.46 at the left of a label, word shifted 22 px right.
+
+# Educational lot 2 art (Moule = geometry, Cuisson = time) — geometry and contracts
+
+Branch feat/art-edu2. 41 new SVGs, all S2. Review sheet rendered with headless Chromium: `sips` ignores the transform of a `<use>`d path inside clipPath/mask, so shape-*-side and the moulds (old ones too) come out wrong with sips although they are right in the browser.
+
+## Shapes triangle, rectangle, ovale, losange, hexagone
+
+- Full set each: shape-<k>-fill/-line/-side/-rim and mold-<k>-back/-front, generated from the etoile files with only the path (and the mould colour) changed. Every existing rule applies unchanged: 400x400 frame, centre 200,200, 0.55 squash about y 200, 64 px side band, 19 px rim, 74 px deep mould whose opening is the squashed fill, plate well point (200,264).
+- Fill = one closed path, solid white, no holes. Corners are rounded by a quadratic through the vertex (cut distance below), so the visible corner sits a few px inside the listed vertex.
+- Corner vertices (top-down frame, clockwise), for corner highlights, hints and tangram cuts:
+  - triangle (3 corners, cut 30): (200,40), (370,344), (30,344). Isosceles, almost equilateral; base at the bottom.
+  - rectangle (4 corners, cut 34): (32,92), (368,92), (368,308), (32,308). 336 x 216, lying down (the carre is 304 x 304).
+  - ovale (no corner): ellipse centre 200,200, rx 172, ry 106, lying down (the rond is r 160).
+  - losange (4 corners, 4 equal sides, cut 26): (200,34), (334,200), (200,366), (66,200). 268 x 332, standing.
+  - hexagone (6 corners, regular, R 168, cut 26, flat top and bottom): (116,54.5), (284,54.5), (368,200.0), (284,345.5), (116,345.5), (32,200.0).
+- In the 3/4 view, multiply (y - 200) by 0.55 to place a corner on the squashed face.
+- In 3/4 the ovale face is 344 x 117 and the rond face 320 x 176: the trap pair differs mostly by flatness, less than in the top-down view. Same for rectangle (336 x 119) against carre (304 x 167).
+- Mould colours (not tinted): triangle green #3fcf4e, rectangle blue #3d7dff, ovale grey-blue #8f9db5, losange magenta #d44fe0, hexagone caramel #b9743f. Existing: rond orange-red, carre teal, coeur pink, etoile yellow, licorne violet.
+
+## Geometry pictograms — pict-coin, pict-cote, pict-rond (96x96, assets/ui/)
+
+- Neutral grey like pict-forme/-couleur/-topping; the highlighted part is dark grey #3b4554 with a white halo.
+- pict-coin: a piece of a shape with its far side torn off (zigzag), the corner at (48,14) highlighted (two legs and a dot). pict-cote: same idea, the straight side y 22, x 12..84 highlighted with a dot at each end. Both are torn pieces on purpose: they do not show a whole triangle or square, so they do not give the answer away.
+- pict-rond: a plain disc, centre 48,48, r 40 ("pas de coin").
+
+## Kitchen timer (assets/kitchen/) — levels 1 and 2
+
+- timer-face-sector (400x400): the level 1 face — red body, white dial, a tick every 30 degrees, no numbers. It holds NO green: the green is timer-sector.
+- timer-sector (400x400, same frame, draw it at the same x,y over the face, under the hand): the green sector alone. Pie slice from the pivot to radius 146, from 135 to 210 degrees clockwise from the top.
+- timer-face-numbers (400x400): the level 2 face — same body, numbers 1..5, no green.
+- timer-hand (80x130): points up. Pivot (40,92) = origin (0.5, 0.7077). Tip 72 px from the pivot: it stops under the numbers and never hides one.
+- Pivot of all three 400x400 layers: (200,196) = origin (0.5, 0.49). Dial radius 150, body radius 186, darker base 10 px lower (the frame's bottom 4 px are empty).
+- Angles are clockwise from the white start mark at the top. A full run is 300 degrees: hand angle = 300 x gauge. Number k is at 60 x k degrees (1 at 60, 3 at 180 straight down, 5 at 300); digit centres on radius 106, digits 50 px high.
+- The sector as drawn is the current green band (gauge 0.45..0.70 -> 135..210 degrees). To move it, rotate the layer about the pivot; its width (75 degrees) is fixed. For another width draw the slice in code (radius 146, fill #5df08f, stroke #0a8f43 4 px) under the hand.
+- Order: face -> timer-sector (level 1 only) -> timer-hand.
+
+## Alarm clock (assets/kitchen/) — level 3
+
+- clock-face (400x440): blue alarm clock with two bells and feet. Pivot of both hands (200,250) = origin (0.5, 0.5682). Dial radius 148, rim radius 176. Hours 1..12, digit centres on radius 123 (hour h at 30 x h degrees clockwise from the top); a short grey tick at each half hour (15 + 30 x h degrees), radius 132..142.
+- clock-hour-hand (80x140): dark blue, points up, carries the yellow hub cap. Pivot (40,100) = origin (0.5, 0.7143). Tip 88 px from the pivot. Angle = 30 x hours (2 h 30 -> 75 degrees).
+- clock-alarm-hand (80x200): magenta, points up. Pivot (40,188) = origin (0.5, 0.94). A thin hand to 98 px from the pivot (it stops before the numbers), then a pointer and a round knob riding on the rim: knob centre (40,26), 162 px from the pivot, radius 21. The knob is the thing to drag; at clock scale 0.9 it is about 38 px wide, so give it a larger hit zone (or take the drag anywhere on the dial and use the pointer's angle).
+- Order: clock-face -> clock-alarm-hand -> clock-hour-hand. When the hour hand reaches the alarm it covers the thin hand; the knob on the rim stays visible.
+- There is no minute hand: the hour hand moves alone.
+- Small start clock: clock-face + clock-hour-hand at the same pivot. The digits stay readable down to about scale 0.45; at 0.3 only the hand position reads.
+- icon-alarm (160x160, assets/ui/): complete glossy disc, magenta like the alarm hand, white bell.

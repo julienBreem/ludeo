@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 160 160" width="160" height="160">
+<!-- alarm (set the alarm / it rings): magenta disc, same colour as clock-alarm-hand -->
+<defs><radialGradient id="g" cx="0.4" cy="0.3" r="0.85"><stop offset="0" stop-color="#ff9df2"/><stop offset="1" stop-color="#d81bd0"/></radialGradient></defs>
+<circle cx="80" cy="84" r="70" fill="#8a0f86"/><circle cx="80" cy="78" r="70" fill="url(#g)" stroke="#8a0f86" stroke-width="3"/>
+<ellipse cx="80" cy="118" rx="52" ry="24" fill="#fff" opacity=".12"/>
+<path d="M34 50 L26 42 M126 50 L134 42" fill="none" stroke="#8a0f86" stroke-width="15" stroke-linecap="round"/><path d="M34 50 L26 42 M126 50 L134 42" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round"/>
+<path d="M80 34 C60 34 54 52 54 70 C54 86 48 94 40 102 H120 C112 94 106 86 106 70 C106 52 100 34 80 34 Z" fill="#fff" stroke="#8a0f86" stroke-width="5" stroke-linejoin="round"/>
+<circle cx="80" cy="30" r="8" fill="#fff" stroke="#8a0f86" stroke-width="4"/>
+<path d="M68 112 C70 124 90 124 92 112 Z" fill="#fff" stroke="#8a0f86" stroke-width="5" stroke-linejoin="round"/>
+<path d="M66 54 C68 48 72 44 78 43" fill="none" stroke="#f3b5ee" stroke-width="5" stroke-linecap="round"/>
+<path d="M24 64 C30 40 52 22 78 18" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round" opacity="0.7"/>
+</svg>

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 400 400" width="400" height="400">
+<!-- triangle: outline and top-face rim highlight, drawn over the glaze -->
+<defs><clipPath id="c"><path d="M185.4 66.2 Q200 40 214.6 66.2 L355.4 317.8 Q370 344 340 344 L60 344 Q30 344 44.6 317.8 Z"/></clipPath></defs>
+<g clip-path="url(#c)"><path d="M185.4 66.2 Q200 40 214.6 66.2 L355.4 317.8 Q370 344 340 344 L60 344 Q30 344 44.6 317.8 Z" transform="translate(6 7)" fill="none" stroke="#fff" stroke-opacity=".6" stroke-width="7" stroke-linejoin="round"/>
+<path d="M185.4 66.2 Q200 40 214.6 66.2 L355.4 317.8 Q370 344 340 344 L60 344 Q30 344 44.6 317.8 Z" transform="translate(-5 -6)" fill="none" stroke="#5a2a10" stroke-opacity=".16" stroke-width="7" stroke-linejoin="round"/></g>
+
+<path d="M185.4 66.2 Q200 40 214.6 66.2 L355.4 317.8 Q370 344 340 344 L60 344 Q30 344 44.6 317.8 Z" fill="none" stroke="#6b3a14" stroke-opacity=".7" stroke-width="5" stroke-linejoin="round"/>
+</svg>
