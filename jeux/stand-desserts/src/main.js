@@ -34,9 +34,9 @@ window.addEventListener('pageshow', (e) => {
 });
 
 // Offline play: the collection's single service worker lives at the site root (two levels up).
-// Relative path so it works from a sub-folder or sub-domain.
+// Relative path so it works from a sub-folder or sub-domain; updateViaCache as in the home.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('../../sw.js', { type: 'module' }).catch(() => {});
+    navigator.serviceWorker.register('../../sw.js', { type: 'module', updateViaCache: 'none' }).catch(() => {});
   });
 }

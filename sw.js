@@ -3,9 +3,10 @@
 // UPDATING: bump CACHE_VERSION on every release, then merge into master (see DEPLOY.md).
 import { HOME_PRECACHE, GAMES } from './jeux/registry.js';
 
-const CACHE_VERSION = 'v4';
-// Keep the 'stand-' prefix: activate deletes every older 'stand-*' cache (v1–v3 of the stand).
-const CACHE = `stand-${CACHE_VERSION}`;
+const CACHE_VERSION = 'v5';
+// A prefix of this collection only: on <account>.github.io every project site of the account
+// shares one origin and its Cache Storage, so activate deletes only older 'ludeo-*' caches.
+const CACHE = `ludeo-${CACHE_VERSION}`;
 const PRECACHE = [...HOME_PRECACHE, ...GAMES.flatMap(g => g.precache)];
 
 self.addEventListener('install', event => {
@@ -19,7 +20,7 @@ self.addEventListener('install', event => {
 self.addEventListener('activate', event => {
   event.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k.startsWith('stand-') && k !== CACHE).map(k => caches.delete(k))))
+      .then(keys => Promise.all(keys.filter(k => k.startsWith('ludeo-') && k !== CACHE).map(k => caches.delete(k))))
       .then(() => self.clients.claim()),
   );
 });

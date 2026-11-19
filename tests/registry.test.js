@@ -135,8 +135,10 @@ test('PWA: manifest, icons and service worker', () => {
     assert.ok(HOME_PRECACHE.includes(icon.src), `${icon.src} not in HOME_PRECACHE`);
   }
   const sw = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
-  assert.match(sw, /const CACHE_VERSION = 'v4'/);
-  assert.match(sw, /const CACHE = `stand-\$\{CACHE_VERSION\}`/, "cache prefix stays 'stand-' so old caches are deleted");
+  assert.match(sw, /const CACHE_VERSION = 'v5'/);
+  assert.match(sw, /const CACHE = `ludeo-\$\{CACHE_VERSION\}`/, "the collection's own cache prefix");
+  assert.match(sw, /k\.startsWith\('ludeo-'\) && k !== CACHE/, "activate deletes only this collection's older caches");
+  assert.equal(m.name, 'Ludeo');
   assert.match(sw, /cache: 'reload'/, 'precache requests must bypass the HTTP cache');
   assert.match(sw, /import \{ HOME_PRECACHE, GAMES \} from '\.\/jeux\/registry\.js'/);
 });
@@ -152,5 +154,7 @@ test('pages use relative paths only', () => {
   const game = fs.readFileSync(path.join(ROOT, 'jeux/stand-desserts/index.html'), 'utf8');
   assert.match(game, /src="\.\.\/\.\.\/vendor\/phaser\.min\.js"/);
   const main = fs.readFileSync(path.join(ROOT, 'jeux/stand-desserts/src/main.js'), 'utf8');
-  assert.match(main, /register\('\.\.\/\.\.\/sw\.js'/, 'the game registers the root service worker');
+  assert.match(main, /register\('\.\.\/\.\.\/sw\.js', \{ type: 'module', updateViaCache: 'none' \}\)/, 'the game registers the root service worker');
+  const home = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  assert.match(home, /register\('sw\.js', \{ type: 'module', updateViaCache: 'none' \}\)/, 'sw.js imports bypass the HTTP cache on update');
 });

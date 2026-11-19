@@ -4,7 +4,7 @@ Le site est publié **gratuitement sur GitHub Pages**. Vous n'avez rien à envoy
 
 L'adresse du site sera : `https://<compte>.github.io/<dépôt>/` (remplacez `<compte>` par votre nom d'utilisateur GitHub et `<dépôt>` par le nom du dépôt). Le site vit dans un sous-dossier : c'est prévu, rien à modifier.
 
-Attention : le dépôt doit être **public** (c'est la condition de GitHub Pages gratuit), donc tout son contenu est visible de tous. Ne mettez jamais de mots de passe ou de données personnelles dans le dépôt. Les réglages et la progression de l'enfant restent sur la tablette, jamais dans le dépôt.
+Attention : le dépôt doit être **public** (c'est la condition de GitHub Pages gratuit), donc tout son contenu est visible de tous. Ne mettez jamais de mots de passe ou de données personnelles dans le dépôt. Les réglages et la progression de l'enfant restent sur la tablette, jamais dans le dépôt. Sur la tablette, ils sont rangés sous l'adresse `https://<compte>.github.io`, commune à tous les sites GitHub Pages de ce compte : un autre site publié sur le même compte pourrait les lire (le prénom et le mois et l'année de naissance de l'enfant). Ne publiez sur ce compte que vos propres sites, ou utilisez plus tard un nom de domaine dédié.
 
 ## 1. Première mise en ligne (une seule fois)
 
@@ -23,7 +23,7 @@ Si la croix est rouge, c'est qu'un test automatique a échoué : rien n'est publ
 1. Connectez la tablette à Internet (Wi-Fi).
 2. Ouvrez l'adresse du site dans **Chrome**. L'adresse commence par `https://` (GitHub Pages l'assure). Laissez l'accueil s'afficher (la grande tuile du gâteau).
 3. Touchez le menu **⋮** (en haut à droite) puis **Installer l'application** (ou **Ajouter à l'écran d'accueil**).
-4. Une icône de gâteau apparaît sur l'écran d'accueil. Lancez l'application depuis cette icône : l'accueil s'ouvre en plein écran, en mode paysage ; la tuile du gâteau lance le stand de desserts.
+4. Une icône de gâteau (nommée « Ludeo ») apparaît sur l'écran d'accueil. Lancez l'application depuis cette icône : l'accueil s'ouvre en plein écran, en mode paysage ; la tuile du gâteau lance le stand de desserts.
 
 Après cette première visite, l'accueil et tous les jeux marchent **sans Internet**.
 
@@ -31,7 +31,7 @@ Après cette première visite, l'accueil et tous les jeux marchent **sans Intern
 
 ## 3. Mettre à jour le jeu (à chaque version)
 
-1. Faites vos modifications, puis, dans `sw.js` (à la racine), augmentez le numéro de la ligne `const CACHE_VERSION = 'v4';` : `'v5'`, puis `'v6'`, etc. À **chaque** mise à jour, sans exception : sinon la tablette garde l'ancienne version. Un seul `sw.js` pour toute la collection.
+1. Faites vos modifications, puis, dans `sw.js` (à la racine), augmentez le numéro de la ligne `const CACHE_VERSION = 'v5';` : `'v6'`, puis `'v7'`, etc. À **chaque** mise à jour, sans exception : sinon la tablette garde l'ancienne version. Un seul `sw.js` pour toute la collection.
 2. Fusionnez les modifications dans `master` (par exemple en acceptant la « pull request »). L'action **Publier le site** se lance toute seule : attendez la coche verte dans l'onglet **Actions**.
 3. Sur la tablette, **avec Internet** : ouvrez le jeu **deux fois** (fermez-le complètement, puis rouvrez-le). La première ouverture télécharge la nouvelle version, la seconde l'affiche.
 4. Après la 2ᵉ ouverture, vérifiez que la nouveauté apparaît ; sinon, vérifiez que `CACHE_VERSION` a bien changé et que la coche verte est apparue, puis recommencez l'étape 3.

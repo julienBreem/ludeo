@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#4fc3f7">
 <link rel="icon" href="shared/icons/icon-192.png">
 <link rel="stylesheet" href="shared/home.css">
-<title>Jeux</title>
+<title>Ludeo</title>
 </head>
 <body>
 <!-- The child's home: no text. Built by shared/home.js. -->
@@ -20,10 +20,11 @@
 <div id="parent" hidden></div>
 <script type="module" src="shared/home.js"></script>
 <script>
-  // Offline play: relative path so it works from a sub-folder or sub-domain.
+  // Offline play: relative path so it works from a sub-folder or sub-domain. updateViaCache
+  // 'none': an update re-reads sw.js's imports (the precache lists) past the HTTP cache.
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      navigator.serviceWorker.register('sw.js', { type: 'module' }).catch(() => {});
+      navigator.serviceWorker.register('sw.js', { type: 'module', updateViaCache: 'none' }).catch(() => {});
     });
   }
 </script>
