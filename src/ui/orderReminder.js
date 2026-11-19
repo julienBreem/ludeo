@@ -1,6 +1,10 @@
 // Order strip, top-left: the ordered cake in 3/4 (one cached texture per order), with the layer
-// of the current step pulsing: dough -> side band, mould -> outline, bake -> the whole cake,
+// of the current step glowing: dough -> side band, mould -> outline, bake -> the whole cake,
 // paint -> the glazed top, toppings -> the toppings. No digits, no icon list.
+// The glow is a solid-colour halo behind the cake (setTintFill: the layer's silhouette in GLOW,
+// whatever its own colours) plus a gentle bounce of the cake. Light is never added over the top
+// face or the toppings, whose colours are the order: only the side band (dough, bake) and the
+// outline (mould) get a pulsing additive fill.
 import { TOP_SQUASH } from '../config.js';
 import { FRAME, TOPPING_SIZE } from './cakeView.js';
 import { idealCake, orderCakeKey, orderSig, ORDER_PX } from './orderCake.js';
@@ -14,8 +18,11 @@ const K = ORDER_PX / FRAME; // texture px per frame unit
 const GLOW = 0xffc400;
 const HALO_R = 14; // frame units the halo spreads around a layer
 const STAND_ORIGIN_Y = 0.8;
+const BOUNCE = 1.04;
+// Steps whose layer may also get an additive fill over the cake (none of them is the top face).
+const FILL_STEPS = ['pate', 'moule', 'cuisson'];
 
-// A highlight texture: the step's layer drawn in `tint`, at the same scale and centre as the
+// A highlight texture: the step's layer as a solid GLOW silhouette, at the same scale and centre as the
 // cake texture. `halo` spreads it around (copies on two rings) so it shows beyond the cake.
 function highlightKey(scene, order, step, halo) {
   const key = `order-hl-${orderSig(order)}-${step}-${halo ? 'halo' : 'fill'}`;
@@ -23,7 +30,8 @@ function highlightKey(scene, order, step, halo) {
   const cake = idealCake(scene, order);
   const shape = order.shape;
   const px = Math.ceil(440 * K);
-  const img = (k2, x = 0, y = 0) => scene.make.image({ x, y, key: k2, add: false });
+  // every layer part is a solid GLOW silhouette (its own colours are dropped)
+  const img = (k2, x = 0, y = 0) => scene.make.image({ x, y, key: k2, add: false }).setTintFill(GLOW);
   const layer = () => {
     const parts = [];
     const top = (k2) => {
@@ -33,7 +41,8 @@ function highlightKey(scene, order, step, halo) {
       parts.push(holder);
     };
     if (step === 'pate' || step === 'cuisson') parts.push(img(`shape-${shape}-side`));
-    if (step === 'cuisson' || step === 'couleur') top(`shape-${shape}-fill`);
+    // the fill (drawn over the cake) never covers the top face: on cuisson it is the side only
+    if (step === 'couleur' || (step === 'cuisson' && halo)) top(`shape-${shape}-fill`);
     if (step === 'moule') top(`shape-${shape}-line`);
     if (step === 'toppings') {
       for (const t of cake.toppings) {
@@ -53,10 +62,7 @@ function highlightKey(scene, order, step, halo) {
   }
   for (const [dx, dy] of offsets) {
     const holder = scene.make.container({ x: dx, y: dy, add: false });
-    for (const p of layer()) {
-      p.setTint?.(GLOW);
-      holder.add(p);
-    }
+    for (const p of layer()) holder.add(p);
     all.add(holder);
   }
   const tex = scene.textures.addDynamicTexture(key, px, px);
@@ -80,14 +86,16 @@ export function addOrderReminder(scene, order, step) {
   const cy = CARD_H / 2 + 4;
   const cake = scene.add.image(cx, cy, orderCakeKey(scene, order)).setScale(scale);
   const halo = scene.add.image(cx, cy, highlightKey(scene, order, step, true)).setScale(scale).setAlpha(0.4);
-  const fill = scene.add.image(cx, cy, highlightKey(scene, order, step, false)).setScale(scale)
-    .setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.15);
-  c.add([halo, cake, fill]);
-  c.glow = scene.tweens.add({
-    targets: halo, alpha: { from: 0.35, to: 1 }, duration: 650, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
-  });
-  scene.tweens.add({
-    targets: fill, alpha: { from: 0.1, to: 0.55 }, duration: 650, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
-  });
+  c.add([halo, cake]);
+  const pulse = { duration: 650, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' };
+  c.glow = scene.tweens.add({ targets: halo, alpha: { from: 0.35, to: 1 }, ...pulse });
+  // the cake and its halo swell a little together (about 4 %), at the same beat
+  scene.tweens.add({ targets: [halo, cake], scale: { from: scale, to: scale * BOUNCE }, ...pulse });
+  if (FILL_STEPS.includes(step)) {
+    const fill = scene.add.image(cx, cy, highlightKey(scene, order, step, false)).setScale(scale)
+      .setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.1);
+    c.add(fill);
+    scene.tweens.add({ targets: fill, alpha: { from: 0.1, to: 0.45 }, scale: { from: scale, to: scale * BOUNCE }, ...pulse });
+  }
   return c;
 }
