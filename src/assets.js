@@ -21,6 +21,7 @@ export const ASSETS = [
   { key: 'shape-carre-side', file: 'assets/shapes/shape-carre-side.svg', w: 400, h: 400 },
   { key: 'shape-coeur-fill', file: 'assets/shapes/shape-coeur-fill.svg', w: 400, h: 400 },
   { key: 'shape-coeur-line', file: 'assets/shapes/shape-coeur-line.svg', w: 400, h: 400 },
+  { key: 'shape-coeur-rim', file: 'assets/shapes/shape-coeur-rim.svg', w: 400, h: 400 },
   { key: 'shape-coeur-side', file: 'assets/shapes/shape-coeur-side.svg', w: 400, h: 400 },
   { key: 'shape-etoile-fill', file: 'assets/shapes/shape-etoile-fill.svg', w: 400, h: 400 },
   { key: 'shape-etoile-line', file: 'assets/shapes/shape-etoile-line.svg', w: 400, h: 400 },
