@@ -7,6 +7,8 @@ export const ID = 'stand-desserts';
 // Name shown to the parent (French).
 export const NAME = 'Stand de desserts';
 export const CATEGORY = 'compter-observer';
+// Picture of the game's tile when its category lists several games (relative to the game folder).
+export const TILE = 'assets/toppings/topping-fraise.svg';
 // Shared settings this game applies (registry SHARED_SETTINGS; a test checks it).
 export const SUPPORTS = ['rythme', 'soir'];
 

@@ -2,7 +2,7 @@
 // and by the service worker (sw.js). Paths are relative to the site root (where sw.js and the
 // home index.html live), never absolute, so the site can live in a sub-folder.
 //
-// Adding a game: create jeux/<id>/collection.js (ID, CATEGORY, SUPPORTS, PRECACHE, reset),
+// Adding a game: create jeux/<id>/collection.js (ID, NAME, CATEGORY, TILE, SUPPORTS, PRECACHE, reset),
 // import it below and add it to GAMES. tests/registry.test.js checks it.
 import * as standDesserts from './stand-desserts/collection.js';
 import { CLIENT_LAYERS } from '../shared/client.js';
@@ -19,6 +19,7 @@ const game = m => ({
   name: m.NAME,
   category: m.CATEGORY,
   path: `jeux/${m.ID}/index.html`,
+  tile: `jeux/${m.ID}/${m.TILE}`,
   supports: m.SUPPORTS,
   precache: m.PRECACHE,
   reset: m.reset,

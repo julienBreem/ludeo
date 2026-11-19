@@ -47,7 +47,7 @@ Après cette première visite, l'accueil et tous les jeux marchent **sans Intern
 Pour ajouter un jeu plus tard :
 
 1. Créez un dossier `jeux/<nom>/` avec sa page `index.html` et ses fichiers.
-2. Dans ce dossier, ajoutez `collection.js` sur le modèle de `jeux/stand-desserts/collection.js` : `ID` (le nom du dossier), `NAME` (nom français montré aux parents), `CATEGORY`, `SUPPORTS`, `PRECACHE` (tous les fichiers du jeu, pour le hors-connexion) et `reset` (efface la progression du jeu).
+2. Dans ce dossier, ajoutez `collection.js` sur le modèle de `jeux/stand-desserts/collection.js` : `ID` (le nom du dossier), `NAME` (nom français montré aux parents), `CATEGORY`, `TILE` (image de la tuile du jeu, dans son dossier), `SUPPORTS`, `PRECACHE` (tous les fichiers du jeu, pour le hors-connexion) et `reset` (efface la progression du jeu).
 3. Dans `jeux/registry.js`, ajoutez une ligne `import` pour ce `collection.js` et ajoutez le jeu à la liste `GAMES`. Si la catégorie n'existe pas encore, ajoutez-la à `CATEGORIES`.
 4. Le jeu **doit respecter tous les réglages partagés** : le **rythme** (calme, normal, rapide) et le **mode soir** (couleurs adoucies, pas de confettis). Il lit ces réglages via `shared/runtime.js` (voir `jeux/stand-desserts/src/ui/pace.js` pour un exemple) et les déclare dans `SUPPORTS` ; il doit aussi proposer un bouton retour vers l'accueil (`../../index.html`).
 5. Lancez `npm test` : un test vérifie le registre, les réglages pris en charge et la liste des fichiers du hors-connexion. Puis augmentez `CACHE_VERSION` (partie 3).

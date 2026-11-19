@@ -43,6 +43,15 @@ test('games: unique ids, known category, page in their folder, reset function', 
   }
 });
 
+test('every game has its own tile picture, on disk and in its precache', () => {
+  for (const g of GAMES) {
+    assert.ok(g.tile && !g.tile.endsWith('/undefined'), `${g.id} has no TILE`);
+    assert.ok(g.tile.startsWith(`jeux/${g.id}/`), `${g.id}: tile outside its folder`);
+    assert.ok(exists(g.tile), `${g.tile} is missing`);
+    assert.ok(g.precache.includes(g.tile), `${g.tile} not in ${g.id}'s precache`);
+  }
+});
+
 test('the stand is registered as specified', () => {
   const g = GAMES.find(x => x.id === 'stand-desserts');
   assert.ok(g);
