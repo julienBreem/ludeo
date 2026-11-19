@@ -4,7 +4,9 @@
 // wrong" picture), the face changes, coins fly into the counter and are saved once (round.paid),
 // then icon-next leads to a new client. Each scored phase's result is saved once (round.recorded)
 // for the parent's level proposals. At Commande N2 / N3 a card at the bottom repeats the order's
-// words / sentence, with the words of the failed points marked.
+// words / sentence, with the words of the failed points marked. When the dough's quantities were
+// wrong, the recipe comes back at the top left: per kind what was needed (with the operation) and
+// what she poured.
 import { W, H, TOUCH, COLOR_HEX, OUTLINE, BATTER, TOP_SQUASH } from '../config.js';
 import { getRound, getState, updateState } from '../game-state.js';
 import { addIconButton } from '../ui/button.js';
@@ -15,7 +17,8 @@ import { goNext } from '../ui/flow.js';
 import { STEPS, scoreRound, bitesFor } from '../logic/scoring.js';
 import { GRID } from '../logic/paint.js';
 import { zoneEdges } from '../logic/zones.js';
-import { DESSERTS } from '../logic/catalog.js';
+import { INGREDIENTS } from '../logic/catalog.js';
+import { fixedRecipe, toPour } from '../logic/recipe.js';
 import { addCoins } from '../logic/economy.js';
 import { dur } from '../ui/pace.js';
 import { orderSentenceParts, orderWordParts, failedElements } from '../logic/orderText.js';
@@ -56,6 +59,13 @@ const REASON_X = 1000;
 const RECAP_LEFT = 30;
 const RECAP_RIGHT = W - 24 - TOUCH - 24;
 const RECAP_PAD = 14;
+// Pâte recap card (top left, over the awning, clear of the coin counter)
+const DOUGH_X = 20;
+const DOUGH_Y = 14;
+const DOUGH_MAX_W = W - 330 - DOUGH_X;
+const DOUGH_REASONS = ['intrus', 'manque', 'trop'];
+const GOOD = { fill: 0xc8f2c2, line: 0x2e7d32 };
+const BAD = { fill: 0xffcdd2, line: 0xc62828 };
 const TEXT_STYLE = { fontFamily: 'Arial Black, Arial, sans-serif', color: '#222222' };
 
 export class ServiceScene extends Phaser.Scene {
@@ -88,6 +98,7 @@ export class ServiceScene extends Phaser.Scene {
     this.card.lineStyle(6, OUTLINE, 1).strokeRoundedRect(CARD_X, CARD_Y, CARD_W, CARD_H, 36);
 
     this.drawWordRecap();
+    this.drawDoughRecap();
 
     this.next = addIconButton(this, W - 24 - TOUCH / 2, H - 24 - TOUCH / 2, 'icon-next', () => this.leave());
     this.next.setDepth(500).setVisible(false).disableInteractive();
@@ -140,6 +151,109 @@ export class ServiceScene extends Phaser.Scene {
     text.setPosition(RECAP_LEFT + RECAP_PAD, top + RECAP_PAD - 2).setDepth(35);
     text.markers.setAlpha(0);
     this.recap = text;
+  }
+
+  doughRecipe() {
+    return this.round.recipe ?? fixedRecipe(this.round.order.dessert);
+  }
+
+  // Pâte failed on quantities: the recipe again, one column per kind (the recipe's, then the
+  // intruders she poured). Top line: the ingredient. Middle line (a little recipe card): what she
+  // had to pour, with the operation at N2-N3 (« 2 + 1 = 3 », « 7 − 3 = 4 », « 5 × 2 = 10 »), as dice
+  // at N1. Bottom line (the bowl): what she poured, green when right, red when not. Fades in with
+  // the pâte row.
+  drawDoughRecap() {
+    const res = this.round.results.pate;
+    if (!res || res.ok || !DOUGH_REASONS.includes(res.reason)) return;
+    const recipe = this.doughRecipe();
+    const added = this.round.doughAdded ?? {};
+    const dice = Object.values(recipe.display).every(d => d.kind === 'dice');
+    const kinds = Object.keys(recipe.target);
+    const extra = Object.keys(added).filter(k => added[k] > 0 && !kinds.includes(k))
+      .sort((a, b) => INGREDIENTS.indexOf(a) - INGREDIENTS.indexOf(b));
+    const box = this.add.container(DOUGH_X, DOUGH_Y).setDepth(45).setAlpha(0);
+    const ICON_Y = 32;
+    const NEED_Y = 86;
+    const HAVE_Y = 138;
+    const pad = 14;
+    const gap = 22;
+    // row pictograms: a small recipe card, the bowl
+    const lead = this.add.container(0, 0);
+    const card = this.add.graphics();
+    card.fillStyle(0xfff8e1, 1).fillRoundedRect(pad, NEED_Y - 22, 34, 44, 6);
+    card.lineStyle(3, OUTLINE, 1).strokeRoundedRect(pad, NEED_Y - 22, 34, 44, 6);
+    card.lineStyle(3, 0x9e9e9e, 1);
+    for (let l = 0; l < 3; l++) card.lineBetween(pad + 7, NEED_Y - 10 + l * 10, pad + 27, NEED_Y - 10 + l * 10);
+    lead.add(card);
+    lead.add(this.fit('bowl', 52, pad + 20).setY(HAVE_Y));
+    const cols = [...kinds, ...extra].map((k) => {
+      const c = this.add.container(0, 0);
+      c.add(this.fit(`ing-${k}`, 46, 0).setY(ICON_Y));
+      const intruder = !(k in recipe.target);
+      const need = intruder ? 0 : toPour(recipe, k);
+      let w = 64;
+      const needPart = dice && !intruder
+        ? this.diceRow(need, NEED_Y)
+        : this.recapText(intruder ? '0' : this.operation(recipe, k), NEED_Y);
+      c.add(needPart.obj);
+      w = Math.max(w, needPart.w);
+      const got = added[k] ?? 0;
+      const ok = got === need;
+      const havePart = dice && got > 0 ? this.diceRow(got, HAVE_Y) : this.recapText(String(got), HAVE_Y);
+      const pw = havePart.w + 20;
+      const bg = this.add.graphics();
+      const col = ok ? GOOD : BAD;
+      bg.fillStyle(col.fill, 1).fillRoundedRect(-pw / 2, HAVE_Y - 26, pw, 52, 14);
+      bg.lineStyle(4, col.line, 1).strokeRoundedRect(-pw / 2, HAVE_Y - 26, pw, 52, 14);
+      c.add(bg);
+      c.add(havePart.obj);
+      w = Math.max(w, pw);
+      return { c, w };
+    });
+    let x = pad + 34 + gap;
+    for (const { c, w } of cols) {
+      c.setX(x + w / 2);
+      x += w + gap;
+    }
+    const width = x - gap + pad;
+    const height = HAVE_Y + 26 + pad;
+    const bg = this.add.graphics();
+    bg.fillStyle(0x000000, 0.15).fillRoundedRect(3, 5, width, height, 24);
+    bg.fillStyle(0xffffff, 1).fillRoundedRect(0, 0, width, height, 24);
+    bg.lineStyle(4, OUTLINE, 1).strokeRoundedRect(0, 0, width, height, 24);
+    box.add(bg);
+    box.add(lead);
+    for (const { c } of cols) box.add(c);
+    if (width > DOUGH_MAX_W) box.setScale(DOUGH_MAX_W / width);
+    this.doughRecap = box;
+  }
+
+  // What she had to pour of k, as the card showed it, with the operation and its result.
+  operation(recipe, k) {
+    const d = recipe.display[k];
+    const pre = recipe.prefilled[k] ?? 0;
+    const shown = d.kind === 'sum' ? `${d.a} + ${d.b}` : String(d.n);
+    let expr = shown;
+    if (recipe.double) expr = d.kind === 'sum' ? `(${shown}) × 2` : `${shown} × 2`;
+    if (d.kind === 'complement') expr = `${expr} − ${pre}`;
+    const result = toPour(recipe, k);
+    return expr === String(result) ? expr : `${expr} = ${result}`;
+  }
+
+  recapText(str, y) {
+    const t = this.add.text(0, y, str, { ...TEXT_STYLE, fontSize: '30px' }).setOrigin(0.5);
+    return { obj: t, w: t.width };
+  }
+
+  // n (0..10) as one or two die faces (5 + the rest), side by side, centred on x = 0.
+  diceRow(n, y) {
+    const faces = n > 5 ? [5, n - 5] : [n];
+    const size = 48;
+    const c = this.add.container(0, 0);
+    faces.forEach((f, i) => {
+      if (f > 0) c.add(this.add.image((i - (faces.length - 1) / 2) * (size + 6), y, `dice-${f}`).setDisplaySize(size, size));
+    });
+    return { obj: c, w: faces.length * (size + 6) - 6 };
   }
 
   markWords() {
@@ -227,6 +341,7 @@ export class ServiceScene extends Phaser.Scene {
       return;
     }
     this.buildRow(i);
+    if (STEPS[i] === 'pate' && this.doughRecap) this.tweens.add({ targets: this.doughRecap, alpha: 1, duration: dur(300) });
     this.time.delayedCall(dur(STEP_MS), () => this.reveal(i + 1, mood));
   }
 
@@ -323,12 +438,13 @@ export class ServiceScene extends Phaser.Scene {
       case 'trop':
         if (step === 'pate') {
           const added = this.round.doughAdded ?? {};
-          const recipe = DESSERTS[o.dessert].recipe;
+          const recipe = this.doughRecipe();
+          const want = k => toPour(recipe, k);
           let key = null;
           let sign = 0;
-          if (reason === 'intrus') key = Object.keys(added).find(k => added[k] > 0 && !(k in recipe));
-          else if (reason === 'manque') { key = Object.keys(recipe).find(k => (added[k] ?? 0) < recipe[k]); sign = -1; }
-          else { key = Object.keys(recipe).find(k => (added[k] ?? 0) > recipe[k]); sign = 1; }
+          if (reason === 'intrus') key = Object.keys(added).find(k => added[k] > 0 && !(k in recipe.target));
+          else if (reason === 'manque') { key = Object.keys(recipe.target).find(k => (added[k] ?? 0) < want(k)); sign = -1; }
+          else { key = Object.keys(recipe.target).find(k => (added[k] ?? 0) > want(k)); sign = 1; }
           c.add(this.fit(key ? `ing-${key}` : 'bowl', 76, x));
           if (key) this.badge(c, x, sign);
           break;

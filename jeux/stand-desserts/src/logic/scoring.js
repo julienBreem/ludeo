@@ -7,12 +7,14 @@ const fail = reason => ({ ok: false, reason });
 export const COVERAGE_OK = 0.85;
 export const STEPS = ['pate', 'moule', 'cuisson', 'couleur', 'toppings'];
 
-export function judgeDough(added, stirProgress, dessert) {
-  const recipe = DESSERTS[dessert].recipe;
+// target: what must end up in the bowl per kind (logic/recipe.js; the dessert's fixed recipe when
+// left out); prefilled: what was already in it (N3 complement). Kinds outside target are intruders.
+export function judgeDough(added, stirProgress, dessert, target = DESSERTS[dessert].recipe, prefilled = {}) {
   const entries = Object.entries(added).filter(([, n]) => n > 0);
-  if (entries.some(([k]) => !(k in recipe))) return fail('intrus');
-  if (Object.entries(recipe).some(([k, n]) => (added[k] ?? 0) < n)) return fail('manque');
-  if (Object.entries(recipe).some(([k, n]) => (added[k] ?? 0) > n)) return fail('trop');
+  const have = k => (prefilled[k] ?? 0) + (added[k] ?? 0);
+  if (entries.some(([k]) => !(k in target))) return fail('intrus');
+  if (Object.entries(target).some(([k, n]) => have(k) < n)) return fail('manque');
+  if (Object.entries(target).some(([k, n]) => have(k) > n)) return fail('trop');
   if (stirProgress < 1) return fail('pas-melange');
   return OK;
 }

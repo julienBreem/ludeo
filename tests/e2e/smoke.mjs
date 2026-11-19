@@ -26,7 +26,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { DESSERTS, INGREDIENTS } from '../../jeux/stand-desserts/src/logic/catalog.js';
+import { DESSERTS } from '../../jeux/stand-desserts/src/logic/catalog.js';
 import { GREEN_MIN, GREEN_MAX } from '../../jeux/stand-desserts/src/logic/bake.js';
 import { COLOR_HEX } from '../../jeux/stand-desserts/src/config.js';
 import { bitesFor } from '../../jeux/stand-desserts/src/logic/scoring.js';
@@ -347,23 +347,25 @@ const actions = {
 
   async dough({ shot: name } = {}) {
     await waitScene('Dough');
-    const r = await sceneEval('Dough', 's => ({ order: s.round.order })');
+    // The recipe depends on the pâte level: read it from the round, with the shelf and bowl layout.
+    const r = await sceneEval('Dough', `s => ({ order: s.round.order, recipe: s.round.recipe, shelf: s.shelf,
+      open: [s.batter.x, s.batter.y - 10], whisk: [s.whisk.x, s.whisk.y - 80] })`);
     order = r.order;
-    log('  order', JSON.stringify(order));
-    const opening = [520, 396];
-    for (const [key, n] of Object.entries(DESSERTS[order.dessert].recipe)) {
-      const x = 250 + INGREDIENTS.indexOf(key) * 156;
-      for (let k = 0; k < n; k++) {
+    log('  order', JSON.stringify(order), 'recipe', JSON.stringify(r.recipe.target), 'prefilled', JSON.stringify(r.recipe.prefilled));
+    const opening = r.open;
+    for (const [key, n] of Object.entries(r.recipe.target)) {
+      const x = r.shelf[key];
+      for (let k = 0; k < n - (r.recipe.prefilled[key] ?? 0); k++) {
         await drag([[x, 725], [x, 600], opening]);
         await sleep(700);
       }
     }
     await waitFor('whisk', () => sceneEval('Dough', 's => s.whisk.visible'));
     // whisk: press it at home, then 6 loops round the bowl opening
-    const pts = [[980, 560]];
+    const pts = [r.whisk];
     for (let i = 0; i <= 6 * 32; i++) {
       const a = (i / 32) * Math.PI * 2;
-      pts.push([520 + Math.cos(a) * 200, 404 + Math.sin(a) * 110]);
+      pts.push([opening[0] + Math.cos(a) * 180, opening[1] + 8 + Math.sin(a) * 100]);
     }
     await drag(pts, 10);
     const prog = await sceneEval('Dough', 's => s.tracker.progress()');
