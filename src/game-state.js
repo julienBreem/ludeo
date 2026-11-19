@@ -2,8 +2,8 @@
 import { loadState, saveState } from './logic/save.js';
 import { generateOrder } from './logic/order.js';
 import { createRound } from './logic/round.js';
+import { generateClient } from './logic/client.js';
 
-const CLIENT_VARIANTS = 4;
 
 let state = null;
 let round = null;
@@ -34,8 +34,9 @@ export function updateState(fn) {
 
 // A fresh Round for a new client: order from owned items + client look.
 export function newRound() {
+  const previous = round?.client ?? null;
   round = createRound(generateOrder(getState().owned));
-  round.clientVariant = Math.floor(Math.random() * CLIENT_VARIANTS);
+  round.client = generateClient(Math.random, previous);
   return round;
 }
 

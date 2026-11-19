@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { makeRng } from '../src/logic/rng.js';
 import {
-  generateClient, sameClient, HAIRS, HAIR_COLORS, SKINS, SHIRTS, ACCESSORIES, ANIMALS,
+  generateClient, sameClient, HAIRS, HAIR_COLORS, SKINS, SHIRTS, ACCESSORIES, ANIMALS, CAP_HAIRS,
 } from '../src/logic/client.js';
 
 test('never the same client twice in a row over 5000 draws', () => {
@@ -45,4 +45,16 @@ test('human fields in range; accessory share ~ 0.5', () => {
     if (c.accessory) acc++;
   }
   assert.ok(Math.abs(acc / humans - 0.5) < 0.03, String(acc / humans));
+});
+
+test('the cap never goes with hair 1 or 5, and caps still occur', () => {
+  const rng = makeRng(4); let caps = 0;
+  for (let i = 0; i < 10000; i++) {
+    const c = generateClient(rng);
+    if (c.accessory !== 'cap') continue;
+    caps++;
+    assert.ok(CAP_HAIRS.includes(c.hair), `cap with hair ${c.hair}`);
+    assert.ok(c.hair !== 1 && c.hair !== 5);
+  }
+  assert.ok(caps > 300, String(caps));
 });

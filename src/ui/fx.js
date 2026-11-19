@@ -130,23 +130,43 @@ export function popIn(scene, target) {
   });
 }
 
-// Random eye blink every 2-5 s: a quick scaleY squash of the face. Returns a stop function.
-export function blink(scene, faceImage) {
+// Random eye blink every 2-5 s on container.eyes only: swap to client-eyes-closed for ~120 ms
+// (fallback on the v1 face image: a quick scaleY squash). Returns a stop function.
+export function blink(scene, container) {
+  const eyes = container.eyes;
   let timer = null;
   let stopped = false;
   const schedule = () => {
     timer = scene.time.delayedCall(2000 + Math.random() * 3000, () => {
-      if (stopped || !faceImage.active) return;
-      const sy = faceImage.scaleY;
-      scene.tweens.add({
-        targets: faceImage, scaleY: sy * 0.15, duration: 70, yoyo: true, ease: 'Quad.easeInOut',
-        onComplete: () => { if (faceImage.active) faceImage.scaleY = sy; },
-      });
+      if (stopped || !eyes.active) return;
+      if (eyes.texture.key === 'client-eyes-open' && scene.textures.exists('client-eyes-closed')) {
+        eyes.setTexture('client-eyes-closed');
+        scene.time.delayedCall(120, () => { if (eyes.active) eyes.setTexture('client-eyes-open'); });
+      } else if (eyes.texture.key.startsWith('face-')) {
+        const sy = eyes.scaleY;
+        scene.tweens.add({
+          targets: eyes, scaleY: sy * 0.15, duration: 70, yoyo: true, ease: 'Quad.easeInOut',
+          onComplete: () => { if (eyes.active) eyes.scaleY = sy; },
+        });
+      }
       schedule();
     });
   };
   schedule();
   return () => { stopped = true; timer?.remove(); };
+}
+
+// The mouth bobs (scaleY about its anchor) for `ms` while the client talks. No mouth layer
+// (v1 face fallback): nothing happens.
+export function talk(scene, container, ms = 1500) {
+  const mouth = container.mouth;
+  if (!mouth?.active) return null;
+  const sy = mouth.scaleY;
+  const dur = 140;
+  return scene.tweens.add({
+    targets: mouth, scaleY: sy * 0.55, duration: dur, yoyo: true, repeat: Math.max(0, Math.round(ms / (dur * 2)) - 1),
+    ease: 'Sine.easeInOut', onComplete: () => { if (mouth.active) mouth.scaleY = sy; },
+  });
 }
 
 // A few warm dots drifting up (oven heat). Call repeatedly while baking.

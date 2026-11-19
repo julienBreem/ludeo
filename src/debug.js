@@ -1,6 +1,7 @@
 // Debug entry: index.html?scene=<SceneKey> opens that scene directly with a sample round
 // (heart gateau, golden, rose | violet glaze, 2 strawberries + 3 stars, order matching).
 import { createRound } from './logic/round.js';
+import { generateClient } from './logic/client.js';
 import { setRound } from './game-state.js';
 import { idealCake } from './ui/orderCake.js';
 
@@ -35,7 +36,7 @@ export function sampleCake(scene) {
 export function installSampleRound(scene) {
   const round = createRound(sampleOrder());
   round.cake = sampleCake(scene);
-  round.clientVariant = 0;
+  round.client = generateClient();
   setRound(round);
   return round;
 }

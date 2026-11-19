@@ -50,9 +50,9 @@ export class ServiceScene extends Phaser.Scene {
 
     this.add.image(W / 2, 90, getState().owned.includes('deco:auvent') ? 'deco-auvent' : 'stand-awning').setDepth(40);
     if (getState().owned.includes('deco:guirlande')) this.add.image(W / 2, 90, 'deco-guirlande').setDepth(41);
-    this.client = drawClient(this, CLIENT_X, CLIENT_Y, round.clientVariant ?? 0, 'bof');
+    this.client = drawClient(this, CLIENT_X, CLIENT_Y, round.client, 'bof');
     this.client.setDepth(10);
-    this.stopBlink = blink(this, this.client.face);
+    this.stopBlink = blink(this, this.client);
     this.add.image(W / 2, H - 130, 'stand-counter').setDepth(20);
     this.drawCounter();
 

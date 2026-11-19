@@ -5,7 +5,7 @@ import { newRound, getRound, getState, updateState, getStorage } from '../game-s
 import { addIconButton } from '../ui/button.js';
 import { drawClient } from '../ui/client.js';
 import { drawCake } from '../ui/cakeView.js';
-import { blink, popIn } from '../ui/fx.js';
+import { blink, popIn, talk } from '../ui/fx.js';
 import { goNext, goTo, restart } from '../ui/flow.js';
 import { resetState, defaultState } from '../logic/save.js';
 
@@ -41,9 +41,9 @@ export class StandScene extends Phaser.Scene {
     this.drawCoins();
     addIconButton(this, 24 + TOUCH / 2, H - 24 - TOUCH / 2, 'icon-shop', () => goTo(this, 'Shop')).setDepth(500);
 
-    this.client = drawClient(this, W + 220, CLIENT_Y, round.clientVariant, 'content');
+    this.client = drawClient(this, W + 220, CLIENT_Y, round.client, 'content');
     this.client.setDepth(10);
-    blink(this, this.client.face);
+    blink(this, this.client);
     this.add.image(W / 2, H - 130, 'stand-counter').setDepth(20);
     if (owned.includes('deco:pancarte')) {
       this.add.image(230, 585, 'deco-pancarte').setScale(0.7).setDepth(21);
@@ -69,6 +69,7 @@ export class StandScene extends Phaser.Scene {
         this.ready = true;
         this.bubble.setVisible(true).setInteractive();
         popIn(this, this.bubble);
+        talk(this, this.client, 1500);
         this.ok.setAlpha(1).setInteractive();
         this.dots.forEach(d => d.setVisible(true));
         this.advance();
