@@ -53,18 +53,22 @@ export function numberWord(n, g = 'm') {
 }
 
 const shapeNoun = key => NOUNS.shape[key] ?? { word: key, g: 'm' };
+// Moule N2-N3 (hideShape): « ? » for the shape, and the masculine forms around it (article,
+// colours), so that « Une … violette » does not tell an étoile or a licorne.
+const HIDDEN = { word: '?', g: 'm' };
+const shapeOf = (order, hideShape) => (hideShape ? HIDDEN : shapeNoun(order.shape));
 const colorWord = (key, g) => NOUNS.color[key]?.[g] ?? key;
 const toppingNoun = key => NOUNS.topping[key] ?? { one: key, many: `${key}s`, g: 'm' };
 const counted = (t, count) => (count === 1 ? t.one : t.many);
 
 /**
- * orderWords(order, level = 1) -> Array<{key, kind: 'forme'|'couleur'|'topping', word, index}>
+ * orderWords(order, level = 1, {hideShape}) -> Array<{key, kind: 'forme'|'couleur'|'topping', word, index}>
  * One word per element, in the order shape, colours (zones left to right), toppings.
  * Level 1: toppings named without a number (« fraises »); level ≥ 2: « 2 fraises ».
  * `index` is the zone index for colours, the position in order.toppings for toppings, 0 for the shape.
  */
-export function orderWords(order, level = 1) {
-  const shape = shapeNoun(order.shape);
+export function orderWords(order, level = 1, { hideShape = false } = {}) {
+  const shape = shapeOf(order, hideShape);
   const out = [{ key: order.shape, kind: 'forme', word: shape.word, index: 0 }];
   (order.glaze ?? []).forEach((key, index) => out.push({ key, kind: 'couleur', word: colorWord(key, shape.g), index }));
   (order.toppings ?? []).forEach(({ key, count }, index) => {
@@ -78,13 +82,13 @@ export function orderWords(order, level = 1) {
 }
 
 /**
- * orderSentenceParts(order) -> Array<{text, kind?, key?, index?}>
+ * orderSentenceParts(order, {hideShape}) -> Array<{text, kind?, key?, index?}>
  * The N3 sentence cut into pieces: the words that name an element carry its kind/key/index (so
  * one can be highlighted), the glue between them (articles, commas, « et », « avec ») does not.
  * Joining every `text` gives orderSentence(order).
  */
-export function orderSentenceParts(order) {
-  const shape = shapeNoun(order.shape);
+export function orderSentenceParts(order, { hideShape = false } = {}) {
+  const shape = shapeOf(order, hideShape);
   const article = shape.g === 'f' ? 'Une' : 'Un';
   const parts = [{ text: `${article} ` }, { text: shape.word, kind: 'forme', key: order.shape, index: 0 }];
   const glue = text => parts.push({ text });
@@ -150,13 +154,13 @@ export function failedElements(order, results = {}) {
 }
 
 /**
- * orderWordParts(order) -> parts for a word list by category (N2 strip and Service recap):
+ * orderWordParts(order, {hideShape}) -> parts for a word list by category (N2 strip and Service recap):
  * [{pict: 'forme'}, shape word, {br}, {pict: 'couleur'}, colours « , »-separated, {br},
  *  {pict: 'topping'}, toppings counted in digits]. Word parts carry kind/key/index like
  * orderSentenceParts; empty categories are left out.
  */
-export function orderWordParts(order) {
-  const words = orderWords(order, 2);
+export function orderWordParts(order, { hideShape = false } = {}) {
+  const words = orderWords(order, 2, { hideShape });
   const out = [];
   for (const kind of ['forme', 'couleur', 'topping']) {
     const list = words.filter(w => w.kind === kind);

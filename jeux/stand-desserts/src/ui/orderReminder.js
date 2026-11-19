@@ -103,8 +103,7 @@ const WORDS_MAX_H = 168;
 function addWordReminder(scene, order, step, level, hideShape) {
   ensureWordTextures(scene);
   const kind = STEP_KIND[step];
-  let parts = level >= 3 ? orderSentenceParts(order) : orderWordParts(order);
-  if (hideShape) parts = parts.map(p => (p.kind === 'forme' ? { ...p, text: '?' } : p));
+  const parts = level >= 3 ? orderSentenceParts(order, { hideShape }) : orderWordParts(order, { hideShape });
   const mark = p => !!kind && p.kind === kind;
   let text = null;
   for (const [i, fit] of WORDS_FITS.entries()) {
@@ -121,6 +120,8 @@ function addWordReminder(scene, order, step, level, hideShape) {
   text.setPosition(WORDS_PAD, WORDS_PAD - 2);
   c.add([bg, text]);
   c.words = text;
+  c.cardW = w;
+  c.cardH = h;
   if (text.marked) {
     c.glow = scene.tweens.add({
       targets: text.markers, alpha: { from: 0.35, to: 1 }, duration: 650, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
@@ -141,6 +142,8 @@ function addHiddenShapeCard(scene) {
     fontFamily: 'Arial Black, Arial, sans-serif', fontSize: '96px', color: '#1f2a44',
   }).setOrigin(0.5);
   c.add([bg, pict, q]);
+  c.cardW = CARD_W;
+  c.cardH = CARD_H;
   c.glow = scene.tweens.add({ targets: q, alpha: { from: 0.45, to: 1 }, duration: 650, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
   return c;
 }
@@ -150,12 +153,15 @@ function addHiddenShapeCard(scene) {
  *   {hideShape = false}) -> Container
  * The card sits at the top-left, depth 400. Its pulse is a tween owned by the scene. `level` is
  * the round's Commande level: 1 shows the cake, 2 the words, 3 the sentence. hideShape (Moule
- * N2-N3): the shape is not shown (« ? »).
+ * N2-N3): the shape is not shown (« ? »). The container's cardW / cardH give the card's size (its
+ * top-left is the container's position).
  */
 export function addOrderReminder(scene, order, step, level = 1, { hideShape = false } = {}) {
   if (level >= 2) return addWordReminder(scene, order, step, level, hideShape);
   if (hideShape) return addHiddenShapeCard(scene);
   const c = scene.add.container(X, Y).setDepth(400);
+  c.cardW = CARD_W;
+  c.cardH = CARD_H;
   const bg = scene.add.graphics();
   bg.fillStyle(0x000000, 0.15).fillRoundedRect(3, 5, CARD_W, CARD_H, 22);
   bg.fillStyle(BACKDROP, 1).fillRoundedRect(0, 0, CARD_W, CARD_H, 22); // pale: white glaze shows

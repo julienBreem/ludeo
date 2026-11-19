@@ -147,3 +147,15 @@ test('orderWordParts: one line per category, led by its pictogram', async () => 
   const tagged = orderWordParts(o).filter(p => p.kind).map(p => `${p.kind}:${p.index}`);
   assert.deepEqual(tagged, ['forme:0', 'couleur:0', 'couleur:1', 'topping:0', 'topping:1']);
 });
+
+test('hideShape: « ? » and the masculine forms, so the sentence and the words never tell the shape', async () => {
+  const { orderWordParts } = await import('../jeux/stand-desserts/src/logic/orderText.js');
+  const join = parts => parts.map(p => p.text ?? '').join('');
+  for (const shape of ['etoile', 'licorne', 'coeur', 'rond']) {
+    const o = order(shape, ['rose', 'violet', 'blanc'], [{ key: 'fraise', count: 1 }]);
+    assert.equal(join(orderSentenceParts(o, { hideShape: true })), 'Un ? rose, violet et blanc, avec une fraise.');
+    assert.equal(join(orderWordParts(o, { hideShape: true })), '?rose, violet, blanc1 fraise');
+  }
+  // without it, unchanged
+  assert.equal(orderSentence(order('etoile', ['violet'], [])), 'Une étoile violette.');
+});

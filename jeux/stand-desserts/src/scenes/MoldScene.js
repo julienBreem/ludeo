@@ -8,9 +8,12 @@
 //     corner glow (tap again: off): she counts them herself, no number is shown. Tapping the
 //     mould under it chooses it.
 // N3: the mould in pieces (2-3, some turned): the target's outline is an empty slot; a tap turns a
-//     piece a quarter turn, a drag moves it (never off the screen). A piece snaps in place when it
-//     is turned right and dropped near a place it fits. ✓ once every piece is in place or on the
-//     slot; right only if every piece snapped.
+//     piece a quarter turn, a drag moves it (never off the screen, never under the order card or
+//     ↺ / ✓). A piece snaps in place when it is turned right and dropped near a place it fits
+//     (SNAP_PX). A near miss (dropped within NEAR_K x that of a free place it fits at some turn)
+//     shows that place's outline glowing and wiggles the piece (a turning wiggle when it must be
+//     turned); at calme pace a piece one quarter turn off turns by itself. ✓ once every piece is in
+//     place or near a place it fits (never stuck); right only if every piece snapped.
 // The exercise is kept on the round (round.moldEx): ↺ starts the same one again.
 import { W, H, BATTER, OUTLINE, TOP_SQUASH } from '../config.js';
 import { getRound, getState } from '../game-state.js';
@@ -54,10 +57,17 @@ const CLUE_PICT = 84;
 const SLOT_X = 420;
 const SLOT_Y = 440;
 const SLOT_K = 0.9; // screen px per frame px (slot and pieces)
-const TRAY = { 2: [[850, 420], [1100, 470]], 3: [[830, 330], [1090, 360], [960, 570]] };
-const SNAP_PX = 40; // x pace greenWindow
+// The tray: right of the slot (it ends at x 600), above ↺ / ✓; pieces laid out in rows by size.
+const TRAY_X0 = 640;
+const TRAY_Y0 = 215;
+const TRAY_Y1 = H - 150;
+const TRAY_GAP = 24;
+const SNAP_PX = 70; // x pace greenWindow (pieces are >= 150 px)
+const NEAR_K = 2; // a near miss: within NEAR_K x the snap distance
+const HINT = 0xffd54f;
 const HIT_MIN = 110; // a piece's tap / drag zone is never smaller (>= 96)
-const KEEP_IN = 60; // a dragged piece's centre stays this far inside the screen
+const KEEP_IN = 60; // a dragged piece's centre stays this far inside the screen and from the card
+const DRAG_MAX_Y = 640; // ... and above ↺ / ✓ (from y 666)
 const DRAG_PX = 10;
 const TURN_MS = 180;
 
@@ -75,13 +85,16 @@ export class MoldScene extends Phaser.Scene {
     this.cards = {};
     this.pieces = [];
     this.bar = null; // Phaser reuses the scene: not the last run's bar
+    this.topDepth = 20;
+    this.hintImg = null;
+    this.reminder = null;
     this.level = [1, 2, 3].includes(round.levels?.moule) ? round.levels.moule : 1;
     this.ex = this.exercise();
     if (this.level === 3 && !this.ex.pieces) this.level = 1; // no silhouette to cut (cannot happen in play)
 
     this.cameras.main.setBackgroundColor(0xe1f5fe);
     ensureWordTextures(this);
-    addOrderReminder(this, round.order, 'moule', round.levels?.commande, { hideShape: this.level >= 2 });
+    this.reminder = addOrderReminder(this, round.order, 'moule', round.levels?.commande, { hideShape: this.level >= 2 });
 
     if (this.level === 3) {
       this.buildTangram();
@@ -306,19 +319,15 @@ export class MoldScene extends Phaser.Scene {
     this.slot = this.add.container(SLOT_X, SLOT_Y).setScale(SLOT_K);
     this.slot.add(this.add.image(0, 0, `shape-${shape}-fill`).setTint(0xb3c7d6).setAlpha(0.55));
     this.slot.add(this.add.image(0, 0, `shape-${shape}-line`).setTint(0x37474f));
-    this.slotBox = new Phaser.Geom.Rectangle(SLOT_X - (FRAME / 2) * SLOT_K, SLOT_Y - (FRAME / 2) * SLOT_K, FRAME * SLOT_K, FRAME * SLOT_K);
     this.filled = new Map(); // place j -> piece index
     this.snapPx = SNAP_PX * Math.max(1, factors().greenWindow ?? 1);
     this.input.dragDistanceThreshold = DRAG_PX;
-    const spots = TRAY[this.ex.pieces.length] ?? TRAY[3];
+    const imgs = this.ex.pieces.map((p, i) => this.add.image(0, 0, p.key).setScale(SLOT_K).setAngle(p.rotation).setDepth(10 + i));
+    const spots = trayLayout(imgs.map((img, i) => ((this.ex.pieces[i].rotation / 90) % 2
+      ? [img.displayHeight, img.displayWidth] : [img.displayWidth, img.displayHeight])));
     this.ex.pieces.forEach((p, i) => {
-      const img = this.add.image(0, 0, p.key).setScale(SLOT_K).setAngle(p.rotation).setDepth(10 + i);
-      // the tray spot, moved in so that the whole (turned) piece is on the screen
-      const side = (p.rotation / 90) % 2 ? [img.displayHeight, img.displayWidth] : [img.displayWidth, img.displayHeight];
-      img.setPosition(
-        Phaser.Math.Clamp(spots[i][0], side[0] / 2 + 16, W - side[0] / 2 - 16),
-        Phaser.Math.Clamp(spots[i][1], side[1] / 2 + 16, H - 150 - side[1] / 2),
-      );
+      const img = imgs[i];
+      img.setPosition(...spots[i]);
       const hw = Math.max(img.width, HIT_MIN / SLOT_K);
       const hh = Math.max(img.height, HIT_MIN / SLOT_K);
       img.setInteractive({
@@ -335,14 +344,15 @@ export class MoldScene extends Phaser.Scene {
       });
       img.on('dragstart', () => {
         piece.dragged = true;
+        this.stopWiggle(piece);
         this.raise(piece);
       });
       img.on('drag', (ptr) => {
         const x = ptr.x + piece.grab[0];
         const y = ptr.y + piece.grab[1];
-        img.setPosition(Phaser.Math.Clamp(x, KEEP_IN, W - KEEP_IN), Phaser.Math.Clamp(y, KEEP_IN, H - KEEP_IN));
+        img.setPosition(...this.keepIn(x, y));
       });
-      img.on('dragend', () => this.tryPlace(piece));
+      img.on('dragend', () => this.tryPlace(piece, true));
       img.on('pointerup', () => {
         if (!piece.dragged) this.turn(piece);
       });
@@ -350,14 +360,24 @@ export class MoldScene extends Phaser.Scene {
     this.updateValidate();
   }
 
+  // A dragged piece's centre: on the screen, above ↺ / ✓, never under the order card.
+  keepIn(x, y) {
+    let cx = Phaser.Math.Clamp(x, KEEP_IN, W - KEEP_IN);
+    const cy = Phaser.Math.Clamp(y, KEEP_IN, DRAG_MAX_Y);
+    const r = this.reminder;
+    if (r?.cardW && cy < r.y + r.cardH + KEEP_IN) cx = Math.max(cx, r.x + r.cardW + KEEP_IN);
+    return [cx, cy];
+  }
+
   raise(piece) {
-    this.topDepth = (this.topDepth ?? 20) + 1;
+    this.topDepth += 1;
     piece.img.setDepth(this.topDepth);
   }
 
   // A quarter turn clockwise.
   turn(piece) {
     if (piece.place !== null || piece.turning) return;
+    this.stopWiggle(piece);
     piece.turning = true;
     piece.rot = (piece.rot + 90) % 360;
     this.raise(piece);
@@ -371,8 +391,9 @@ export class MoldScene extends Phaser.Scene {
     });
   }
 
-  // Snaps the piece into a free place it fits at its current turn, if it is near it.
-  tryPlace(piece) {
+  // Snaps the piece into a free place it fits at its current turn, if it is near it. A drop that
+  // does not snap but is a near miss gets its feedback (nearMiss).
+  tryPlace(piece, dropped = false) {
     if (piece.place !== null) return;
     const fits = this.ex.pieces[piece.i].fits[piece.rot / 90] ?? [];
     let best = null;
@@ -396,13 +417,93 @@ export class MoldScene extends Phaser.Scene {
           if (this.filled.size === this.pieces.length) sparkle(this, SLOT_X, SLOT_Y);
         },
       });
+      if (this.hintImg?.place === best) this.clearHint();
+    } else if (dropped) {
+      this.nearMiss(piece);
     }
     this.updateValidate();
   }
 
-  // ✓ once every piece is in its place or lies on the slot.
+  // The free place nearest to the piece among those it fits at any turn: {j, d, off} (off = the
+  // quarter turns clockwise it still needs), or null.
+  nearestPlace(piece) {
+    const fits = this.ex.pieces[piece.i].fits;
+    let best = null;
+    for (let r = 0; r < 4; r++) {
+      for (const j of fits[r] ?? []) {
+        if (this.filled.has(j)) continue;
+        const [hx, hy] = this.home(j);
+        const d = Math.hypot(piece.img.x - hx, piece.img.y - hy);
+        if (!best || d < best.d) best = { j, d, off: (r - piece.rot / 90 + 4) % 4 };
+      }
+    }
+    return best;
+  }
+
+  // A drop near a place the piece fits (at this turn but a bit far, or at another turn): the place
+  // glows and the piece wiggles (a turning wiggle when it must be turned). Calme pace: a piece one
+  // quarter turn off and close enough turns by itself (then snaps).
+  nearMiss(piece) {
+    const near = this.nearestPlace(piece);
+    if (!near || near.d > this.snapPx * NEAR_K) return;
+    if (near.off === 1 && near.d <= this.snapPx && (factors().greenWindow ?? 1) > 1) {
+      this.turn(piece);
+      return;
+    }
+    this.showHint(near.j);
+    this.wiggle(piece, near.off !== 0);
+  }
+
+  // The place's outline (its own piece, unturned), glowing twice.
+  showHint(j) {
+    this.clearHint();
+    const [hx, hy] = this.home(j);
+    const img = this.add.image(hx, hy, this.ex.pieces[j].key).setScale(SLOT_K).setTintFill(HINT).setAlpha(0).setDepth(4);
+    img.place = j;
+    this.hintImg = img;
+    this.tweens.add({
+      targets: img, alpha: { from: 0, to: 0.85 }, duration: dur(320), yoyo: true, repeat: 1, ease: 'Sine.easeInOut',
+      onComplete: () => { if (this.hintImg === img) this.clearHint(); },
+    });
+  }
+
+  clearHint() {
+    if (!this.hintImg) return;
+    this.tweens.killTweensOf(this.hintImg);
+    this.hintImg.destroy();
+    this.hintImg = null;
+  }
+
+  // A small shake: sideways (in the wrong spot), or turning to and fro (it must be turned).
+  wiggle(piece, turning) {
+    this.stopWiggle(piece);
+    const img = piece.img;
+    const base = turning ? piece.rot : img.x;
+    piece.wig = this.tweens.add({
+      targets: img,
+      ...(turning ? { angle: { from: base - 12, to: base + 12 } } : { x: { from: base - 10, to: base + 10 } }),
+      duration: dur(90), yoyo: true, repeat: 2, ease: 'Sine.easeInOut',
+      onComplete: () => { piece.wig = null; if (turning) img.setAngle(piece.rot); else img.x = base; },
+    });
+    piece.wigBase = { turning, base };
+  }
+
+  stopWiggle(piece) {
+    if (!piece.wig) return;
+    piece.wig.stop();
+    piece.wig = null;
+    if (piece.wigBase.turning) piece.img.setAngle(piece.rot);
+    else piece.img.x = piece.wigBase.base;
+  }
+
+  // ✓ once every piece is in its place or near a free place it fits (at any turn): she can always
+  // finish (and is judged), but a piece left in the tray or far off keeps ✓ grey.
   updateValidate() {
-    const done = this.pieces.every(p => p.place !== null || this.slotBox.contains(p.img.x, p.img.y));
+    const done = this.pieces.every((p) => {
+      if (p.place !== null) return true;
+      const near = this.nearestPlace(p);
+      return !!near && near.d <= this.snapPx * NEAR_K;
+    });
     this.bar?.setValidateEnabled(done);
   }
 
@@ -421,4 +522,37 @@ export class MoldScene extends Phaser.Scene {
     goNext(this);
     return true;
   }
+}
+
+// The tray: the (turned) piece sizes laid out in rows, left to right, in the area right of the slot
+// (TRAY_X0..W, TRAY_Y0..TRAY_Y1), every row and the whole block centred, TRAY_GAP between pieces.
+// -> [[x, y], ...] the pieces' centres.
+export function trayLayout(sizes) {
+  const x0 = TRAY_X0;
+  const x1 = W - 16;
+  const rows = [];
+  let row = null;
+  sizes.forEach(([w, h], i) => {
+    if (row && row.w + TRAY_GAP + w <= x1 - x0) {
+      row.items.push(i);
+      row.w += TRAY_GAP + w;
+      row.h = Math.max(row.h, h);
+    } else {
+      row = { items: [i], w, h };
+      rows.push(row);
+    }
+  });
+  const total = rows.reduce((a, r) => a + r.h, 0) + TRAY_GAP * (rows.length - 1);
+  let y = TRAY_Y0 + Math.max(0, (TRAY_Y1 - TRAY_Y0 - total) / 2);
+  const out = [];
+  for (const r of rows) {
+    let x = x0 + (x1 - x0 - r.w) / 2;
+    for (const i of r.items) {
+      const [w] = sizes[i];
+      out[i] = [Math.round(x + w / 2), Math.round(Math.min(y + r.h / 2, TRAY_Y1 - sizes[i][1] / 2))];
+      x += w + TRAY_GAP;
+    }
+    y += r.h + TRAY_GAP;
+  }
+  return out;
 }
