@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { maskFromAlpha, createPaintGrid, GRID, BRUSH_RADIUS } from '../src/logic/paint.js';
+import { maskFromAlpha, createPaintGrid, dominantColor, GRID, BRUSH_RADIUS } from '../src/logic/paint.js';
 
 test('constants', () => { assert.equal(GRID, 64); assert.equal(BRUSH_RADIUS, 4); });
 
@@ -46,4 +46,17 @@ test('empty mask gives zero coverage, not NaN', () => {
   const g = createPaintGrid(new Uint8Array(64 * 64));
   g.paint(10, 10, 1);
   assert.equal(g.coverage(['rose']).rose, 0);
+});
+
+test('dominantColor: the colour painted on the most cells wins', () => {
+  const keys = ['rose', 'violet', 'jaune'];
+  // mostly yellow (3), some violet (2): the yellow pot, not the first key
+  assert.equal(dominantColor(Uint8Array.from([0, 3, 3, 3, 2, 2, 0]), keys), 'jaune');
+  assert.equal(dominantColor(Uint8Array.from([2, 2, 1]), keys), 'violet');
+  assert.equal(dominantColor(Uint8Array.from([1, 0, 0]), keys), 'rose');
+});
+
+test('dominantColor: unpainted cells never win; nothing painted gives null', () => {
+  assert.equal(dominantColor(Uint8Array.from([0, 0, 0, 0, 2]), ['rose', 'violet']), 'violet');
+  assert.equal(dominantColor(new Uint8Array(10), ['rose']), null);
 });

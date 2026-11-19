@@ -93,7 +93,8 @@ function syncMask(scene, maskImage, target) {
  * view 'top': top-down; '3q': side band + top face squashed by TOP_SQUASH, standing toppings.
  * inMold (with '3q'): mold back, squashed top face (no side band, no toppings), mold front.
  * Extras on the returned container: .top (top-face container), .glaze (Graphics),
- * .side, .moldBack, .moldFront (images or null), .setBakeGauge(g), .setGlaze(glaze).
+ * .side, .moldBack, .moldFront, .line, .maskImage (images or null; maskImage is the top face's
+ * BitmapMask source), .standing (3/4 standing topping images), .setBakeGauge(g), .setGlaze(glaze).
  */
 export function drawCake(scene, x, y, cake, { size = 400, bakeGauge, view = '3q', inMold = false } = {}) {
   const c = scene.add.container(x, y);
@@ -107,6 +108,9 @@ export function drawCake(scene, x, y, cake, { size = 400, bakeGauge, view = '3q'
   c.moldBack = null;
   c.moldFront = null;
   c.glaze = null;
+  c.line = null;
+  c.maskImage = null;
+  c.standing = [];
 
   if (mold) {
     c.moldBack = scene.add.image(0, 0, `mold-${shape}-back`);
@@ -134,6 +138,7 @@ export function drawCake(scene, x, y, cake, { size = 400, bakeGauge, view = '3q'
     const maskImage = scene.make.image({ x: 0, y: 0, key: `shape-${shape}-fill`, add: false });
     masked.setMask(maskImage.createBitmapMask());
     syncMask(scene, maskImage, masked);
+    c.maskImage = maskImage;
   } else {
     const batter = scene.add.graphics();
     batter.fillStyle(BATTER, 1).fillCircle(0, 0, BATTER_RADIUS);
@@ -148,7 +153,10 @@ export function drawCake(scene, x, y, cake, { size = 400, bakeGauge, view = '3q'
     return img;
   });
   if (!threeQ) toppings.forEach(t => top.add(t));
-  if (shape) top.add(scene.add.image(0, 0, `shape-${shape}-line`));
+  if (shape) {
+    c.line = scene.add.image(0, 0, `shape-${shape}-line`);
+    top.add(c.line);
+  }
   if (threeQ && !mold) {
     toppings
       .sort((a, b) => a.y - b.y)
@@ -156,6 +164,7 @@ export function drawCake(scene, x, y, cake, { size = 400, bakeGauge, view = '3q'
         t.y *= TOP_SQUASH;
         t.setOrigin(0.5, STAND_ORIGIN_Y);
         c.add(t);
+        c.standing.push(t);
       });
   } else if (mold) {
     toppings.forEach(t => t.destroy());

@@ -47,3 +47,13 @@ export function createPaintGrid(mask, size = GRID) {
     clear() { cells.fill(0); },
   };
 }
+
+// Colour key painted on the most cells (cell value k = colorKeys[k-1]), or null if nothing is
+// painted. Ties go to the first colour in colorKeys.
+export function dominantColor(cells, colorKeys) {
+  const counts = new Array(colorKeys.length + 1).fill(0);
+  for (const v of cells) if (v > 0 && v <= colorKeys.length) counts[v]++;
+  let best = 0;
+  for (let k = 1; k < counts.length; k++) if (counts[k] > counts[best]) best = k;
+  return best ? colorKeys[best - 1] : null;
+}

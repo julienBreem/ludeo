@@ -5,18 +5,22 @@ import { W, H, TOUCH, COLOR_HEX, OUTLINE } from '../config.js';
 import { getRound, getState, updateState } from '../game-state.js';
 import { addIconButton } from '../ui/button.js';
 import { drawClient } from '../ui/client.js';
-import { drawCake, shapeMask } from '../ui/cakeView.js';
+import { drawCake, shapeMask, FRAME } from '../ui/cakeView.js';
 import { blink, popIn, confetti, splash } from '../ui/fx.js';
 import { goNext } from '../ui/flow.js';
 import { STEPS, scoreRound } from '../logic/scoring.js';
+import { dominantColor } from '../logic/paint.js';
 import { DESSERTS } from '../logic/catalog.js';
 import { addCoins } from '../logic/economy.js';
 
 const CLIENT_X = 300;
 const CLIENT_Y = 470;
-const CAKE_X = 330;
-const CAKE_Y = 650;
+// The served cake stands on the worktop (y ~545-590), in front of the client, slightly right.
+const CAKE_X = 505;
+const CAKE_Y = 488;
 const CAKE_SIZE = 250;
+const CAKE_FROM_X = CAKE_X + 220; // slides in from behind the result card
+const BITE_KEY = 'bite-mask';
 const CARD_X = 650;
 const CARD_Y = 192;
 const CARD_W = 590;
@@ -39,6 +43,7 @@ export class ServiceScene extends Phaser.Scene {
     this.round = round;
     if (window.__game) window.__round = round;
     this.leaving = false;
+    this.biteGfx = null;
     const { coins, mood } = scoreRound(round.results);
     this.coinsEarned = coins;
     this.cameras.main.setBackgroundColor(0xfffde7);
@@ -51,7 +56,7 @@ export class ServiceScene extends Phaser.Scene {
     this.add.image(W / 2, H - 130, 'stand-counter').setDepth(20);
     this.drawCounter();
 
-    this.cake = drawCake(this, CARD_X - 120, CAKE_Y, round.cake, { size: CAKE_SIZE, view: '3q' }).setDepth(25);
+    this.cake = drawCake(this, CAKE_FROM_X, CAKE_Y, round.cake, { size: CAKE_SIZE, view: '3q' }).setDepth(25);
     this.card = this.add.graphics().setDepth(30);
     this.card.fillStyle(0xffffff, 1).fillRoundedRect(CARD_X, CARD_Y, CARD_W, CARD_H, 36);
     this.card.lineStyle(6, OUTLINE, 1).strokeRoundedRect(CARD_X, CARD_Y, CARD_W, CARD_H, 36);
@@ -67,7 +72,11 @@ export class ServiceScene extends Phaser.Scene {
         this.time.delayedCall(500, () => this.reveal(0, mood));
       },
     });
-    this.events.once('shutdown', () => this.stopBlink?.());
+    this.events.once('shutdown', () => {
+      this.stopBlink?.();
+      this.biteGfx?.destroy(); // made off the display list: not destroyed by the scene
+      this.biteGfx = null;
+    });
   }
 
   drawCounter() {
@@ -79,16 +88,50 @@ export class ServiceScene extends Phaser.Scene {
     }).setOrigin(0, 0.5).setDepth(500);
   }
 
-  // A semicircular chunk is cut out of the cake's right edge, with a few crumbs.
+  // A round chunk is cut out of the cake's right edge, with a few crumbs.
+  // Not a mask on the whole cake: the top face already has a BitmapMask and nested masks hide
+  // everything above it in WebGL (toppings, outline). Instead the bite is cut out of the top
+  // face's mask texture, and an inverted GeometryMask is put on each unmasked part.
   bite() {
+    const cake = this.cake;
     const r = CAKE_SIZE * 0.17;
-    const bx = this.cake.x + CAKE_SIZE * 0.42;
-    const by = this.cake.y;
+    const bx = cake.x + CAKE_SIZE * 0.42;
+    const by = cake.y;
     const g = this.make.graphics({ x: 0, y: 0 }, false);
     g.fillStyle(0xffffff, 1).fillCircle(bx, by, r);
-    this.cake.setMask(g.createGeometryMask().setInvertAlpha(true));
+    const mask = g.createGeometryMask().setInvertAlpha(true);
+    for (const part of [cake.side, cake.line, ...cake.standing]) part?.setMask(mask);
     this.biteGfx = g;
+    if (cake.maskImage) {
+      // bite centre and radii in the top face's local frame units (cake scale, top squash)
+      const s = cake.scaleX;
+      const fx = (bx - cake.x) / s / cake.top.scaleX;
+      const fy = (by - cake.y) / s / cake.top.scaleY;
+      cake.maskImage.setTexture(this.bittenMask(this.round.cake.shape, fx, fy, r / s / cake.top.scaleX, r / s / cake.top.scaleY));
+    }
     splash(this, bx, by, 0xd9a066);
+  }
+
+  // shape-<shape>-fill with an ellipse erased (frame units, centre-relative): the bitten silhouette.
+  bittenMask(shape, fx, fy, rx, ry) {
+    const src = this.textures.get(`shape-${shape}-fill`).getSourceImage();
+    const w = src.width;
+    const h = src.height;
+    let tex = this.textures.exists(BITE_KEY) ? this.textures.get(BITE_KEY) : null;
+    if (tex && (tex.width !== w || tex.height !== h)) { this.textures.remove(BITE_KEY); tex = null; }
+    if (!tex) tex = this.textures.createCanvas(BITE_KEY, w, h);
+    const ctx = tex.getContext();
+    const k = w / FRAME;
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.clearRect(0, 0, w, h);
+    ctx.drawImage(src, 0, 0, w, h);
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.beginPath();
+    ctx.ellipse((fx + FRAME / 2) * k, (fy + FRAME / 2) * k, rx * k, ry * k, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalCompositeOperation = 'source-over';
+    tex.refresh();
+    return BITE_KEY;
   }
 
   reveal(i, mood) {
@@ -199,15 +242,10 @@ export class ServiceScene extends Phaser.Scene {
         c.add(this.miniCake({ ...base, bake: reason }, x));
         break;
       case 'mauvaise-couleur': {
-        let key = Object.keys(COLOR_HEX).find(k => k !== o.color);
+        // the pot she mostly painted with (the judge says it is not the ordered one)
         const gl = cake.glaze;
-        if (gl) {
-          const counts = new Array(gl.colorKeys.length + 1).fill(0);
-          for (const v of gl.cells) counts[v]++;
-          let best = 0;
-          for (let k = 1; k < counts.length; k++) if (counts[k] > counts[best || k]) best = k;
-          if (best) key = gl.colorKeys[best - 1];
-        }
+        const painted = gl ? dominantColor(gl.cells, gl.colorKeys) : null;
+        const key = painted && painted !== o.color ? painted : Object.keys(COLOR_HEX).find(k => k !== o.color);
         c.add(this.fit('pot', 80, x).setTint(COLOR_HEX[key]));
         break;
       }
