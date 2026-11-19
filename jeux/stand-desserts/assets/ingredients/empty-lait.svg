@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 120 120" width="120" height="120">
+<!-- lait, used: the bottle empty (see-through glass, a last drop of milk), cap off beside it -->
+<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#eaf6ff"/><stop offset="1" stop-color="#b9dcf5"/></linearGradient><linearGradient id="c" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5c9dff"/><stop offset="1" stop-color="#1e63f0"/></linearGradient><linearGradient id="m" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#e3eef8"/></linearGradient></defs>
+<ellipse cx="56" cy="110" rx="34" ry="6" fill="#0b4a70" opacity=".22"/>
+<g transform="rotate(-8 50 60)">
+<path d="M38 12 H62 V30 C62 39 78 44 78 62 V96 Q78 108 66 108 H34 Q22 108 22 96 V62 C22 44 38 39 38 30 Z" fill="url(#g)" fill-opacity=".55" stroke="#6fa6d6" stroke-width="3" stroke-linejoin="round"/>
+<path d="M25 97 Q50 91 75 97 Q76 105 66 105.500 H34 Q24 105 25 97 Z" fill="url(#m)" stroke="#9cc4e8" stroke-width="1.5"/>
+<ellipse cx="50" cy="12" rx="12" ry="4" fill="#d5e9f8" stroke="#6fa6d6" stroke-width="3"/>
+<path d="M22 66 H78 V90 H22 Z" fill="url(#c)" fill-opacity=".8" stroke="#0d47c9" stroke-width="2.5"/>
+<path d="M50 69 C55 76 58 79 58 83 A8 8 0 0 1 42 83 C42 79 45 76 50 69 Z" fill="#fff"/>
+<path d="M30 58 C31 50 36 46 41 41" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" opacity=".95"/>
+<path d="M70 60 V64" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".7"/>
+</g>
+<g transform="rotate(14 96 98)"><path d="M82 92 V102 Q96 108 110 102 V92 Z" fill="#1e63f0" stroke="#0d47c9" stroke-width="2.5" stroke-linejoin="round"/><ellipse cx="96" cy="92" rx="14" ry="5.500" fill="url(#c)" stroke="#0d47c9" stroke-width="2.5"/><path d="M88 91 H96" stroke="#fff" stroke-width="2.5" stroke-linecap="round" opacity=".7"/></g>
+</svg>

@@ -14,6 +14,13 @@ export const ASSETS = [
   { key: 'ing-lait', file: 'assets/ingredients/ing-lait.svg', w: 160, h: 160 },
   { key: 'ing-oeuf', file: 'assets/ingredients/ing-oeuf.svg', w: 160, h: 160 },
   { key: 'ing-sucre', file: 'assets/ingredients/ing-sucre.svg', w: 160, h: 160 },
+  // empty packaging (educational lot 1): what is left of each ingredient once poured
+  { key: 'empty-beurre', file: 'assets/ingredients/empty-beurre.svg', w: 120, h: 120 },
+  { key: 'empty-chocolat', file: 'assets/ingredients/empty-chocolat.svg', w: 120, h: 120 },
+  { key: 'empty-farine', file: 'assets/ingredients/empty-farine.svg', w: 120, h: 120 },
+  { key: 'empty-lait', file: 'assets/ingredients/empty-lait.svg', w: 120, h: 120 },
+  { key: 'empty-oeuf', file: 'assets/ingredients/empty-oeuf.svg', w: 120, h: 120 },
+  { key: 'empty-sucre', file: 'assets/ingredients/empty-sucre.svg', w: 120, h: 120 },
   // desserts
   { key: 'dessert-cupcake', file: 'assets/desserts/dessert-cupcake.svg', w: 400, h: 400 },
   { key: 'dessert-gateau', file: 'assets/desserts/dessert-gateau.svg', w: 400, h: 400 },
@@ -72,6 +79,11 @@ export const ASSETS = [
   { key: 'oven', file: 'assets/kitchen/oven.svg', w: 500, h: 450 },
   { key: 'pot', file: 'assets/kitchen/pot.svg', w: 200, h: 200 },
   { key: 'whisk', file: 'assets/kitchen/whisk.svg', w: 160, h: 400 },
+  // dough counting aids: egg cartons, the board for empties, the tray of what is already in the bowl
+  { key: 'egg-box', file: 'assets/kitchen/egg-box.svg', w: 400, h: 200 },
+  { key: 'egg-box-5', file: 'assets/kitchen/egg-box-5.svg', w: 200, h: 120 },
+  { key: 'plate-side', file: 'assets/kitchen/plate-side.svg', w: 420, h: 300 },
+  { key: 'tray', file: 'assets/kitchen/tray.svg', w: 260, h: 120 },
   // client: shared with the home's avatar (shared/assets/client/, precached by the home)
   ...CLIENT_LAYERS.map(key => ({ key, file: `${SHARED_CLIENT_DIR}${key}.svg`, w: 300, h: 300 })),
   // stand
@@ -89,6 +101,17 @@ export const ASSETS = [
   { key: 'icon-out', file: 'assets/ui/icon-out.svg', w: 160, h: 160 },
   { key: 'icon-restart', file: 'assets/ui/icon-restart.svg', w: 160, h: 160 },
   { key: 'icon-shop', file: 'assets/ui/icon-shop.svg', w: 160, h: 160 },
+  // reading and numbers: dice constellations, the eye, word labels, category pictograms
+  { key: 'dice-1', file: 'assets/ui/dice-1.svg', w: 96, h: 96 },
+  { key: 'dice-2', file: 'assets/ui/dice-2.svg', w: 96, h: 96 },
+  { key: 'dice-3', file: 'assets/ui/dice-3.svg', w: 96, h: 96 },
+  { key: 'dice-4', file: 'assets/ui/dice-4.svg', w: 96, h: 96 },
+  { key: 'dice-5', file: 'assets/ui/dice-5.svg', w: 96, h: 96 },
+  { key: 'icon-eye', file: 'assets/ui/icon-eye.svg', w: 160, h: 160 },
+  { key: 'label-tag', file: 'assets/ui/label-tag.svg', w: 200, h: 64 },
+  { key: 'pict-couleur', file: 'assets/ui/pict-couleur.svg', w: 96, h: 96 },
+  { key: 'pict-forme', file: 'assets/ui/pict-forme.svg', w: 96, h: 96 },
+  { key: 'pict-topping', file: 'assets/ui/pict-topping.svg', w: 96, h: 96 },
 ];
 
 // Every file of this game the service worker must cache for offline play, relative to the

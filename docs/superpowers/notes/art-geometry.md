@@ -106,3 +106,50 @@ Branch feat/art-home. Six SVGs in shared/assets/, all S2. Numbers below are in t
 - cat-compter-observer (480x360): a complete card (rx 44, darker base 8 px lower), no extra tile background needed. Shown at scale 1.1 (528x396), centred horizontally, top at y 250.
 - icon-home (160x160): complete glossy disc like the stand icons (turquoise); icon-gear is grey-blue on purpose (parent button).
 - Evening: the backgrounds and the moon are drawn for the evening and take no filter. Avatar, tile and gear were dimmed on the sheet with saturate .75 then RGB x .84/.76/.76; the home's real filter should stay close to that.
+
+# Educational lot 1 art (Commande = reading, Pâte = numbers) — geometry and contracts
+
+Branch feat/art-edu1. 20 new SVGs, all S2, none meant to be tinted. Layout numbers marked "sheet" are the ones used on the checkpoint sheet (1280x800 frame); they are suggestions.
+
+## Empty packaging — empty-<ingredient> (120x120, assets/ingredients/)
+
+- oeuf: half shell with a cracked rim. farine: bag flattened and folded over. sucre: empty sugar pot, lid beside it, a sugar cube on its label (the ingredient sprite is loose cubes, so the cube label is the link). beurre: wrapping paper open, print of the block. lait: see-through empty bottle, cap off. chocolat: torn wrapper with foil.
+- The drawing fills about 80% of the frame, centred; each has its own ground shadow at the bottom (y 100..110).
+- They stay readable down to about 45 px. Below that, do not go.
+
+## egg-box (400x200) and egg-box-5 (200x120), assets/kitchen/
+
+- egg-box: open carton seen from above, 2 rows of 5. Cell centres: x 52, 126, 200, 274, 348 (pitch 74); y 62 (back row) and 130 (front row). Cells are ellipses rx 31, ry 28. Fill order suggested: back row left to right, then front row.
+- A shell in a cell: empty-oeuf centred 4 px above the cell centre, at 0.6 x the box's scale (72 px in the 400 px frame). No front layer is needed.
+- Sheet: box at scale 0.78, centre (620,580); second box (after 10) at (945,580).
+- egg-box-5: one row of 5 whole eggs in a carton with a pink band; egg centres x 28, 64, 100, 136, 172, tops at y 12. The eggs are countable on purpose; there is no digit on it. Sheet: on the shelf next to the egg, scale 0.92.
+
+## plate-side (420x300), the board beside the bowl
+
+- Wooden board seen from above. Top face: x 8..412, y 8..270 (corner radius 36); the 16 px below is its thickness. Hanging hole at (380,42), r 11: keep items clear of it.
+- Area for the empties: x 30..390, y 28..248 (360x220).
+- Suggested slots (frame units; multiply by the board's scale): one lane per kind present in the recipe (eggs go to the egg box), lane pitch = min(72, 220 / max(3, kinds)), lanes centred vertically in the area.
+  - at most 5 per kind: empties at scale 0.5, first centre x 66, pitch 66.
+  - at most 10 per kind: scale 0.36, first centre x 52, pitch 33, plus 10 px after the 5th (groups of five, like the carton).
+- Sheet: board at scale 1.1, centre (1030,350); bowl at scale 0.8, centre (270,450).
+
+## tray (260x120), what is already in the bowl
+
+- Lilac, like the bowl, so it reads as "belongs to the bowl". Rim ellipse centre (130,54), radii 124x48; well centre (130,56), radii 102x35.
+- Items stand in the well: centres on y 44..50, x 58..202, at scale 0.4 (pitch 36).
+- Sheet: centre (150,262), above the bowl's left side. On the recipe card, "already there" is a lilac pill (fill #e4d9ff, stroke #6a3fd6) holding the tray at scale 0.2 and the number.
+
+## dice-1..5 (96x96, assets/ui/)
+
+- A die face (x 5..91, y 3..87, base 6 px lower) with dark blue dots r 10 at x 27/48/69, y 25/46/67. 2 and 3 are diagonals from the top left. Sheet: scale 0.62 on the recipe card under a 64 px ingredient.
+
+## label-tag (200x64), word label
+
+- 9-slice: left 26, right 26, top 26, bottom 30 (the bottom includes the 6 px darker base). Face: x 2..198, y 2..56. Text area: x 18..182, y 6..52; text centre y 29.
+- The gloss line under the top edge stretches with the middle column. Meant to be stretched in width; keep the height at 64.
+- Leader lines on the sheet: 4 px #3b5b7a over a 9 px white line, ending in a white dot r 9 with the same stroke, drawn over the cake; labels are drawn last.
+
+## icon-eye (160x160) and pict-forme / pict-couleur / pict-topping (96x96)
+
+- icon-eye: complete glossy disc like the other icons (yellow, the one hue no other button uses).
+- pict-*: neutral grey category pictograms (three shapes; a pot with a drip; a star and a cherry), drawn inside the frame with about 4 px margin. Sheet: scale 0.46 at the left of a label, word shifted 22 px right.

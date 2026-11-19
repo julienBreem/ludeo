@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 120 120" width="120" height="120">
+<!-- sucre, used: the sugar pot empty, lid off, a sugar cube on its label -->
+<defs><linearGradient id="b" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#c9def2"/></linearGradient><linearGradient id="i" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7fa9cf"/><stop offset="1" stop-color="#cfe2f4"/></linearGradient><linearGradient id="k" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7fb6ff"/><stop offset="1" stop-color="#1e63f0"/></linearGradient></defs>
+<ellipse cx="60" cy="108" rx="46" ry="7" fill="#0b4a70" opacity=".22"/>
+<g transform="translate(-7 2)"><path d="M78 99 Q98 72 118 99 Z" fill="#eef6fd" stroke="#6fa6d6" stroke-width="3" stroke-linejoin="round"/><ellipse cx="98" cy="99" rx="20" ry="5.500" fill="#d6e9fb" stroke="#6fa6d6" stroke-width="3"/><circle cx="98" cy="83" r="5.500" fill="url(#k)" stroke="#0d47c9" stroke-width="2.5"/></g>
+<path d="M22 44 C16 66 20 92 32 104 Q56 112 80 104 C92 92 96 66 90 44 Z" fill="url(#b)" stroke="#6fa6d6" stroke-width="3" stroke-linejoin="round"/>
+<ellipse cx="56" cy="44" rx="36" ry="13" fill="#eef6fd" stroke="#6fa6d6" stroke-width="3"/>
+<ellipse cx="56" cy="45.500" rx="28" ry="8.500" fill="url(#i)"/>
+<path d="M30 46 C38 40 48 38 58 38" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".9"/>
+<rect x="36" y="62" width="40" height="34" rx="8" fill="#fff" stroke="#6fa6d6" stroke-width="2.5" transform="translate(-4 0)"/>
+<g transform="translate(-4 -5)"><g transform="translate(60 77) scale(.5)"><path d="M-30 0 L0 15 V49 L-30 34 Z" fill="#f4faff"/><path d="M30 0 L0 15 V49 L30 34 Z" fill="#c2dbf2"/><path d="M0 -15 L30 0 L0 15 L-30 0 Z" fill="#fff"/><path d="M0 -15 L30 0 V34 L0 49 L-30 34 V0 Z M-30 0 L0 15 L30 0 M0 15 V49" fill="none" stroke="#6fa6d6" stroke-width="4.5" stroke-linejoin="round"/></g></g>
+<path d="M27 62 C25 76 28 90 34 97" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" opacity=".9"/>
+<path d="M102 44 Q102 52 110 52 Q102 52 102 60 Q102 52 94 52 Q102 52 102 44 Z" fill="#fff" stroke="#ffd54f" stroke-width="1.5"/>
+</svg>
