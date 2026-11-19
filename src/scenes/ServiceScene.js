@@ -3,7 +3,7 @@
 // animation and crumbs. Then the 5 steps are revealed one by one (icon, ok/ko, small "what went
 // wrong" picture), the face changes, coins fly into the counter and are saved once (round.paid),
 // then icon-next leads to a new client.
-import { W, H, TOUCH, COLOR_HEX, OUTLINE, BATTER } from '../config.js';
+import { W, H, TOUCH, COLOR_HEX, OUTLINE, BATTER, TOP_SQUASH } from '../config.js';
 import { getRound, getState, updateState } from '../game-state.js';
 import { addIconButton } from '../ui/button.js';
 import { drawClient } from '../ui/client.js';
@@ -40,6 +40,7 @@ const CARD_H = 470;
 const ROW_H = 90;
 const STEP_MS = 600;
 const MINI = 110; // mini cake pictures, px
+const SWAP_MINI = 150; // the colour-swap cake: bigger, so each zone's colour reads
 const CX = CARD_X + CARD_W / 2; // rows pop in around the card's centre line
 const ICON_X = 720;
 const STATUS_X = 850;
@@ -241,9 +242,9 @@ export class ServiceScene extends Phaser.Scene {
     c.add(g);
   }
 
-  miniCake(cake, x) {
+  miniCake(cake, x, size = MINI) {
     const c = this.add.container(0, 0);
-    const inner = drawCake(this, x, 6, cake, { size: MINI, view: '3q' });
+    const inner = drawCake(this, x, 6, cake, { size, view: '3q' });
     c.add(inner);
     return c;
   }
@@ -313,8 +314,9 @@ export class ServiceScene extends Phaser.Scene {
           break;
         }
         // an ordered colour in the wrong zone (left and right mixed up): her cake as she painted
-        // it, in the order's shape, with a cross on the failing zone
-        c.add(this.miniCake({ ...base, shape: o.shape, bake: 'dore', glaze: cake.glaze }, x));
+        // it, in the order's shape, with a cross on the failing zone's front edge (the zone's
+        // colour stays visible above it)
+        c.add(this.miniCake({ ...base, shape: o.shape, bake: 'dore', glaze: cake.glaze }, x, SWAP_MINI));
         const mask = shapeMask(this, o.shape);
         const edges = [-Infinity, ...zoneEdges(mask, GRID, o.glaze.length), Infinity];
         let minX = GRID;
@@ -324,10 +326,13 @@ export class ServiceScene extends Phaser.Scene {
           minX = Math.min(minX, n % GRID);
           maxX = Math.max(maxX, n % GRID);
         }
-        const a = Math.max(minX, edges[zone]);
-        const b = Math.min(maxX + 1, edges[zone + 1]);
-        const fx = ((a + b) / 2) * (FRAME / GRID) - FRAME / 2; // zone centre, frame units
-        this.badge(c, x, 'x', { x: x + fx * (MINI / FRAME), y: 6, r: 16 });
+        const col = Math.min(maxX, Math.max(minX, Math.floor((Math.max(minX, edges[zone]) + Math.min(maxX + 1, edges[zone + 1])) / 2)));
+        let row = 0; // the silhouette's lowest row in that column: the zone's front edge
+        for (let y = 0; y < GRID; y++) if (mask[y * GRID + col]) row = y;
+        const k = SWAP_MINI / FRAME;
+        const fx = (col + 0.5) * (FRAME / GRID) - FRAME / 2;
+        const fy = ((row + 1) * (FRAME / GRID) - FRAME / 2) * TOP_SQUASH;
+        this.badge(c, x, 'x', { x: x + fx * k, y: 6 + fy * k, r: 14 });
         break;
       }
       case 'pas-couvert': {

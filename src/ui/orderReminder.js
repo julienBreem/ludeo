@@ -2,9 +2,10 @@
 // of the current step glowing: dough -> side band, mould -> outline, bake -> the whole cake,
 // paint -> the glazed top, toppings -> the toppings. No digits, no icon list.
 // The glow is a solid-colour halo behind the cake (setTintFill: the layer's silhouette in GLOW,
-// whatever its own colours) plus a gentle bounce of the cake. Light is never added over the top
-// face or the toppings, whose colours are the order: only the side band (dough, bake) and the
-// outline (mould) get a pulsing additive fill.
+// whatever its own colours; for toppings a yellow ring around each one, over the cake) plus a
+// gentle bounce of the cake. Light is never added over the top face or the toppings, whose
+// colours are the order: only the side band (dough, bake) and the outline (mould) get a pulsing
+// additive fill.
 import { TOP_SQUASH, BACKDROP } from '../config.js';
 import { FRAME, TOPPING_SIZE } from './cakeView.js';
 import { idealCake, orderCakeKey, orderSig, ORDER_PX } from './orderCake.js';
@@ -31,26 +32,26 @@ function highlightKey(scene, order, step, halo) {
   const shape = order.shape;
   const px = Math.ceil(440 * K);
   // every layer part is a solid GLOW silhouette (its own colours are dropped)
-  const img = (k2, x = 0, y = 0) => scene.make.image({ x, y, key: k2, add: false }).setTintFill(GLOW);
+  const plain = (k2, x = 0, y = 0) => scene.make.image({ x, y, key: k2, add: false });
+  const img = (k2, x, y) => plain(k2, x, y).setTintFill(GLOW);
+  const topOf = (image) => {
+    const holder = scene.make.container({ x: 0, y: 0, add: false });
+    holder.scaleY = TOP_SQUASH;
+    holder.add(image);
+    return holder;
+  };
+  const standing = (make) => cake.toppings.map(t => {
+    const ti = make(`topping-${t.key}`, t.x, t.y * TOP_SQUASH).setOrigin(0.5, STAND_ORIGIN_Y);
+    return ti.setScale(TOPPING_SIZE / Math.max(ti.width, ti.height));
+  });
   const layer = () => {
     const parts = [];
-    const top = (k2) => {
-      const holder = scene.make.container({ x: 0, y: 0, add: false });
-      holder.scaleY = TOP_SQUASH;
-      holder.add(img(k2));
-      parts.push(holder);
-    };
+    const top = k2 => parts.push(topOf(img(k2)));
     if (step === 'pate' || step === 'cuisson') parts.push(img(`shape-${shape}-side`));
     // the fill (drawn over the cake) never covers the top face: on cuisson it is the side only
     if (step === 'couleur' || (step === 'cuisson' && halo)) top(`shape-${shape}-fill`);
     if (step === 'moule') top(`shape-${shape}-line`);
-    if (step === 'toppings') {
-      for (const t of cake.toppings) {
-        const ti = img(`topping-${t.key}`, t.x, t.y * TOP_SQUASH).setOrigin(0.5, STAND_ORIGIN_Y);
-        ti.setScale(TOPPING_SIZE / Math.max(ti.width, ti.height));
-        parts.push(ti);
-      }
-    }
+    if (step === 'toppings') parts.push(...standing(img));
     return parts;
   };
   const all = scene.make.container({ x: px / 2, y: px / 2, add: false }).setScale(K);
@@ -65,9 +66,21 @@ function highlightKey(scene, order, step, halo) {
     for (const p of layer()) holder.add(p);
     all.add(holder);
   }
+  // Toppings stand on the cake, so their halo is shown over it: each topping is drawn again in
+  // its own colours over its yellow ring, which then reads as an outline glow.
+  if (halo && step === 'toppings') for (const p of standing(plain)) all.add(p);
   const tex = scene.textures.addDynamicTexture(key, px, px);
   tex.draw(all);
   all.destroy();
+  // The additive fill must never light the order's colours: cut the top face (dough, bake) and
+  // the toppings out of it.
+  if (!halo) {
+    const cut = scene.make.container({ x: px / 2, y: px / 2, add: false }).setScale(K);
+    if (step !== 'moule') cut.add(topOf(plain(`shape-${shape}-fill`)));
+    for (const p of standing(plain)) cut.add(p);
+    tex.erase(cut);
+    cut.destroy();
+  }
   return key;
 }
 
@@ -86,9 +99,10 @@ export function addOrderReminder(scene, order, step) {
   const cy = CARD_H / 2 + 4;
   const cake = scene.add.image(cx, cy, orderCakeKey(scene, order)).setScale(scale);
   const halo = scene.add.image(cx, cy, highlightKey(scene, order, step, true)).setScale(scale).setAlpha(0.4);
-  c.add([halo, cake]);
+  c.add(step === 'toppings' ? [cake, halo] : [halo, cake]); // toppings: the ringed toppings over the cake
   const pulse = { duration: 650, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' };
-  c.glow = scene.tweens.add({ targets: halo, alpha: { from: 0.35, to: 1 }, ...pulse });
+  // the toppings' ring sits over the glaze: never so faint that it muddies it
+  c.glow = scene.tweens.add({ targets: halo, alpha: { from: step === 'toppings' ? 0.55 : 0.35, to: 1 }, ...pulse });
   // the cake and its halo swell a little together (about 4 %), at the same beat
   scene.tweens.add({ targets: [halo, cake], scale: { from: scale, to: scale * BOUNCE }, ...pulse });
   if (FILL_STEPS.includes(step)) {
