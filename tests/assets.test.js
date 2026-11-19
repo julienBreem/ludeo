@@ -69,6 +69,11 @@ test('every ASSETS file and every src/**/*.js is in PRECACHE', () => {
   assert.equal(cached.size, PRECACHE.length, 'PRECACHE has duplicates');
 });
 
+test('every PRECACHE entry exists on disk', () => {
+  const missing = PRECACHE.filter(f => f !== './' && !fs.existsSync(path.join(ROOT, f)));
+  assert.deepEqual(missing, []);
+});
+
 test('keys are unique', () => {
   const keys = ASSETS.map(a => a.key);
   assert.equal(new Set(keys).size, keys.length);
@@ -96,4 +101,5 @@ test('PWA: precache, icons and manifest', () => {
   }
   const sw = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
   assert.match(sw, /const CACHE_VERSION = 'v\d+'/);
+  assert.match(sw, /cache: 'reload'/, 'precache requests must bypass the HTTP cache');
 });

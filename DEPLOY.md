@@ -29,9 +29,10 @@ Après cette première visite, le jeu marche **sans Internet**.
 ## 4. Mettre à jour le jeu
 
 1. Modifiez les fichiers du jeu.
-2. Dans `sw.js`, changez la ligne `const CACHE_VERSION = 'v1';` en `'v2'`, puis `'v3'`, etc. (à chaque mise à jour, sans exception : sinon la tablette garde l'ancienne version).
+2. Dans `sw.js`, augmentez le numéro de la ligne `const CACHE_VERSION = 'v2';` : `'v3'`, puis `'v4'`, etc. (à chaque mise à jour, sans exception : sinon la tablette garde l'ancienne version).
 3. Envoyez de nouveau tous les fichiers modifiés (et `sw.js`).
 4. Sur la tablette, avec Internet : ouvrez le jeu **deux fois** (le fermer complètement, puis le rouvrir). La première ouverture télécharge la nouvelle version, la seconde l'affiche.
+5. Après la 2ᵉ ouverture, vérifiez que la nouveauté apparaît ; sinon, re-changez `CACHE_VERSION` (`'v3'`, etc.), renvoyez `sw.js` et recommencez l'étape 4.
 
 ## 5. Tout remettre à zéro (réservé aux parents)
 

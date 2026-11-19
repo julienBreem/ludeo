@@ -2,12 +2,15 @@
 // UPDATING: bump CACHE_VERSION on every deploy, then re-upload (see DEPLOY.md).
 import { PRECACHE } from './src/assets.js';
 
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v2';
 const CACHE = `stand-${CACHE_VERSION}`;
 
 self.addEventListener('install', event => {
   // Paths in PRECACHE are relative to the site root, which is where sw.js lives.
-  event.waitUntil(caches.open(CACHE).then(c => c.addAll(PRECACHE)).then(() => self.skipWaiting()));
+  // cache: 'reload' bypasses the browser's HTTP cache: without it a new version can be filled
+  // with the old files (static hosts send Last-Modified/Expires, so the HTTP cache answers).
+  const requests = PRECACHE.map(u => new Request(u, { cache: 'reload' }));
+  event.waitUntil(caches.open(CACHE).then(c => c.addAll(requests)).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', event => {
