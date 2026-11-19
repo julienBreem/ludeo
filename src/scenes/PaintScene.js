@@ -1,14 +1,18 @@
 // Paint: pick a glaze pot, then finger-paint the top-down cake until it is covered.
 // Coverage lives on the 64x64 paint grid; the visible glaze is a RenderTexture under the cake's
 // shape mask, and each move only draws the cells that changed (no full redraw while painting).
+// Multi-colour orders split the top into vertical zones, shown as dotted guide lines (painting
+// crosses them). On a tart the crust rim covers the outer band: those cells are not paintable and
+// do not count.
 import { W, H, OUTLINE, COLOR_HEX } from '../config.js';
 import { getRound, getState } from '../game-state.js';
 import { ownedKeys } from '../logic/catalog.js';
 import { createPaintGrid, GRID, BRUSH_RADIUS } from '../logic/paint.js';
+import { zoneMap, zoneEdges } from '../logic/zones.js';
 import { judgeColor, COVERAGE_OK } from '../logic/scoring.js';
 import { addStepBar } from '../ui/stepBar.js';
 import { addOrderReminder } from '../ui/orderReminder.js';
-import { drawCake, shapeMask, FRAME } from '../ui/cakeView.js';
+import { drawCake, shapeMask, rimMask, FRAME } from '../ui/cakeView.js';
 import { goNext, restart } from '../ui/flow.js';
 
 const CAKE_X = 540;
@@ -25,6 +29,25 @@ const BAR_Y = 375;
 const BAR_W = 330;
 const BAR_H = 56;
 const STAMP_STEP = BRUSH_RADIUS * 0.5; // cells between brush stamps along a fast stroke
+const CELL_F = FRAME / GRID; // frame units per grid cell
+const DASH = 14; // zone guide dash length / gap, in frame units
+const DASH_GAP = 10;
+
+// Silhouette cells not under the rim, plus the rim's innermost ring of cells: a cell whose centre
+// is under the rim can still show a sliver inside the rim's smooth edge, so the glaze reaches one
+// cell under the rim (which is drawn over it) instead of leaving bare steps along the edge.
+function paintableUnderRim(full, rim) {
+  const open = full.map((m, i) => (m && !rim[i] ? 1 : 0));
+  const out = Uint8Array.from(open);
+  for (let i = 0; i < out.length; i++) {
+    if (open[i] || !full[i]) continue;
+    const x = i % GRID;
+    const y = (i - x) / GRID;
+    if ((x > 0 && open[i - 1]) || (x < GRID - 1 && open[i + 1])
+      || (y > 0 && open[i - GRID]) || (y < GRID - 1 && open[i + GRID])) out[i] = 1;
+  }
+  return out;
+}
 
 export class PaintScene extends Phaser.Scene {
   constructor() {
@@ -38,7 +61,16 @@ export class PaintScene extends Phaser.Scene {
     const shape = round.cake.shape ?? round.order.shape;
     this.colorKeys = ownedKeys(getState().owned, 'color');
     this.selected = 0; // 1-based index into colorKeys, 0 = no pot chosen
-    this.mask = shapeMask(this, shape);
+    const full = shapeMask(this, shape);
+    // Paintable top: the silhouette minus the tart rim (all zeros when there is no rim).
+    const rim = round.cake.dessert === 'tarte' ? rimMask(this, shape) : null;
+    this.mask = rim ? paintableUnderRim(full, rim) : full;
+    const nZones = Math.max(1, round.order.glaze.length);
+    // Zones follow the silhouette's width (as on the order picture); cells under the rim count
+    // in no zone.
+    this.zones = zoneMap(full, GRID, nZones);
+    if (rim) for (let i = 0; i < this.zones.length; i++) if (!this.mask[i]) this.zones[i] = -1;
+    this.edges = zoneEdges(full, GRID, nZones);
     this.grid = createPaintGrid(this.mask, GRID);
     this.stroke = null; // {id, u, v}
     this.painted = false;
@@ -52,6 +84,7 @@ export class PaintScene extends Phaser.Scene {
     // sub-container, right above the (empty) glaze Graphics.
     this.layer = this.add.renderTexture(0, 0, CAKE_SIZE, CAKE_SIZE).setScale(1 / SCALE);
     this.cake.glaze.parentContainer.add(this.layer);
+    this.drawZoneGuides();
     this.brush = this.make.graphics({ x: 0, y: 0 }, false);
 
     this.drawShelf();
@@ -63,6 +96,42 @@ export class PaintScene extends Phaser.Scene {
     this.input.on('pointerupoutside', p => this.onUp(p));
 
     this.bar = addStepBar(this, { onRestart: () => restart(this), onValidate: () => this.validate() });
+  }
+
+  // Dotted vertical lines at the zone edges, over the glaze (under the rim and outline), only
+  // where the column crosses the paintable top. White dashes with a soft dark edge.
+  drawZoneGuides() {
+    if (!this.edges.length) return;
+    const g = this.add.graphics();
+    const top = this.cake.top;
+    top.addAt(g, top.getIndex(this.cake.glaze.parentContainer) + 1);
+    this.guides = g;
+    for (const e of this.edges) {
+      const a = Math.max(0, Math.ceil(e) - 1);
+      const b = Math.min(GRID - 1, Math.floor(e));
+      const x = e * CELL_F - FRAME / 2;
+      let run = -1;
+      for (let y = 0; y <= GRID; y++) {
+        const inside = y < GRID && (this.mask[y * GRID + a] || this.mask[y * GRID + b]);
+        if (inside && run < 0) run = y;
+        if (!inside && run >= 0) {
+          this.dashes(g, x, run * CELL_F - FRAME / 2, y * CELL_F - FRAME / 2);
+          run = -1;
+        }
+      }
+    }
+  }
+
+  dashes(g, x, ya, yb) {
+    const len = yb - ya;
+    const n = Math.max(1, Math.round((len + DASH_GAP) / (DASH + DASH_GAP)));
+    const step = len / n; // spread the dashes evenly over the run
+    const d = Math.min(DASH, step * 0.6);
+    for (let i = 0; i < n; i++) {
+      const y = ya + i * step + (step - d) / 2;
+      g.fillStyle(0x4a2c2a, 0.3).fillRoundedRect(x - 4.5, y - 2, 9, d + 4, 4.5);
+      g.fillStyle(0xffffff, 0.95).fillRoundedRect(x - 2.5, y, 5, d, 2.5);
+    }
   }
 
   drawShelf() {
@@ -91,13 +160,16 @@ export class PaintScene extends Phaser.Scene {
     this.updateBar();
   }
 
-  // Coverage of the selected colour; the bar is full once that colour covers COVERAGE_OK.
+  // Global coverage of the paintable top (all colours together, so it tells nothing about which
+  // colour goes where); the bar is full at COVERAGE_OK. Drawn in the selected pot's colour.
   updateBar() {
     const g = this.barFill;
     g.clear();
     if (!this.selected) return;
     const key = this.colorKeys[this.selected - 1];
-    const cov = this.grid.coverage(this.colorKeys)[key] ?? 0;
+    const covs = this.grid.coverage(this.colorKeys);
+    let cov = 0;
+    for (const k of this.colorKeys) cov += covs[k];
     const f = Math.min(1, cov / COVERAGE_OK);
     const w = Math.max(BAR_H, f * BAR_W);
     if (f <= 0) return;
@@ -210,7 +282,7 @@ export class PaintScene extends Phaser.Scene {
 
   validate() {
     const order = this.round.order;
-    this.round.results.couleur = judgeColor(this.grid.coverage(this.colorKeys), order);
+    this.round.results.couleur = judgeColor(this.grid.cells, this.colorKeys, this.zones, order.glaze);
     this.round.cake.glaze = { cells: Uint8Array.from(this.grid.cells), size: GRID, colorKeys: [...this.colorKeys] };
     goNext(this);
   }

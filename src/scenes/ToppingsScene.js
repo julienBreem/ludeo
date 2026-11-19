@@ -1,5 +1,6 @@
 // Toppings: drag owned toppings one by one onto the top-down cake. A copy dropped on the cake
-// (a shape-mask cell) stays put; dropped anywhere else it goes back to the shelf.
+// (a shape-mask cell) stays put; dropped anywhere else it goes back to the shelf. Every owned kind
+// is on the shelf; the order can ask for several kinds, each with its own count.
 import { W, H } from '../config.js';
 import { getRound, getState } from '../game-state.js';
 import { ownedKeys } from '../logic/catalog.js';
@@ -34,7 +35,7 @@ export class ToppingsScene extends Phaser.Scene {
     this.mask = shapeMask(this, this.shape);
     this.placed = []; // [{key, x, y}] in frame units, relative to the cake centre
     this.drag = null;
-    this.sparkled = false;
+    this.sparkled = false; // true while the placed toppings match the order exactly
 
     this.cameras.main.setBackgroundColor(0xe8f5e9);
     addOrderReminder(this, round.order, 'toppings');
@@ -110,16 +111,19 @@ export class ToppingsScene extends Phaser.Scene {
     popIn(this, t);
     if (this.placed.length === 1) this.bar.setValidateEnabled(true);
 
-    // Visual feedback only (scoring happens at ✓): one sparkle on the exact count and kind.
-    const { topping, toppingCount } = this.round.order;
-    if (!this.sparkled && this.placed.length === toppingCount && this.placed.every(p => p.key === topping)) {
-      this.sparkled = true;
-      sparkle(this, CAKE_X, CAKE_Y);
-    }
+    this.checkExact();
+  }
+
+  // Visual feedback only (scoring happens at ✓): one sparkle when every ordered kind has its exact
+  // count and nothing else is placed; it can come again only after the match is lost and regained.
+  checkExact() {
+    const exact = judgeToppings(this.placed.map(p => p.key), this.round.order.toppings).ok;
+    if (exact && !this.sparkled) sparkle(this, CAKE_X, CAKE_Y);
+    this.sparkled = exact;
   }
 
   validate() {
-    this.round.results.toppings = judgeToppings(this.placed.map(p => p.key), this.round.order);
+    this.round.results.toppings = judgeToppings(this.placed.map(p => p.key), this.round.order.toppings);
     this.round.cake.toppings = this.placed.map(p => ({ ...p }));
     goNext(this);
   }
