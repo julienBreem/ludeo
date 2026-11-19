@@ -5,7 +5,7 @@ import { ownedKeys } from '../logic/catalog.js';
 import { judgeShape } from '../logic/scoring.js';
 import { addStepBar } from '../ui/stepBar.js';
 import { addOrderReminder } from '../ui/orderReminder.js';
-import { goNext } from '../ui/flow.js';
+import { goNext, restart } from '../ui/flow.js';
 import { splash } from '../ui/fx.js';
 
 const CARD = 230;
@@ -39,7 +39,7 @@ export class MoldScene extends Phaser.Scene {
     this.bowl = this.add.image(W / 2, BOWL_Y, 'bowl').setScale(BOWL_SCALE).setDepth(20).setVisible(false);
     this.stream = this.add.rectangle(0, 0, 30, 100, BATTER).setOrigin(0.5, 0).setDepth(19).setVisible(false);
 
-    this.bar = addStepBar(this, { onRestart: () => this.scene.restart(), onValidate: () => this.validate() });
+    this.bar = addStepBar(this, { onRestart: () => restart(this), onValidate: () => this.validate() });
   }
 
   addCard(key, x) {
@@ -130,7 +130,7 @@ export class MoldScene extends Phaser.Scene {
   }
 
   validate() {
-    if (!this.chosen) return;
+    if (!this.chosen) return false;
     this.round.results.moule = judgeShape(this.chosen, this.round.order);
     this.round.cake.shape = this.chosen;
     goNext(this);

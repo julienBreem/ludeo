@@ -8,7 +8,7 @@ import { judgeToppings } from '../logic/scoring.js';
 import { addStepBar } from '../ui/stepBar.js';
 import { addOrderReminder } from '../ui/orderReminder.js';
 import { drawCake, shapeMask, FRAME, TOPPING_SIZE } from '../ui/cakeView.js';
-import { goNext } from '../ui/flow.js';
+import { goNext, restart } from '../ui/flow.js';
 import { popIn, sparkle } from '../ui/fx.js';
 
 const CAKE_X = W / 2;
@@ -19,6 +19,7 @@ const SHELF_Y = 728;
 const STEP = 140;
 const ICON = 112;
 const DRAG_SIZE = TOPPING_SIZE * SCALE * 1.15;
+const MAX_TOPPINGS = 12; // soft cap: past it the cake becomes an unreadable pile ('trop' still judged)
 
 export class ToppingsScene extends Phaser.Scene {
   constructor() {
@@ -45,7 +46,7 @@ export class ToppingsScene extends Phaser.Scene {
     this.input.on('pointerup', p => this.onUp(p));
     this.input.on('pointerupoutside', p => this.onUp(p));
 
-    this.bar = addStepBar(this, { onRestart: () => this.scene.restart(), onValidate: () => this.validate() });
+    this.bar = addStepBar(this, { onRestart: () => restart(this), onValidate: () => this.validate() });
   }
 
   drawShelf() {
@@ -63,7 +64,7 @@ export class ToppingsScene extends Phaser.Scene {
   }
 
   startDrag(p, key, homeX) {
-    if (this.drag) return;
+    if (this.drag || this.placed.length >= MAX_TOPPINGS) return;
     const img = this.add.image(p.x, p.y, `topping-${key}`).setDepth(40);
     img.setScale(DRAG_SIZE / Math.max(img.width, img.height));
     this.drag = { key, img, homeX, id: p.id };

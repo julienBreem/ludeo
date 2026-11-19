@@ -6,7 +6,7 @@ import { addIconButton } from '../ui/button.js';
 import { drawClient } from '../ui/client.js';
 import { drawCake } from '../ui/cakeView.js';
 import { blink, popIn } from '../ui/fx.js';
-import { goNext, goTo } from '../ui/flow.js';
+import { goNext, goTo, restart } from '../ui/flow.js';
 import { resetState, defaultState } from '../logic/save.js';
 
 const CLIENT_X = 360;
@@ -35,6 +35,7 @@ export class StandScene extends Phaser.Scene {
     this.step = -1;
     this.content = null;
     this.ready = false;
+    this.overlay = null;
 
     this.drawBackground(owned);
     this.drawCoins();
@@ -193,7 +194,7 @@ export class StandScene extends Phaser.Scene {
       resetState(getStorage());
       updateState(() => defaultState());
       this.overlay = null;
-      this.scene.restart();
+      restart(this);
     });
   }
 

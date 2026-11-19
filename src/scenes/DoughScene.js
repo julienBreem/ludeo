@@ -6,7 +6,7 @@ import { createStirTracker } from '../logic/stir.js';
 import { judgeDough } from '../logic/scoring.js';
 import { addStepBar } from '../ui/stepBar.js';
 import { addOrderReminder } from '../ui/orderReminder.js';
-import { goNext } from '../ui/flow.js';
+import { goNext, restart } from '../ui/flow.js';
 import { splash, flourPuff, popIn } from '../ui/fx.js';
 
 const BOWL_X = 520;
@@ -73,7 +73,7 @@ export class DoughScene extends Phaser.Scene {
     this.input.on('pointerup', p => this.onUp(p));
     this.input.on('pointerupoutside', p => this.onUp(p));
 
-    this.bar = addStepBar(this, { onRestart: () => this.scene.restart(), onValidate: () => this.validate() });
+    this.bar = addStepBar(this, { onRestart: () => restart(this), onValidate: () => this.validate() });
   }
 
   drawShelf() {

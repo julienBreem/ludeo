@@ -9,7 +9,7 @@ import { judgeColor, COVERAGE_OK } from '../logic/scoring.js';
 import { addStepBar } from '../ui/stepBar.js';
 import { addOrderReminder } from '../ui/orderReminder.js';
 import { drawCake, shapeMask, FRAME } from '../ui/cakeView.js';
-import { goNext } from '../ui/flow.js';
+import { goNext, restart } from '../ui/flow.js';
 
 const CAKE_X = 540;
 const CAKE_Y = 375;
@@ -62,7 +62,7 @@ export class PaintScene extends Phaser.Scene {
     this.input.on('pointerup', p => this.onUp(p));
     this.input.on('pointerupoutside', p => this.onUp(p));
 
-    this.bar = addStepBar(this, { onRestart: () => this.scene.restart(), onValidate: () => this.validate() });
+    this.bar = addStepBar(this, { onRestart: () => restart(this), onValidate: () => this.validate() });
   }
 
   drawShelf() {
