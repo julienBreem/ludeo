@@ -1,6 +1,5 @@
-import { ageFrom } from './profile.js';
+import { ageFrom, ageLabel } from './profile.js';
 import { recommendedPace } from './pace.js';
-import { defaultCollection } from './store.js';
 
 export function recommendations(c, now) {
   const out = [];
@@ -19,7 +18,7 @@ export function recommendations(c, now) {
         : 'rythme habituel, effets complets';
       out.push({
         id: 'rythme',
-        text: `Pour ${age} ans, nous conseillons le rythme ${pace} : ${desc}.`,
+        text: `Pour ${ageLabel(age)}, nous conseillons le rythme ${pace} : ${desc}.`,
         signature: String(age),
       });
     }
@@ -39,7 +38,8 @@ export function applyRecommendation(c, id, now) {
     return { ...c, pace: recommendedPace(ageFrom(c.profile, now)) };
   }
   if (id === 'soir') {
-    return { ...c, evening: { ...defaultCollection().evening, enabled: true } };
+    // keeps the hours the parent may already have chosen
+    return { ...c, evening: { ...c.evening, enabled: true } };
   }
   return c;
 }

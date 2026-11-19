@@ -1,5 +1,6 @@
 import { PACES } from './pace.js';
 import { parseHHMM } from './evening.js';
+import { HAIRS, HAIR_COLORS, SKINS, SHIRTS, ACCESSORIES, ANIMALS } from './client.js';
 
 export const COLLECTION_KEY = 'collection.v1';
 
@@ -7,6 +8,7 @@ export function defaultCollection() {
   return {
     version: 1,
     profile: null,
+    draftName: '', // first name typed before the birth date (the profile needs both)
     avatar: null,
     pace: 'normal',
     evening: { enabled: false, start: '19:00', end: '07:00' },
@@ -19,6 +21,19 @@ function cleanProfile(p) {
   if (!Number.isInteger(p.month) || p.month < 1 || p.month > 12) return null;
   if (!Number.isInteger(p.year) || p.year < 1900 || p.year > 2200) return null;
   return { name: typeof p.name === 'string' ? p.name : '', month: p.month, year: p.year };
+}
+
+// A Client (shared/client.js) whose every field the avatar's drawing can use, or null.
+function cleanAvatar(a) {
+  if (!a || typeof a !== 'object' || Array.isArray(a)) return null;
+  const index = (v, n) => Number.isInteger(v) && v >= 0 && v < n;
+  if (!index(a.shirt, SHIRTS)) return null;
+  if (a.kind === 'animal') return ANIMALS.includes(a.animal) ? { kind: 'animal', animal: a.animal, shirt: a.shirt } : null;
+  if (a.kind !== 'human') return null;
+  if (!index(a.hair, HAIRS) || !index(a.hairColor, HAIR_COLORS) || !index(a.skin, SKINS)) return null;
+  const accessory = a.accessory ?? null;
+  if (accessory !== null && !ACCESSORIES.includes(accessory)) return null;
+  return { kind: 'human', hair: a.hair, hairColor: a.hairColor, skin: a.skin, shirt: a.shirt, accessory };
 }
 
 function cleanEvening(e, def) {
@@ -53,7 +68,8 @@ export function loadCollection(storage) {
   return {
     version: 1,
     profile: cleanProfile(data.profile),
-    avatar: data.avatar && typeof data.avatar === 'object' && !Array.isArray(data.avatar) ? data.avatar : null,
+    draftName: typeof data.draftName === 'string' ? data.draftName : def.draftName,
+    avatar: cleanAvatar(data.avatar),
     pace: PACES.includes(data.pace) ? data.pace : def.pace,
     evening: cleanEvening(data.evening, def.evening),
     ignored,

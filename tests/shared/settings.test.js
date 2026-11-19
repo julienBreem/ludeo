@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ageFrom } from '../../shared/profile.js';
+import { ageFrom, isFutureBirth, ageLabel } from '../../shared/profile.js';
+import { generateClient } from '../../shared/client.js';
 import { PACES, PACE_FACTORS, recommendedPace } from '../../shared/pace.js';
 import { parseHHMM, isEvening } from '../../shared/evening.js';
 import { COLLECTION_KEY, defaultCollection, loadCollection, saveCollection } from '../../shared/store.js';
@@ -62,7 +63,7 @@ test('isEvening 22:00 -> 06:00, disabled, start==end, same-day window', () => {
 
 test('store: missing, round trip, garbage, wrong types, throwing', () => {
   assert.equal(COLLECTION_KEY, 'collection.v1');
-  assert.deepEqual(defaultCollection(), { version: 1, profile: null, avatar: null, pace: 'normal', evening: { enabled: false, start: '19:00', end: '07:00' }, ignored: {} });
+  assert.deepEqual(defaultCollection(), { version: 1, profile: null, draftName: '', avatar: null, pace: 'normal', evening: { enabled: false, start: '19:00', end: '07:00' }, ignored: {} });
   assert.deepEqual(loadCollection(fakeStorage()), defaultCollection());
   const s = fakeStorage();
   const c = { ...defaultCollection(), profile: { name: 'Léa', month: 3, year: 2020 }, pace: 'calme', ignored: { soir: 'off' } };
@@ -90,6 +91,48 @@ test('store: missing, round trip, garbage, wrong types, throwing', () => {
   }
   assert.deepEqual(loadCollection(throwing), defaultCollection());
   assert.equal(saveCollection(throwing, c), false);
+});
+
+test('store: the avatar is a drawable Client or null (review M6)', () => {
+  const s = fakeStorage();
+  const load = avatar => { s.setItem(COLLECTION_KEY, JSON.stringify({ version: 1, avatar })); return loadCollection(s).avatar; };
+  const human = { kind: 'human', hair: 5, hairColor: 4, skin: 3, shirt: 5, accessory: 'cap' };
+  assert.deepEqual(load(human), human);
+  assert.deepEqual(load({ ...human, accessory: null }), { ...human, accessory: null });
+  assert.deepEqual(load({ kind: 'animal', animal: 'ours', shirt: 0 }), { kind: 'animal', animal: 'ours', shirt: 0 });
+  for (const bad of [
+    {}, { shirt: -1 }, [], 'x', { ...human, shirt: 6 }, { ...human, hair: 6 }, { ...human, hairColor: 5 },
+    { ...human, skin: 4 }, { ...human, skin: 1.5 }, { ...human, accessory: 'hat' }, { ...human, kind: 'robot' },
+    { kind: 'animal', animal: 'loup', shirt: 0 }, { kind: 'animal', animal: 'chat' },
+  ]) assert.equal(load(bad), null, JSON.stringify(bad));
+  // every look the generator makes is kept
+  let seed = 1;
+  const rng = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  for (let i = 0; i < 500; i++) {
+    const a = generateClient(rng);
+    assert.deepEqual(load(a), a);
+  }
+});
+
+test('store: a first name typed before the birth date is kept (review M2)', () => {
+  const s = fakeStorage();
+  const c = { ...defaultCollection(), draftName: 'Léa' };
+  saveCollection(s, c);
+  assert.equal(loadCollection(s).draftName, 'Léa');
+  s.setItem(COLLECTION_KEY, JSON.stringify({ version: 1, draftName: 3 }));
+  assert.equal(loadCollection(s).draftName, '');
+});
+
+test('isFutureBirth and ageLabel (review M3)', () => {
+  const now = new Date(2026, 10, 19);
+  assert.equal(isFutureBirth({ month: 12, year: 2026 }, now), true);
+  assert.equal(isFutureBirth({ month: 1, year: 2027 }, now), true);
+  assert.equal(isFutureBirth({ month: 11, year: 2026 }, now), false);
+  assert.equal(isFutureBirth({ month: 12, year: 2025 }, now), false);
+  assert.equal(ageLabel(0), '0 an');
+  assert.equal(ageLabel(1), '1 an');
+  assert.equal(ageLabel(2), '2 ans');
+  assert.equal(ageLabel(6), '6 ans');
 });
 
 test('recommendations', () => {
@@ -131,6 +174,9 @@ test('applyRecommendation', () => {
   const c = { ...defaultCollection(), profile: { name: 'Léa', month: 3, year: 2020 } };
   assert.equal(applyRecommendation(c, 'rythme', now).pace, 'calme');
   assert.deepEqual(applyRecommendation(c, 'soir', now).evening, { enabled: true, start: '19:00', end: '07:00' });
+  // hours chosen while it was off are kept (review M7)
+  const custom = { ...c, evening: { enabled: false, start: '20:30', end: '06:30' } };
+  assert.deepEqual(applyRecommendation(custom, 'soir', now).evening, { enabled: true, start: '20:30', end: '06:30' });
   assert.deepEqual(applyRecommendation(c, 'profil', now), c);
   assert.equal(c.pace, 'normal');
   assert.equal(c.evening.enabled, false);

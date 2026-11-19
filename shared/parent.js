@@ -2,7 +2,7 @@
 // Recommandations, Jeux. Every change is saved at once through updateCollection.
 import { GAMES } from '../jeux/registry.js';
 import { getCollection, updateCollection, clock } from './runtime.js';
-import { ageFrom } from './profile.js';
+import { ageFrom, ageLabel, isFutureBirth } from './profile.js';
 import { PACES, recommendedPace } from './pace.js';
 import { recommendations, applyRecommendation, ignoreRecommendation } from './recommendations.js';
 import { drawAvatar, stepAvatar, randomAvatar, DEFAULT_AVATAR } from './avatar.js';
@@ -39,13 +39,21 @@ function timeOptions(current) {
 export function openParent(root, { onClose } = {}) {
   const save = fn => updateCollection(fn);
   const now = () => clock();
-  // The profile needs a birth month and year to be saved; until then the name waits here.
-  const first = getCollection().profile;
-  const draft = { name: first?.name ?? '', month: first?.month ?? 0, year: first?.year ?? 0 };
+  // The profile needs a valid birth month and year. Until then it is removed (the selects and the
+  // stored profile always agree) and the first name is kept alone in draftName.
+  const start = getCollection();
+  const draft = { name: start.profile?.name ?? start.draftName, month: start.profile?.month ?? 0, year: start.profile?.year ?? 0 };
   const sections = {};
+  const dateComplete = () => draft.month > 0 && draft.year > 0;
+  const dateInFuture = () => dateComplete() && isFutureBirth(draft, now());
 
   function saveProfile() {
-    if (draft.month && draft.year) save(c => ({ ...c, profile: { name: draft.name.trim(), month: draft.month, year: draft.year } }));
+    const name = draft.name.trim();
+    if (dateComplete() && !dateInFuture()) {
+      save(c => ({ ...c, profile: { name, month: draft.month, year: draft.year }, draftName: '' }));
+    } else {
+      save(c => ({ ...c, profile: null, draftName: name }));
+    }
   }
 
   // ---- Profil ----
@@ -84,7 +92,8 @@ export function openParent(root, { onClose } = {}) {
       h('p', { class: 'p-note' }, 'Ces informations restent sur la tablette. Le prénom est pour vous, l\'enfant ne le voit pas.'),
       h('div', { class: 'p-row' }, h('label', { for: 'p-name' }, 'Prénom'), name),
       h('div', { class: 'p-row' }, h('label', {}, 'Naissance'), month, year,
-        profile ? h('span', {}, `${ageFrom(profile, now())} ans`) : null),
+        profile ? h('span', {}, ageLabel(ageFrom(profile, now()))) : null),
+      dateInFuture() ? h('p', { class: 'p-warn', id: 'p-date-warn' }, 'Cette date est dans le futur : choisissez le mois et l\'année de naissance.') : null,
       h('div', { class: 'p-row p-avatar' }, canvas,
         button('◀ Précédent', () => setAvatar(a => stepAvatar(a, -1))),
         button('Au hasard', () => setAvatar(a => randomAvatar(a))),
@@ -125,7 +134,10 @@ export function openParent(root, { onClose } = {}) {
           refresh('soir', 'recos');
         }, e.enabled ? 'on' : ''),
         h('label', {}, 'De'), sel('start', 'Heure de début'),
-        h('label', {}, 'à'), sel('end', 'Heure de fin')));
+        h('label', {}, 'à'), sel('end', 'Heure de fin')),
+      e.start === e.end
+        ? h('p', { class: 'p-warn', id: 'p-soir-warn' }, 'Le début et la fin sont à la même heure : le mode soir ne s\'active jamais. Choisissez deux heures différentes.')
+        : null);
   }
 
   // ---- Recommandations ----
