@@ -23,6 +23,8 @@ import { fileURLToPath } from 'node:url';
 import { DESSERTS, INGREDIENTS } from '../../src/logic/catalog.js';
 import { GREEN_MIN, GREEN_MAX } from '../../src/logic/bake.js';
 import { COLOR_HEX } from '../../src/config.js';
+import { bitesFor } from '../../src/logic/scoring.js';
+import { BRUSH_RADIUS } from '../../src/logic/paint.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const outDir = process.argv[2] ?? fs.mkdtempSync(path.join(os.tmpdir(), 'stand-smoke-'));
@@ -145,7 +147,26 @@ function check(cond, msg) {
 }
 
 let order = null; // order of the current round, read in Dough
-let paintedColor = null;
+let wrongColor = null; // colour painted on zone 0 in a 'wrong' paint (not in the order)
+let lastClient = null; // client of the previous Stand (null after a page load)
+let roundClient = null; // client of the current round
+const toppingTotal = o => o.toppings.reduce((n, t) => n + t.count, 0);
+
+// Pixels with alpha in the served cake's eaten texture (async snapshot of the DynamicTexture).
+const EATEN_INK = `s => new Promise(resolve => {
+  const img = s.cake.eatenImage;
+  if (!img) return resolve(null);
+  img.texture.snapshot(snap => {
+    const c = document.createElement('canvas');
+    c.width = snap.width; c.height = snap.height;
+    const x = c.getContext('2d');
+    x.drawImage(snap, 0, 0);
+    const d = x.getImageData(0, 0, c.width, c.height).data;
+    let n = 0;
+    for (let i = 3; i < d.length; i += 4) if (d[i] > 8) n++;
+    resolve(n);
+  });
+})`;
 
 // ---- one action per scene ------------------------------------------------------------------------
 const actions = {
@@ -153,16 +174,20 @@ const actions = {
     await send('Page.navigate', { url: URL });
     await waitFor('Phaser hook', () => evaluate(HOOK), 15000);
     await waitScene('Stand', 20000);
+    lastClient = null;
   },
 
+  // v1.1: one bubble with the finished cake; ✓ starts the preparation. The client must differ
+  // from the previous Stand's client.
   async stand({ shot: name } = {}) {
     await waitScene('Stand');
     await waitFor('client at the stand', () => sceneEval('Stand', 's => s.ready'));
-    for (let i = 0; i < 4; i++) {
-      if (name && i === 3) await shot(name);
-      await tap(OK_BTN);
-      await sleep(350);
-    }
+    const client = await sceneEval('Stand', 's => JSON.stringify(s.client.client)');
+    if (lastClient) check(client !== lastClient, `new client differs from the previous one (${client})`);
+    lastClient = client;
+    roundClient = client;
+    if (name) await shot(name);
+    await tap(OK_BTN);
     await waitScene('Dough');
   },
 
@@ -264,22 +289,52 @@ const actions = {
     await waitScene('Paint');
   },
 
-  // color: 'order' paints the ordered colour, 'wrong' the last other owned colour.
+  // Paints each glaze zone with its colour: the zone's columns in zig-zags, the brush path kept
+  // a brush radius inside the inner zone lines so it does not spill on the neighbour.
+  // color 'wrong': zone 0 gets an owned colour that is not in the order.
   async paint({ color = 'order', shot: name } = {}) {
     await waitScene('Paint');
-    const keys = await sceneEval('Paint', 's => s.colorKeys');
-    // 'wrong' takes the last other colour: never the old buggy fallback (first other colour key)
-    paintedColor = color === 'order' ? order.color : keys.filter(k => k !== order.color).at(-1);
-    const potX = await sceneEval('Paint', `s => s.pots[${keys.indexOf(paintedColor)}].x`);
-    await tap([potX, 728]);
-    await sleep(250);
-    const pts = [];
-    for (let y = 140, dir = 1; y <= 610; y += 22, dir = -dir) {
-      pts.push([dir > 0 ? 290 : 790, y], [dir > 0 ? 790 : 290, y]);
+    const geo = await sceneEval('Paint', `s => {
+      const zones = Array.from(s.zones); const n = Math.max(...zones) + 1; const box = [];
+      for (let z = 0; z < n; z++) box.push({ x0: 99, x1: -1, y0: 99, y1: -1 });
+      zones.forEach((z, i) => { if (z < 0) return; const b = box[z]; const x = i % 64; const y = Math.floor(i / 64);
+        b.x0 = Math.min(b.x0, x); b.x1 = Math.max(b.x1, x); b.y0 = Math.min(b.y0, y); b.y1 = Math.max(b.y1, y); });
+      return { keys: s.colorKeys, box, pots: s.pots.map(p => p.x) };
+    }`);
+    const zoneColors = [...order.glaze];
+    wrongColor = null;
+    if (color === 'wrong') {
+      wrongColor = geo.keys.filter(k => !order.glaze.includes(k)).at(-1);
+      zoneColors[0] = wrongColor;
     }
-    await drag(pts, 4);
-    const cov = await sceneEval('Paint', `s => s.grid.coverage(s.colorKeys)[${JSON.stringify(paintedColor)}] ?? 0`);
-    check(cov > 0.85, `cake painted ${paintedColor} (coverage ${cov.toFixed(2)})`);
+    const CELL = 480 / 64;
+    const sx = u => 540 + (u - 32) * CELL;
+    const sy = v => 375 + (v - 32) * CELL;
+    const inset = BRUSH_RADIUS - 0.5;
+    for (let z = 0; z < zoneColors.length; z++) {
+      const b = geo.box[z];
+      const u0 = z === 0 ? b.x0 - 1 : b.x0 + inset;
+      const u1 = z === zoneColors.length - 1 ? b.x1 + 2 : b.x1 + 1 - inset;
+      await tap([geo.pots[geo.keys.indexOf(zoneColors[z])], 728]);
+      await sleep(250);
+      const pts = [];
+      for (let v = b.y0 - 1, dir = 1; v <= b.y1 + 2; v += 2, dir = -dir) {
+        pts.push([sx(dir > 0 ? u0 : u1), sy(v)], [sx(dir > 0 ? u1 : u0), sy(v)]);
+      }
+      await drag(pts, 4);
+    }
+    const cov = await sceneEval('Paint', `s => {
+      const out = []; const want = ${JSON.stringify(zoneColors)};
+      for (let z = 0; z < want.length; z++) {
+        let t = 0; let n = 0; const w = s.colorKeys.indexOf(want[z]) + 1;
+        s.zones.forEach((zz, i) => { if (zz !== z) return; t++; if (s.grid.cells[i] === w) n++; });
+        out.push(n / t);
+      }
+      return out;
+    }`);
+    for (let z = 0; z < zoneColors.length; z++) {
+      check(cov[z] > 0.85, `zone ${z} painted ${zoneColors[z]} (coverage ${cov[z].toFixed(2)})`);
+    }
     if (name) await shot(name);
     await tap(OK_BTN);
     await waitScene('Toppings');
@@ -288,14 +343,17 @@ const actions = {
   // race: ✓ then ↺ 60 ms apart; the step must still move on and keep the ✓ result.
   async toppings({ race = false, shot: name } = {}) {
     await waitScene('Toppings');
-    const x = await shelfX('Toppings', `topping-${order.topping}`);
     const spots = [[640, 330], [570, 400], [710, 400], [640, 440], [580, 320], [700, 320]];
-    for (let i = 0; i < order.toppingCount; i++) {
-      await drag([[x, 728], [x, 600], spots[i]]);
-      await sleep(400);
+    let i = 0;
+    for (const { key, count } of order.toppings) {
+      const x = await shelfX('Toppings', `topping-${key}`);
+      for (let k = 0; k < count; k++) {
+        await drag([[x, 728], [x, 600], spots[i++]]);
+        await sleep(400);
+      }
     }
     const n = await sceneEval('Toppings', 's => s.placed.length');
-    check(n === order.toppingCount, `${n} toppings placed`);
+    check(n === toppingTotal(order), `${n} toppings placed (${order.toppings.map(t => `${t.count} ${t.key}`).join(', ')})`);
     if (name) await shot(name);
     if (race) {
       await tap(OK_BTN, 30);
@@ -313,27 +371,61 @@ const actions = {
 
   async service({ shot: name, expectCoins } = {}) {
     await waitScene('Service');
-    await waitFor('next button', () => sceneEval('Service', 's => s.next.visible && s.next.input?.enabled'), 15000);
+    const served = await sceneEval('Service', 's => JSON.stringify(s.client.client)');
+    if (roundClient) check(served === roundClient, 'the Stand client is served');
+    await waitFor('next button', () => sceneEval('Service', 's => s.next.visible && s.next.input?.enabled'), 20000);
     const info = await sceneEval('Service', `s => ({
+      order: s.round.order,
       results: s.round.results,
       earned: s.coinsEarned,
-      standingVisible: s.cake.standing.length,
-      standingMask: s.cake.standing.map(t => t.mask && t.mask.constructor.name),
+      paid: s.round.paid ?? false,
+      coinsPaid: s.round.coinsPaid ?? 0,
+      bites: s.cake.bitesEaten(),
+      eatenImage: !!s.cake.eatenImage,
+      parts: s.cake.list.length,
+      intact: !!(s.cake.side && s.cake.top && s.cake.line) && s.cake.visible && s.cake.alpha === 1,
+      standing: s.cake.standing.filter(t => t.active && t.visible).length,
       parentMask: !!s.cake.mask,
       pots: s.children.list.flatMap(function walk(o) { return o.list ? o.list.flatMap(walk) : [o]; })
         .filter(o => o.texture && o.texture.key === 'pot').map(o => o.tintTopLeft),
     })`);
+    const ink = await sceneEval('Service', EATEN_INK);
     log('  results', JSON.stringify(Object.fromEntries(Object.entries(info.results).map(([k, v]) => [k, v.ok ? 'ok' : v.reason]))));
-    check(!info.parentMask, 'no mask on the whole served cake (toppings stay visible after the bite)');
-    check(info.standingVisible === order.toppingCount, `${info.standingVisible} toppings standing on the served cake`);
+    check(!info.parentMask, 'no mask on the whole served cake');
     if (expectCoins !== undefined) check(info.earned === expectCoins, `${info.earned} coins earned`);
-    if (info.results.couleur && !info.results.couleur.ok) {
-      const want = COLOR_HEX[paintedColor];
-      check(info.pots.includes(want), `wrong-colour picture shows the painted pot ${paintedColor} (pots ${info.pots.map(c => c.toString(16))})`);
+    check(info.paid === (info.earned > 0) && info.coinsPaid === (info.earned > 0 ? info.earned : 0), `paid once (${info.coinsPaid})`);
+    check(info.bites === bitesFor(info.earned), `${info.bites} bites for ${info.earned}/5`);
+    if (info.earned === 5) {
+      check(info.eatenImage && info.parts === 1 && info.standing === 0 && ink === 0,
+        `5/5: nothing of the cake is visible, toppings included (parts ${info.parts}, standing ${info.standing}, ink ${ink})`);
+    } else if (info.earned === 0) {
+      check(!info.eatenImage && info.intact && info.standing === toppingTotal(info.order) && ink === null,
+        `0/5: the cake is intact (${info.standing} toppings standing)`);
+    } else {
+      check(info.eatenImage && ink > 0, `${info.earned}/5: part of the cake is left (ink ${ink})`);
+    }
+    if (info.results.couleur && !info.results.couleur.ok && wrongColor) {
+      const want = COLOR_HEX[wrongColor];
+      check(info.pots.includes(want), `wrong-colour picture shows the painted pot ${wrongColor} (pots ${info.pots.map(c => c.toString(16))})`);
     }
     if (name) await shot(name);
     await tap(OK_BTN);
     await waitScene('Stand');
+  },
+
+  // Opens the Service directly with the debug sample round and a forced score
+  // (?scene=Service&score=N), runs the Service checks, then goes on to the Stand.
+  async forcedService({ score, shot: name }) {
+    const u = new globalThis.URL(URL);
+    u.searchParams.set('scene', 'Service');
+    u.searchParams.set('score', String(score));
+    await send('Page.navigate', { url: u.href });
+    await waitFor('Phaser hook', () => evaluate(HOOK), 15000);
+    await waitScene('Service', 20000);
+    roundClient = await sceneEval('Service', 's => JSON.stringify(s.client.client)');
+    lastClient = roundClient; // the next Stand client must differ from the sample client
+    wrongColor = null;
+    await actions.service({ shot: name, expectCoins: score });
   },
 };
 

@@ -2,7 +2,7 @@
 // UPDATING: bump CACHE_VERSION on every deploy, then re-upload (see DEPLOY.md).
 import { PRECACHE } from './src/assets.js';
 
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v3';
 const CACHE = `stand-${CACHE_VERSION}`;
 
 self.addEventListener('install', event => {
