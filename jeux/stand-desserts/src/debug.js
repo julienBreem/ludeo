@@ -1,7 +1,11 @@
-// Debug entry: index.html?scene=<SceneKey> opens that scene directly with a sample round
+// Debug entry: index.html?debug&scene=<SceneKey> opens that scene directly with a sample round
 // (heart gateau, golden, rose | violet glaze, 2 strawberries + 3 stars, order matching).
 // &score=N (0..5) also fills the round's results: the first N steps ok, the others failed
-// (&alt=1 picks the other colour/topping failure reasons), e.g. ?scene=Service&score=3.
+// (&alt=1 picks the other colour/topping failure reasons), e.g. ?debug&scene=Service&score=3.
+// Without the debug flag ?scene= and &score= are ignored (normal start), so a shared or saved link
+// cannot open a made-up round. A sample round's results are never saved for the parent's proposals,
+// unless &record=1 is given too (tests: ?debug&scene=Service&score=0&record=1 counts as a played
+// round at the stored levels).
 // Levels: ?debug&level=<phase>:<n>,... (e.g. ?debug&level=pate:3) forces phase levels for this page
 // (shared/runtime.js phaseLevels), for the sample round and every new client.
 // Order: ?debug&order=<shape>/<colours>/<toppings>[/<dessert>] (e.g. licorne/rose-violet-jaune/
@@ -16,14 +20,19 @@ import { idealCake } from './ui/orderCake.js';
 
 const PARAM = 'scene';
 
-// Valid scene key from the URL, or null (normal start).
-export function debugSceneKey(game) {
-  let key = null;
+// The URL's parameters when the debug flag is on, else null.
+function debugParams() {
   try {
-    key = new URLSearchParams(window.location.search).get(PARAM);
+    const q = new URLSearchParams(window.location.search);
+    return q.has('debug') ? q : null;
   } catch {
     return null;
   }
+}
+
+// Valid scene key from the URL (?debug&scene=), or null (normal start).
+export function debugSceneKey(game) {
+  const key = debugParams()?.get(PARAM) ?? null;
   if (!key || key === 'Boot') return null;
   return game.scene.keys[key] ? key : null;
 }
@@ -61,14 +70,10 @@ export function sampleResults(score, alt = false) {
 }
 
 function urlScore() {
-  try {
-    const q = new URLSearchParams(window.location.search);
-    const n = q.get('score');
-    if (n === null || !/^[0-5]$/.test(n)) return { score: null, alt: false };
-    return { score: Number(n), alt: q.get('alt') === '1' };
-  } catch {
-    return { score: null, alt: false };
-  }
+  const q = debugParams();
+  const n = q?.get('score') ?? null;
+  if (n === null || !/^[0-5]$/.test(n)) return { score: null, alt: false };
+  return { score: Number(n), alt: q.get('alt') === '1' };
 }
 
 export function installSampleRound(scene) {
@@ -78,6 +83,8 @@ export function installSampleRound(scene) {
   round.levels = phaseLevels(ID);
   const { score, alt } = urlScore();
   round.results = sampleResults(score, alt);
+  round.sample = true; // not played: ServiceScene saves nothing of it...
+  round.recordSample = debugParams()?.get('record') === '1'; // ...unless asked to (tests)
   setRound(round);
   return round;
 }

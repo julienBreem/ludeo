@@ -11,7 +11,9 @@ import { ToppingsScene } from './scenes/ToppingsScene.js';
 import { ServiceScene } from './scenes/ServiceScene.js';
 import { ShopScene } from './scenes/ShopScene.js';
 
-if (new URLSearchParams(window.location.search).has('scene')) installErrorLog();
+// Debug entries only (?debug&scene=, debug.js).
+const query = new URLSearchParams(window.location.search);
+if (query.has('debug') && query.has('scene')) installErrorLog();
 
 const game = new Phaser.Game({
   type: Phaser.AUTO,

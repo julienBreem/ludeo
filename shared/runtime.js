@@ -85,20 +85,30 @@ function debugLevels(phases) {
   return out;
 }
 
-// The level of each phase of a game, for the next client: { [phaseId]: 1|2|3 }. A phase that is
+// The level of each phase of a game as the parent set it: { [phaseId]: 1|2|3 }. A phase that is
 // not educational yet (`levels: 1`) always plays level 1, whatever its theme says.
-export function phaseLevels(gameId) {
+export function storedPhaseLevels(gameId) {
   const c = getCollection();
-  const phases = phasesOf(gameId);
   const out = {};
-  for (const p of phases) out[p.id] = Math.min(phaseLevel(c, gameId, p), p.levels ?? 3);
-  return { ...out, ...debugLevels(phases) };
+  for (const p of phasesOf(gameId)) out[p.id] = Math.min(phaseLevel(c, gameId, p), p.levels ?? 3);
+  return out;
+}
+
+// The level of each phase of a game, for the next client: the stored levels, with the debug
+// overrides of ?debug&level= on top.
+export function phaseLevels(gameId) {
+  return { ...storedPhaseLevels(gameId), ...debugLevels(phasesOf(gameId)) };
 }
 
 // Saves a phase's result (its point at Service) for the parent's proposals. Nothing for a phase
-// that is not educational yet (`levels: 1`), has no point of its own (`scored: false`) or is unknown.
-export function recordPhaseResult(gameId, phaseId, ok) {
+// that is not educational yet (`levels: 1`), has no point of its own (`scored: false`) or is unknown,
+// and nothing when the round was not played at the phase's stored level (`playedLevel`: the level
+// the round kept when the client arrived): a ?debug&level= round, or a round under way while the
+// parent changed the level (that change started a new history, which this round does not belong to).
+export function recordPhaseResult(gameId, phaseId, ok, playedLevel) {
   const p = phasesOf(gameId).find(x => x.id === phaseId);
-  if (!p || p.levels === 1 || p.scored === false) return;
+  if (!p || p.levels === 1 || p.scored === false) return false;
+  if (playedLevel !== storedPhaseLevels(gameId)[phaseId]) return false;
   updateCollection(c => recordResult(c, gameId, phaseId, ok));
+  return true;
 }

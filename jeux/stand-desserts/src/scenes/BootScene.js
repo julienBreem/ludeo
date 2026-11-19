@@ -1,5 +1,5 @@
 // Loads every SVG (coin first, to draw the progress bar), makes the particle textures,
-// then starts the Stand (or the debug scene given by ?scene=).
+// then starts the Stand (or the debug scene given by ?debug&scene=, debug.js).
 import { ASSETS } from '../assets.js';
 import { W, H, COUNTER, OUTLINE } from '../config.js';
 import { makeFxTextures } from '../ui/fx.js';

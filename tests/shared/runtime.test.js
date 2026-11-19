@@ -124,12 +124,28 @@ test('phaseLevels: ?debug&level= forces levels; ignored without the debug flag o
 test('recordPhaseResult saves results only for scored phases that have levels', () => {
   const s = memoryStorage();
   withStorage(s, () => {
-    recordPhaseResult('stand-desserts', 'pate', false);
-    recordPhaseResult('stand-desserts', 'pate', true);
-    recordPhaseResult('stand-desserts', 'commande', false); // no point of its own
-    recordPhaseResult('stand-desserts', 'moule', false); // not educational yet
-    recordPhaseResult('stand-desserts', 'nope', false);
-    recordPhaseResult('inconnu', 'pate', false);
+    recordPhaseResult('stand-desserts', 'pate', false, 1);
+    recordPhaseResult('stand-desserts', 'pate', true, 1);
+    recordPhaseResult('stand-desserts', 'commande', false, 1); // no point of its own
+    recordPhaseResult('stand-desserts', 'moule', false, 1); // not educational yet
+    recordPhaseResult('stand-desserts', 'nope', false, 1);
+    recordPhaseResult('inconnu', 'pate', false, 1);
     assert.deepEqual(getCollection().history, { 'stand-desserts/pate': [false, true] });
+  });
+});
+
+test('recordPhaseResult (I1): only a round played at the stored level counts', () => {
+  withStorage(memoryStorage(), () => {
+    updateCollection(c => ({ ...c, levels: { nombres: 2 } }));
+    // a ?debug&level= round: played at 3 while the parent set 2
+    withSearch('?debug&level=pate:3', () => assert.equal(recordPhaseResult('stand-desserts', 'pate', false, 3), false));
+    // no level kept (a round from before levels) or the round of the level the parent just changed
+    assert.equal(recordPhaseResult('stand-desserts', 'pate', false, undefined), false);
+    assert.equal(recordPhaseResult('stand-desserts', 'pate', false, 1), false);
+    assert.equal(getCollection().history['stand-desserts/pate'], undefined);
+    assert.equal(recordPhaseResult('stand-desserts', 'pate', false, 2), true);
+    // the debug override does not change what the parent set
+    withSearch('?debug&level=pate:3', () => assert.equal(recordPhaseResult('stand-desserts', 'pate', true, 2), true));
+    assert.deepEqual(getCollection().history['stand-desserts/pate'], [false, true]);
   });
 });

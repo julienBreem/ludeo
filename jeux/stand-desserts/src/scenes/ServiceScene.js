@@ -78,6 +78,9 @@ export class ServiceScene extends Phaser.Scene {
     this.round = round;
     if (window.__game) window.__round = round;
     this.leaving = false;
+    // set only for some rounds: Phaser reuses this instance, never keep the last round's
+    this.recap = null;
+    this.doughRecap = null;
     const { coins, mood } = scoreRound(round.results);
     this.coinsEarned = coins;
     this.recordResults();
@@ -118,14 +121,20 @@ export class ServiceScene extends Phaser.Scene {
     this.events.once('shutdown', () => this.stopBlink?.());
   }
 
-  // Once per round (a restarted scene does not count twice): each step's point, ok or not, for the
-  // level proposals (shared/runtime.js keeps only the phases that have levels).
+  // Once per round (a restarted Service does not count twice): each step's point, ok or not, for
+  // the level proposals. Only a round she really played: one that started at the Stand (✓) and came
+  // here through every step; a debug sample round only with ?debug&record=1. shared/runtime.js
+  // keeps only the phases that have levels, and only when the round's level (kept at the client's
+  // arrival) is still the stored one (no ?debug&level=, no parent change during the round).
+  // An abandoned round (home button, the Shop from the Stand, a reload) never reaches Service.
   recordResults() {
-    if (this.round.recorded) return;
-    this.round.recorded = true;
+    const round = this.round;
+    if (round.recorded) return;
+    round.recorded = true;
+    if (!round.started && !(round.sample && round.recordSample)) return;
     for (const step of STEPS) {
-      const res = this.round.results[step];
-      if (res) recordPhaseResult(ID, step, res.ok === true); // no result: not played (debug entry)
+      const res = round.results[step];
+      if (res) recordPhaseResult(ID, step, res.ok === true, round.levels?.[step]);
     }
   }
 
@@ -228,13 +237,13 @@ export class ServiceScene extends Phaser.Scene {
     this.doughRecap = box;
   }
 
-  // What she had to pour of k, as the card showed it, with the operation and its result.
+  // What she had to pour of k, as the card showed it, with the operation and its result: « 2 + 1 = 3 »,
+  // « 4 × 2 = 8 » (a doubled column), « 7 − 3 = 4 » (the complement: the total minus the tray).
   operation(recipe, k) {
     const d = recipe.display[k];
     const pre = recipe.prefilled[k] ?? 0;
-    const shown = d.kind === 'sum' ? `${d.a} + ${d.b}` : String(d.n);
-    let expr = shown;
-    if (recipe.double) expr = d.kind === 'sum' ? `(${shown}) × 2` : `${shown} × 2`;
+    let expr = d.kind === 'sum' ? `${d.a} + ${d.b}` : String(d.n);
+    if (d.times === 2) expr = `${expr} × 2`;
     if (d.kind === 'complement') expr = `${expr} − ${pre}`;
     const result = toPour(recipe, k);
     return expr === String(result) ? expr : `${expr} = ${result}`;
@@ -245,9 +254,12 @@ export class ServiceScene extends Phaser.Scene {
     return { obj: t, w: t.width };
   }
 
-  // n (0..10) as one or two die faces (5 + the rest), side by side, centred on x = 0.
+  // n as die faces of 5 and the rest, side by side, centred on x = 0 (12 -> 5, 5, 2). Every face is
+  // one of the dice-1..5 textures, whatever she poured (eggs go up to 20).
   diceRow(n, y) {
-    const faces = n > 5 ? [5, n - 5] : [n];
+    const faces = [];
+    for (let left = n; left > 0; left -= 5) faces.push(Math.min(5, left));
+    if (!faces.length) faces.push(0);
     const size = 48;
     const c = this.add.container(0, 0);
     faces.forEach((f, i) => {
