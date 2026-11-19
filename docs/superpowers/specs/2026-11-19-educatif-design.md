@@ -86,6 +86,10 @@ Chaque phase : thème principal, puis niveaux.
 - Le réalisme des quantités n'est pas requis.
 - Erreur : la recette réapparaît, ce qu'elle a mis / ce qu'il fallait (avec l'opération).
 
+**2 bis. Pâte — ajustements après la première planche (validés par le parent)**
+- **Prise multiple** : appui long sur un ingrédient → la main en ramasse un de plus toutes les ~0,6 s (plus lent au rythme calme) ; au-dessus de la main, **points de dé au N1**, **chiffre aux N2–N3** ; glisser dans le bol verse tout d'un coup ; lâcher ailleurs remet tout sur l'étagère. Appui bref = un seul. La boîte de 5 œufs est retirée.
+- **Nombres revus à la baisse** : N1 1–4 par ingrédient, total ≤ 8 ; N2 une addition de résultat ≤ 6, autres 1–3, total ≤ 10 ; N3 complément de total ≤ 10, ×2 sur un nombre ≤ 4, total ≤ 12.
+
 **3. Moule — `geometrie`**
 - Nouvelles formes de départ : **triangle, rectangle, ovale** ; en boutique : **losange, hexagone** (cœur, étoile, licorne restent).
 - N1 : retrouver la forme parmi **4 moules**, dont un piège proche ; toucher un moule affiche son nom.
