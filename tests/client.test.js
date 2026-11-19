@@ -22,6 +22,15 @@ test('sameClient compares by value', () => {
   assert.ok(!sameClient(a, null));
 });
 
+test('sameClient: a bald client looks the same whatever the hidden hair colour', () => {
+  const bald = { kind: 'human', hair: 0, hairColor: 0, skin: 1, shirt: 2, accessory: null };
+  assert.ok(sameClient(bald, { ...bald, hairColor: 3 }));
+  assert.ok(sameClient({ ...bald, accessory: 'glasses' }, { ...bald, accessory: 'glasses', hairColor: 4 }));
+  assert.ok(!sameClient({ ...bald, accessory: 'beard' }, { ...bald, accessory: 'beard', hairColor: 3 }));
+  assert.ok(!sameClient({ ...bald, accessory: 'moustache' }, { ...bald, accessory: 'moustache', hairColor: 3 }));
+  assert.ok(!sameClient({ ...bald, hair: 2 }, { ...bald, hair: 2, hairColor: 3 }));
+});
+
 test('animal share ~ 0.2 (+-0.03 over 10000)', () => {
   const rng = makeRng(2); let animals = 0; const n = 10000;
   for (let i = 0; i < n; i++) {

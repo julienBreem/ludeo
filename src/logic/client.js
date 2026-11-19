@@ -12,11 +12,15 @@ export const CAP_HAIRS = [0, 2, 3, 4];
 
 const int = (n, rng) => Math.floor(rng() * n);
 
+// The hair colour only shows on hair or on a hair-tinted accessory (beard, moustache).
+const showsHairColor = c => c.hair > 0 || c.accessory === 'beard' || c.accessory === 'moustache';
+
+// Same look: two clients that would be drawn the same.
 export function sameClient(a, b) {
   if (!a || !b || a.kind !== b.kind) return false;
   if (a.kind === 'animal') return a.animal === b.animal && a.shirt === b.shirt;
-  return a.hair === b.hair && a.hairColor === b.hairColor && a.skin === b.skin
-    && a.shirt === b.shirt && a.accessory === b.accessory;
+  return a.hair === b.hair && a.skin === b.skin && a.shirt === b.shirt && a.accessory === b.accessory
+    && (a.hairColor === b.hairColor || !showsHairColor(a));
 }
 
 function draw(rng) {
