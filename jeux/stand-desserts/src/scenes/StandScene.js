@@ -7,14 +7,14 @@
 //   by a neutral category pictogram; toppings counted in digits.
 // - N3: one sentence (numbers in letters); the eye button shows the cake again for 2 s, as often
 //   as she likes.
-// The bubble grows to its content. At N1 and N3 it holds tap targets, so only ✓ moves on; at N2
-// tapping the bubble also moves on (as in v1).
+// The bubble grows to its content. At every level only ✓ moves on (the bubble holds tap targets at
+// N1 and N3; N2 behaves the same, so the three levels agree).
 // The home button (top-left) goes back to the collection home. Reset lives in the home's parent space.
 import { W, H, TOUCH, BACKDROP, TOP_SQUASH } from '../config.js';
 import { newRound, getState } from '../game-state.js';
 import { GRID } from '../logic/paint.js';
 import { orderWords, orderSentenceParts } from '../logic/orderText.js';
-import { placeRow } from '../logic/tagLayout.js';
+import { labelLayout, tagHitArea } from '../logic/tagLayout.js';
 import { addIconButton } from '../ui/button.js';
 import { drawClient } from '../ui/client.js';
 import { FRAME } from '../ui/cakeView.js';
@@ -44,6 +44,7 @@ const GLOW = 0xffc400;
 const LEADER = 0x4f6d8f;
 const TAG_GAP = 34; // between the cake's box and the tags
 const ROW_GAP = 14; // between tags in a row
+const TAG_TOUCH = 96; // the least touch target (the tags' hit areas: tests/tagLayout.test.js)
 // Relative, so it works from a sub-folder: the game is two levels below the collection home.
 const HOME_URL = '../../index.html';
 const TEXT_STYLE = { fontFamily: 'Arial Black, Arial, sans-serif', color: '#222222' };
@@ -70,9 +71,25 @@ export class StandScene extends Phaser.Scene {
   create() {
     const round = newRound();
     const owned = getState().owned;
+    this.round = round;
     this.order = round.order;
     this.level = [1, 2, 3].includes(round.levels?.commande) ? round.levels.commande : 1;
     this.ready = false;
+    // Phaser reuses this instance for every client and every return from the Shop: every per-run
+    // field starts again here (some are only set at one level).
+    this.pictureHidden = false;
+    this.peeking = false;
+    this.peekTimer = null;
+    this.glowing = null;
+    this.picture = null;
+    this.wordBounds = null;
+    this.tags = null;
+    this.geo = null;
+    this.eye = null;
+    this.sentence = null;
+    this.bubble = null;
+    this.inner = null;
+    this.box = null;
     ensureWordTextures(this);
 
     this.drawBackground(owned);
@@ -104,8 +121,6 @@ export class StandScene extends Phaser.Scene {
         this.bubble.setVisible(true);
         this.box.setVisible(true);
         if (this.level === 2) {
-          this.bubble.setInteractive({ useHandCursor: true });
-          this.bubble.on('pointerup', () => this.advance());
           // the picture shows for a while, then only the words stay
           this.time.delayedCall(dur(N2_SHOW_MS), () => this.hidePicture());
         }
@@ -135,20 +150,19 @@ export class StandScene extends Phaser.Scene {
     };
     // the shape on the right, the toppings above, the colours (zones left to right) below
     const shape = items.find(it => it.w.kind === 'forme');
-    const sp = point(shape.w);
-    shape.tag.x = bb.right + TAG_GAP + shape.tag.w / 2;
-    shape.tag.y = Math.min(bb.bottom - shape.tag.h / 2, Math.max(bb.top + shape.tag.h / 2, sp.y));
-    const rowMin = bb.left - 24;
-    const rowMax = shape.tag.x + shape.tag.w / 2;
-    const row = (list, y, below) => {
-      const xs = placeRow(list.map(it => ({ want: point(it.w).x, w: it.tag.w })), rowMin, rowMax, ROW_GAP);
-      list.forEach((it, i) => {
-        it.tag.x = xs[i];
-        it.tag.y = below ? y + it.tag.h / 2 : y - it.tag.h / 2;
-      });
-    };
-    row(items.filter(it => it.w.kind === 'topping'), bb.top - TAG_GAP, false);
-    row(items.filter(it => it.w.kind === 'couleur'), bb.bottom + TAG_GAP, true);
+    const toppings = items.filter(it => it.w.kind === 'topping');
+    const colours = items.filter(it => it.w.kind === 'couleur');
+    const spec = it => ({ want: point(it.w), w: it.tag.w, h: it.tag.h });
+    const at = labelLayout(
+      { bb, shape: spec(shape), toppings: toppings.map(spec), colours: colours.map(spec) },
+      { tagGap: TAG_GAP, rowGap: ROW_GAP },
+    );
+    // x / y set one by one: setPosition(x, y) would also reset the transform's `w` (0), which is
+    // where addTag keeps the tag's width
+    const put = (tag, p) => { tag.x = p.x; tag.y = p.y; };
+    put(shape.tag, at.shape);
+    toppings.forEach((it, i) => put(it.tag, at.toppings[i]));
+    colours.forEach((it, i) => put(it.tag, at.colours[i]));
     // leader lines, from the tag's edge facing the cake to a dot on the element
     for (const it of items) {
       const p = point(it.w);
@@ -160,9 +174,15 @@ export class StandScene extends Phaser.Scene {
       lines.fillStyle(0xffffff, 1).fillCircle(p.x, p.y, 9);
       lines.fillStyle(LEADER, 1).fillCircle(p.x, p.y, 6);
     }
+    // The tags are drawn TAG_MIN_H (64) px tall, but each one is a touch target of at least TAG_TOUCH
+    // (96) px: its hit area grows above and below (logic/tagLayout.js tagHitArea; the rows keep
+    // ROW_GAP between tags, and the topping row (above the cake) and the colour row (below) are far
+    // apart, so no two hit areas overlap: tests/tagLayout.test.js).
     for (const it of items) {
       box.add(it.tag);
-      it.tag.setInteractive({ useHandCursor: true });
+      const a = tagHitArea(it.tag.w, it.tag.h, TAG_TOUCH);
+      it.tag.setInteractive(new Phaser.Geom.Rectangle(a.x, a.y, a.w, a.h), Phaser.Geom.Rectangle.Contains);
+      if (it.tag.input) it.tag.input.cursor = 'pointer';
       it.tag.on('pointerup', () => this.glow(it, geo, s));
     }
     this.picture = pic;
@@ -359,12 +379,6 @@ export class StandScene extends Phaser.Scene {
     this.tweens.add({
       targets: size, w: f.w, h: f.h, duration: ms, ease: 'Sine.easeInOut',
       onUpdate: () => this.bubble.setSize(size.w, size.h),
-      onComplete: () => {
-        // the tap area follows the new size (the pointerup listener stays)
-        if (!this.bubble.input) return;
-        this.bubble.removeInteractive();
-        this.bubble.setInteractive({ useHandCursor: true });
-      },
     });
     this.tweens.add({ targets: this.bubble, x: f.x, y: f.y, duration: ms, ease: 'Sine.easeInOut' });
     this.tweens.add({
@@ -398,6 +412,7 @@ export class StandScene extends Phaser.Scene {
   advance() {
     if (!this.ready) return;
     this.ready = false;
+    this.round.started = true; // a played round (ServiceScene saves its results)
     goNext(this);
   }
 }

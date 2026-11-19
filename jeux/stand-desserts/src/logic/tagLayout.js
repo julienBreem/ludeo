@@ -35,3 +35,39 @@ export function placeRow(items, min, max, gap = 12) {
   order.forEach((i, k) => { out[i] = left[k] + items[i].w / 2; });
   return out;
 }
+
+/**
+ * labelLayout({bb, shape, toppings, colours}, {tagGap, rowGap, rowPad}) -> {shape, toppings, colours}
+ * Commande N1: where the label tags go around the cake's box `bb` ({left, right, top, bottom}).
+ * Each tag is {want: {x, y}, w, h} (want = the element it names); the result gives each tag's
+ * centre {x, y}, same order. The shape's tag on the right (at its element's height, inside the
+ * box's height), the toppings' row above the box, the colours' row below, each row as close as
+ * possible to its elements (placeRow), between the box's left (minus rowPad) and the shape tag's
+ * right edge.
+ */
+export function labelLayout({ bb, shape, toppings, colours }, { tagGap = 34, rowGap = 14, rowPad = 24 } = {}) {
+  const sx = bb.right + tagGap + shape.w / 2;
+  const sy = Math.min(bb.bottom - shape.h / 2, Math.max(bb.top + shape.h / 2, shape.want.y));
+  const rowMin = bb.left - rowPad;
+  const rowMax = sx + shape.w / 2;
+  const row = (list, y, below) => {
+    const xs = placeRow(list.map(t => ({ want: t.want.x, w: t.w })), rowMin, rowMax, rowGap);
+    return list.map((t, i) => ({ x: xs[i], y: below ? y + t.h / 2 : y - t.h / 2 }));
+  };
+  return {
+    shape: { x: sx, y: sy },
+    toppings: row(toppings, bb.top - tagGap, false),
+    colours: row(colours, bb.bottom + tagGap, true),
+  };
+}
+
+/**
+ * tagHitArea(w, h, min = 96) -> {x, y, w, h}
+ * The touch area of a w x h tag (a Phaser Container sized w x h: hit-area coordinates have their
+ * origin at the container's top-left corner): at least `min` px tall and wide, centred on the tag.
+ */
+export function tagHitArea(w, h, min = 96) {
+  const hw = Math.max(w, min);
+  const hh = Math.max(h, min);
+  return { x: (w - hw) / 2, y: (h - hh) / 2, w: hw, h: hh };
+}

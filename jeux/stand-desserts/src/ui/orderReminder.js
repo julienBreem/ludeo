@@ -89,8 +89,12 @@ export function highlightKey(scene, order, step, halo) {
 
 // The words of the order that belong to a step (the dough and the bake have none).
 const STEP_KIND = { moule: 'forme', couleur: 'couleur', toppings: 'topping' };
-const WORDS_W = 300; // text width of the word card
 const WORDS_PAD = 14;
+// Text width and font size of the word card, tried in this order until the card is at most
+// WORDS_MAX_H tall: a long N3 sentence (3 colours, 3 kinds) gets a smaller font on a wider card
+// instead of growing down over the scene (the Pâte tray sits below it, from y 202).
+const WORDS_FITS = [{ width: 300, fontSize: 22 }, { width: 360, fontSize: 19 }, { width: 400, fontSize: 17 }];
+const WORDS_MAX_H = 168;
 
 // Commande N2 / N3: the card shows the words (N2, by category with pictograms) or the sentence
 // (N3) instead of the picture; the step's words get a pulsing marker.
@@ -98,7 +102,13 @@ function addWordReminder(scene, order, step, level) {
   ensureWordTextures(scene);
   const kind = STEP_KIND[step];
   const parts = level >= 3 ? orderSentenceParts(order) : orderWordParts(order);
-  const text = flowParts(scene, parts, { width: WORDS_W, fontSize: 22, mark: p => !!kind && p.kind === kind });
+  const mark = p => !!kind && p.kind === kind;
+  let text = null;
+  for (const [i, fit] of WORDS_FITS.entries()) {
+    text?.destroy();
+    text = flowParts(scene, parts, { ...fit, mark });
+    if (text.h + 2 * WORDS_PAD - 4 <= WORDS_MAX_H || i === WORDS_FITS.length - 1) break;
+  }
   const w = text.w + 2 * WORDS_PAD;
   const h = text.h + 2 * WORDS_PAD - 4;
   const c = scene.add.container(X, Y).setDepth(400);

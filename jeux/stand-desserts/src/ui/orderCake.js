@@ -230,8 +230,9 @@ const STAND_DOWN = TOPPING_SIZE * (1 - STAND_ORIGIN_Y);
  *   zones: Array<{x, y, cells: number[]}>, toppings: Array<{x, y, spots: Array<{x, y}>}>}
  * In frame units around the cake centre, as the cake shows in 3/4 (orderCakeKey's picture):
  * bbox holds the whole cake (side band and standing toppings included); shape is a point on the
- * outline's right edge; zones[i] a point on the top face just behind its front edge (and the
- * zone's grid cells); toppings[i] (per order.toppings entry) the middle of the back-most topping
+ * outline's right edge; zones[i] a point on the top face just behind its front edge, moved to the
+ * nearest cell of the zone that no topping covers when a topping stands there (so a colour's dot
+ * never seems to name a topping), and the zone's grid cells; toppings[i] (per order.toppings entry) the middle of the back-most topping
  * of that kind, with every spot of that kind (standing points).
  */
 export function orderGeometry(scene, order) {
@@ -252,6 +253,13 @@ export function orderGeometry(scene, order) {
   for (let y = 0; y < GRID; y++) if (mask[y * GRID + maxX]) rows.push(y);
   const midRow = rows.length ? rows[Math.floor(rows.length / 2)] : GRID / 2;
   const shape = { x: fx(maxX + 1) - CELL * 0.5, y: fy(midRow + 0.5) };
+  const cake = idealCake(scene, order);
+  // a frame point under a standing topping (its picture, with a margin for the dot)
+  const DOT_MARGIN = 10;
+  const covered = (x, y) => cake.toppings.some((p) => {
+    const py = p.y * TOP_SQUASH;
+    return Math.abs(x - p.x) < TOPPING_SIZE / 2 + DOT_MARGIN && y > py - STAND_UP - DOT_MARGIN && y < py + STAND_DOWN + DOT_MARGIN;
+  });
   const zoneOut = [];
   for (let z = 0; z < order.glaze.length; z++) {
     const cells = [];
@@ -267,9 +275,19 @@ export function orderGeometry(scene, order) {
     if (row < 0) { row = GRID / 2; top = row; }
     // a little behind the front edge, never past the zone's middle
     const v = Math.max((top + row + 1) / 2, row + 1 - 4);
-    zoneOut.push({ x: fx(col + 0.5), y: fy(v), cells });
+    let point = { x: fx(col + 0.5), y: fy(v) };
+    if (covered(point.x, point.y)) {
+      let best = null;
+      for (const i of cells) {
+        const q = { x: fx((i % GRID) + 0.5), y: fy(Math.floor(i / GRID) + 0.5) };
+        if (covered(q.x, q.y)) continue;
+        const d = (q.x - point.x) ** 2 + (q.y - point.y) ** 2;
+        if (!best || d < best.d) best = { ...q, d };
+      }
+      if (best) point = { x: best.x, y: best.y };
+    }
+    zoneOut.push({ ...point, cells });
   }
-  const cake = idealCake(scene, order);
   const toppings = order.toppings.map(t => {
     const spots = cake.toppings.filter(p => p.key === t.key).map(p => ({ x: p.x, y: p.y * TOP_SQUASH }));
     let best = spots[0] ?? { x: 0, y: 0 };
