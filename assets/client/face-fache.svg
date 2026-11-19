@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 300 300" width="300" height="300">
-<!-- unhappy face overlay: scrunched eyes, wobbly mouth -->
-<g fill="none" stroke="#6b3a14" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"><path d="M98 114 L128 130 L98 146 M202 114 L172 130 L202 146"/></g>
-<path d="M118 178 C124 164 134 164 140 174 C146 184 154 184 160 174 C166 164 176 164 182 178 C176 186 166 176 160 184 C154 192 146 192 140 184 C134 176 124 186 118 178 Z" fill="#c2114a" stroke="#8a0030" stroke-width="3" stroke-linejoin="round"/>
-<path d="M214 150 C222 162 226 168 226 174 A12 12 0 0 1 202 174 C202 168 206 162 214 150 Z" fill="#7fd8ff" stroke="#2a8fd0" stroke-width="2.5"/>
-</svg>

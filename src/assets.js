@@ -89,9 +89,6 @@ export const ASSETS = [
   { key: 'client-hair-2', file: 'assets/client/client-hair-2.svg', w: 300, h: 300 },
   { key: 'client-hair-3', file: 'assets/client/client-hair-3.svg', w: 300, h: 300 },
   { key: 'client-head', file: 'assets/client/client-head.svg', w: 300, h: 300 },
-  { key: 'face-bof', file: 'assets/client/face-bof.svg', w: 300, h: 300 },
-  { key: 'face-content', file: 'assets/client/face-content.svg', w: 300, h: 300 },
-  { key: 'face-fache', file: 'assets/client/face-fache.svg', w: 300, h: 300 },
   // stand
   { key: 'bubble', file: 'assets/stand/bubble.svg', w: 440, h: 340 },
   { key: 'coin', file: 'assets/stand/coin.svg', w: 160, h: 160 },
