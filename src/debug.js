@@ -1,9 +1,8 @@
 // Debug entry: index.html?scene=<SceneKey> opens that scene directly with a sample round
-// (heart gateau, golden, half rose glaze, 3 strawberries, order matching).
+// (heart gateau, golden, rose | violet glaze, 2 strawberries + 3 stars, order matching).
 import { createRound } from './logic/round.js';
-import { GRID } from './logic/paint.js';
 import { setRound } from './game-state.js';
-import { shapeMask } from './ui/cakeView.js';
+import { idealCake } from './ui/orderCake.js';
 
 const PARAM = 'scene';
 
@@ -20,26 +19,17 @@ export function debugSceneKey(game) {
 }
 
 export function sampleOrder() {
-  return { dessert: 'gateau', shape: 'coeur', color: 'rose', topping: 'fraise', toppingCount: 3 };
-}
-
-// Hard-coded sample cake (placeholders draw it too). Glaze: left half of the heart in rose.
-export function sampleCake(scene) {
-  const mask = shapeMask(scene, 'coeur');
-  const cells = new Uint8Array(GRID * GRID);
-  for (let i = 0; i < cells.length; i++) if (mask[i] && i % GRID < GRID / 2) cells[i] = 1;
   return {
     dessert: 'gateau',
-    doughOk: true,
     shape: 'coeur',
-    bake: 'dore',
-    glaze: { cells, size: GRID, colorKeys: ['rose'] },
-    toppings: [
-      { key: 'fraise', x: -70, y: -40 },
-      { key: 'fraise', x: 60, y: -50 },
-      { key: 'fraise', x: 0, y: 60 },
-    ],
+    glaze: ['rose', 'violet'],
+    toppings: [{ key: 'fraise', count: 2 }, { key: 'etoile', count: 3 }],
   };
+}
+
+// Sample cake: the ideal cake of the sample order (placeholders draw it too).
+export function sampleCake(scene) {
+  return idealCake(scene, sampleOrder());
 }
 
 export function installSampleRound(scene) {

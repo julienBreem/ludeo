@@ -71,6 +71,15 @@ export function splash(scene, x, y, color = 0xffffff) {
   }, 10);
 }
 
+// Cake crumbs falling from a bite (count <= 10; colours: an array of tints).
+export function crumbs(scene, x, y, colors, count = 8) {
+  return emit(scene, x, y, 'fx-dot', {
+    x: { min: -14, max: 14 }, y: { min: -20, max: 20 },
+    speed: { min: 60, max: 200 }, angle: { min: 200, max: 340 }, gravityY: 1100,
+    scale: { min: 0.35, max: 0.75 }, lifespan: 700, tint: colors,
+  }, Math.min(10, count));
+}
+
 export function flourPuff(scene, x, y) {
   return emit(scene, x, y, 'fx-puff', {
     speed: { min: 30, max: 110 }, angle: { min: 180, max: 360 },
