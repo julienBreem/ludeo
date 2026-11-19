@@ -118,6 +118,38 @@ async function drag(points, stepMs = 16) {
   await mouse('mouseReleased', xn, yn);
 }
 
+// Moves the pressed mouse along the points (no press / release).
+async function moveTo(...points) {
+  for (let i = 1; i < points.length; i++) {
+    const [ax, ay] = points[i - 1];
+    const [bx, by] = points[i];
+    const n = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay) / 24));
+    for (let k = 1; k <= n; k++) {
+      await mouse('mouseMoved', ax + ((bx - ax) * k) / n, ay + ((by - ay) * k) / n);
+      await sleep(16);
+    }
+  }
+  await sleep(40);
+}
+
+// Dough multi-grab: presses the shelf ingredient at x and holds until the hand holds n (one more
+// every 600 ms x the pace's anim factor); returns what the hand holds, the mouse still pressed.
+async function grabMany(x, n) {
+  await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y: 725, buttons: 0 });
+  const t0 = Date.now();
+  await mouse('mousePressed', x, 725);
+  await sleep(40);
+  if (n > 1) {
+    await waitFor(`hand holds 2`, () => evaluate(`window.__sm.getScene('Dough').drag?.n >= 2`), 15000);
+    const first = Date.now() - t0;
+    // calme pace (anim x1.5): the second one comes after ~900 ms, not 600
+    if (first < 800) throw new Error(`check failed: long press picked the second one after ${first} ms (calme: ~900 ms)`);
+    log(`  ok: long press: one more after ${first} ms (calme pace)`);
+    await waitFor(`hand holds ${n}`, () => evaluate(`window.__sm.getScene('Dough').drag?.n >= ${n}`), 15000);
+  }
+  return evaluate(`window.__sm.getScene('Dough').drag?.n ?? 0`);
+}
+
 // ---- game state (read only) --------------------------------------------------------------------
 const HOOK = `(() => {
   if (typeof Phaser === 'undefined') return false;
@@ -349,21 +381,53 @@ const actions = {
     await waitScene('Stand');
   },
 
-  async dough({ shot: name } = {}) {
+  // Dough: at N1 one ingredient per drag; at N2-N3 the multi-grab (spec 2 bis): a long press on
+  // the shelf until the hand holds what the kind needs, then one drop in the bowl (a short drag when
+  // one is needed). `hold`: first, a long press until the hand holds that many of the first kind,
+  // dropped outside the bowl: they all go back to the shelf, nothing is poured.
+  async dough({ shot: name, hold } = {}) {
     await waitScene('Dough');
     // The recipe depends on the pâte level: read it from the round, with the shelf and bowl layout.
-    const r = await sceneEval('Dough', `s => ({ order: s.round.order, recipe: s.round.recipe, shelf: s.shelf,
+    const r = await sceneEval('Dough', `s => ({ order: s.round.order, recipe: s.round.recipe, shelf: s.shelf, level: s.level,
       open: [s.batter.x, s.batter.y - 10], whisk: [s.whisk.x, s.whisk.y - 80] })`);
     order = r.order;
-    log('  order', JSON.stringify(order), 'recipe', JSON.stringify(r.recipe.target), 'prefilled', JSON.stringify(r.recipe.prefilled));
+    log('  order', JSON.stringify(order), 'recipe', JSON.stringify(r.recipe.target), 'prefilled', JSON.stringify(r.recipe.prefilled), 'level', r.level);
     const opening = r.open;
-    for (const [key, n] of Object.entries(r.recipe.target)) {
-      const x = r.shelf[key];
-      for (let k = 0; k < n - (r.recipe.prefilled[key] ?? 0); k++) {
-        await drag([[x, 725], [x, 600], opening]);
-        await sleep(700);
-      }
+    const kinds = Object.keys(r.recipe.target);
+    if (hold) {
+      const x = r.shelf[kinds[0]];
+      const held = await grabMany(x, hold);
+      check(held === hold, `long press: the hand holds ${held} (${r.level <= 1 ? 'dice dots' : 'a digit'} above it)`);
+      if (name) await shot(`${name}-hold${hold}`);
+      await moveTo([x, 725], [760, 300]);
+      await mouse('mouseReleased', 760, 300);
+      await sleep(120);
+      if (name) await shot(`${name}-drop-outside`);
+      await waitFor('hand back on the shelf', () => sceneEval('Dough', 's => !s.drag && !s.children.list.some(o => o.type === "Container" && o.depth === 40)'));
+      const added = await sceneEval('Dough', 's => ({ added: s.added, board: s.shells.length + Object.values(s.empties).reduce((a, l) => a + l.length, 0) })');
+      check(Object.keys(added.added).length === 0 && added.board === 0, `dropped outside the bowl: all ${hold} back on the shelf, nothing poured (${JSON.stringify(added)})`);
     }
+    let longPresses = 0;
+    for (const key of kinds) {
+      const x = r.shelf[key];
+      const need = r.recipe.target[key] - (r.recipe.prefilled[key] ?? 0);
+      if (r.level >= 2) {
+        const held = await grabMany(x, need);
+        check(held === need, `${key}: the hand holds ${held} of ${need}`);
+        if (need > 1) longPresses++;
+        await moveTo([x, 725], [x, 600], opening);
+        await mouse('mouseReleased', opening[0], opening[1]);
+        await sleep(700 + need * 220);
+      } else {
+        for (let k = 0; k < need; k++) {
+          await drag([[x, 725], [x, 600], opening]);
+          await sleep(700);
+        }
+      }
+      await waitFor(`${key} poured`, () => sceneEval('Dough', `s => (s.added[${JSON.stringify(key)}] ?? 0) === ${need} && (${JSON.stringify(key)} === 'oeuf' ? s.shells.length : (s.empties[${JSON.stringify(key)}] ?? []).length) === ${need}`));
+    }
+    if (r.level >= 2) check(longPresses >= 1 || kinds.every(k => r.recipe.target[k] - (r.recipe.prefilled[k] ?? 0) === 1), `N${r.level}: ${longPresses} kinds poured with one long press each`);
+    log('  ok: every kind poured, its empties on the board', JSON.stringify(await sceneEval('Dough', 's => s.added')));
     await waitFor('whisk', () => sceneEval('Dough', 's => s.whisk.visible'));
     // whisk: press it at home, then 6 loops round the bowl opening
     const pts = [r.whisk];
@@ -588,7 +652,7 @@ const actions = {
 
   // Home → tile → Stand → Dough at the levels set in the parent space: one pâte round played (the
   // recipe is read, not forced), the Commande level read from the round.
-  async levelRound({ n, shot: name } = {}) {
+  async levelRound({ n, hold, shot: name } = {}) {
     await tap(await elCenter(TILE));
     await waitFor('stand page', () => evaluate(`location.href === ${JSON.stringify(GAME_URL)}`).catch(() => false), 15000);
     await waitFor('Phaser hook', () => evaluate(HOOK).catch(() => false), 15000);
@@ -599,11 +663,11 @@ const actions = {
     check(lv.commande === n && lv.pate === n, `the round plays at the levels set in the parent space (${JSON.stringify(lv)})`);
     const rec = await sceneEval('Dough', 's => s.round.recipe');
     const pre = Object.values(rec.prefilled ?? {}).some(v => v > 0);
-    if (n === 1) check(!pre && !rec.double, `N1 recipe: plain dice (${JSON.stringify(rec.target)})`);
     const pour = Object.keys(rec.target).reduce((a, k) => a + rec.target[k] - (rec.prefilled?.[k] ?? 0), 0);
-    if (n === 2) check(!pre && !rec.double && Object.values(rec.target).every(v => v <= 10) && pour <= 15, `N2 recipe: numbers up to 10, ${pour} <= 15 to pour (${JSON.stringify(rec.target)})`);
-    if (n === 3) check(Object.values(rec.target).every(v => v <= 20) && pour <= 20, `N3 recipe: numbers up to 20, ${pour} <= 20 to pour (${JSON.stringify(rec.target)})`);
-    await actions.dough({ shot: name });
+    if (n === 1) check(!pre && !rec.double && Object.values(rec.target).every(v => v <= 4) && pour <= 8, `N1 recipe: plain dice up to 4, ${pour} <= 8 to pour (${JSON.stringify(rec.target)})`);
+    if (n === 2) check(!pre && !rec.double && Object.values(rec.target).every(v => v <= 6) && pour <= 10, `N2 recipe: numbers up to 6, ${pour} <= 10 to pour (${JSON.stringify(rec.target)})`);
+    if (n === 3) check(Object.values(rec.target).every(v => v <= 10) && pour <= 12, `N3 recipe: numbers up to 10, ${pour} <= 12 to pour (${JSON.stringify(rec.target)})`);
+    await actions.dough({ shot: name, hold });
   },
 
   // Three pâte failures at pâte level 2 (set in the parent space): the parent space proposes to lower

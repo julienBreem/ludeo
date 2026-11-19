@@ -83,7 +83,6 @@ The files are released under CC0 1.0 (https://creativecommons.org/publicdomain/z
 | `assets/ingredients/empty-oeuf.svg` | original — drawn for this project | CC0 |
 | `assets/ingredients/empty-sucre.svg` | original — drawn for this project | CC0 |
 | `assets/kitchen/egg-box.svg` | original — drawn for this project | CC0 |
-| `assets/kitchen/egg-box-5.svg` | original — drawn for this project | CC0 |
 | `assets/kitchen/plate-side.svg` | original — drawn for this project | CC0 |
 | `assets/kitchen/tray.svg` | original — drawn for this project | CC0 |
 | `assets/ui/dice-1.svg` | original — drawn for this project | CC0 |

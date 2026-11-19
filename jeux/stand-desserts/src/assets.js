@@ -79,9 +79,8 @@ export const ASSETS = [
   { key: 'oven', file: 'assets/kitchen/oven.svg', w: 500, h: 450 },
   { key: 'pot', file: 'assets/kitchen/pot.svg', w: 200, h: 200 },
   { key: 'whisk', file: 'assets/kitchen/whisk.svg', w: 160, h: 400 },
-  // dough counting aids: egg cartons, the board for empties, the tray of what is already in the bowl
+  // dough counting aids: the egg carton, the board for empties, the tray of what is already in the bowl
   { key: 'egg-box', file: 'assets/kitchen/egg-box.svg', w: 400, h: 200 },
-  { key: 'egg-box-5', file: 'assets/kitchen/egg-box-5.svg', w: 200, h: 120 },
   { key: 'plate-side', file: 'assets/kitchen/plate-side.svg', w: 420, h: 300 },
   { key: 'tray', file: 'assets/kitchen/tray.svg', w: 260, h: 120 },
   // client: shared with the home's avatar (shared/assets/client/, precached by the home)

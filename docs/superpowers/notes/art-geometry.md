@@ -117,12 +117,12 @@ Branch feat/art-edu1. 20 new SVGs, all S2, none meant to be tinted. Layout numbe
 - The drawing fills about 80% of the frame, centred; each has its own ground shadow at the bottom (y 100..110).
 - They stay readable down to about 45 px. Below that, do not go.
 
-## egg-box (400x200) and egg-box-5 (200x120), assets/kitchen/
+## egg-box (400x200), assets/kitchen/
 
 - egg-box: open carton seen from above, 2 rows of 5. Cell centres: x 52, 126, 200, 274, 348 (pitch 74); y 62 (back row) and 130 (front row). Cells are ellipses rx 31, ry 28. Fill order suggested: back row left to right, then front row.
 - A shell in a cell: empty-oeuf centred 4 px above the cell centre, at 0.6 x the box's scale (72 px in the 400 px frame). No front layer is needed.
 - Sheet: box at scale 0.78, centre (620,580); second box (after 10) at (945,580).
-- egg-box-5: one row of 5 whole eggs in a carton with a pink band; egg centres x 28, 64, 100, 136, 172, tops at y 12. The eggs are countable on purpose; there is no digit on it. Sheet: on the shelf next to the egg, scale 0.92.
+- egg-box-5 (the 5-egg carton) was removed after the parent's review (spec 2 bis): the multi-grab replaces it.
 
 ## plate-side (420x300), the board beside the bowl
 
