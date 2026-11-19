@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 360 260" width="360" height="260">
+<!-- liquid in bowl-mix (same frame, same x,y): white and grey only, tinted in code with the mixed colour. Surface = ellipse cx 180 cy 98 rx 130 ry 35 -->
+<defs><linearGradient id="l" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#dcdcdc"/><stop offset="0.35" stop-color="#ffffff"/><stop offset="1" stop-color="#f2f2f2"/></linearGradient></defs>
+<ellipse cx="180" cy="98" rx="130" ry="35" fill="url(#l)" stroke="#b4b4b4" stroke-width="3"/>
+<path d="M92 100 C100 82 150 76 196 80 C240 84 262 94 250 104 C238 114 176 116 150 108 C132 102 150 92 182 94 C200 95 210 98 204 101" fill="none" stroke="#cfcfcf" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M78 90 C100 76 140 70 176 70" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
+<ellipse cx="262" cy="112" rx="9" ry="4" fill="#fff"/><ellipse cx="284" cy="103" rx="5" ry="2.5" fill="#fff"/>
+</svg>

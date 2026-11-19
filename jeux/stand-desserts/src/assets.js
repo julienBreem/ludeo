@@ -153,6 +153,15 @@ export const ASSETS = [
   { key: 'pict-coin', file: 'assets/ui/pict-coin.svg', w: 96, h: 96 },
   { key: 'pict-cote', file: 'assets/ui/pict-cote.svg', w: 96, h: 96 },
   { key: 'pict-rond', file: 'assets/ui/pict-rond.svg', w: 96, h: 96 },
+  // colours and logic: mixing bowl with its tintable liquid, failed-mix splash, slot marker, hint card and its signs
+  { key: 'bowl-mix', file: 'assets/kitchen/bowl-mix.svg', w: 360, h: 260 },
+  { key: 'bowl-mix-liquid', file: 'assets/kitchen/bowl-mix-liquid.svg', w: 360, h: 260 },
+  { key: 'blob-rate', file: 'assets/kitchen/blob-rate.svg', w: 160, h: 160 },
+  { key: 'slot-ring', file: 'assets/ui/slot-ring.svg', w: 96, h: 96 },
+  { key: 'hint-card', file: 'assets/ui/hint-card.svg', w: 400, h: 460 },
+  { key: 'sym-equal', file: 'assets/ui/sym-equal.svg', w: 96, h: 96 },
+  { key: 'sym-plus1', file: 'assets/ui/sym-plus1.svg', w: 144, h: 96 },
+  { key: 'sym-minus1', file: 'assets/ui/sym-minus1.svg', w: 144, h: 96 },
 ];
 
 // Every file of this game the service worker must cache for offline play, relative to the

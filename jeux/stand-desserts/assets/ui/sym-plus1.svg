@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 144 96" width="144" height="96">
+<!-- hint sign "+ 1" (one more): plus centred 40,48, digit 1 at x 88..108 -->
+<defs><linearGradient id="g" x1="0" y1="18" x2="0" y2="78" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#62f09a"/><stop offset="1" stop-color="#0a9a48"/></linearGradient></defs>
+<path d="M18 48 H62 M40 26 V70 M88 36 L108 20 V76" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke="#fff" stroke-width="27"/>
+<path d="M18 48 H62 M40 26 V70 M88 36 L108 20 V76" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke="#07602e" stroke-width="21" transform="translate(0 3)"/>
+<path d="M18 48 H62 M40 26 V70 M88 36 L108 20 V76" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke="#07602e" stroke-width="21"/>
+<path d="M18 48 H62 M40 26 V70 M88 36 L108 20 V76" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke="url(#g)" stroke-width="15"/>
+<path d="M18 48 H62 M40 26 V70 M88 36 L108 20 V76" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke="#fff" stroke-width="3.5" opacity=".7" transform="translate(-2.5 -3.5)"/>
+</svg>

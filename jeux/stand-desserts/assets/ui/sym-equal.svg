@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 96 96" width="96" height="96">
+<!-- hint sign "=" (same number): two bars x 20..76 at y 36 and y 60 -->
+<defs><linearGradient id="g" x1="0" y1="18" x2="0" y2="78" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#5b8cf0"/><stop offset="1" stop-color="#173a9c"/></linearGradient></defs>
+<path d="M20 36 H76 M20 60 H76" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke="#fff" stroke-width="27"/>
+<path d="M20 36 H76 M20 60 H76" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke="#0d2a66" stroke-width="21" transform="translate(0 3)"/>
+<path d="M20 36 H76 M20 60 H76" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke="#0d2a66" stroke-width="21"/>
+<path d="M20 36 H76 M20 60 H76" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke="url(#g)" stroke-width="15"/>
+<path d="M20 36 H76 M20 60 H76" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke="#fff" stroke-width="3.5" opacity=".7" transform="translate(-2.5 -3.5)"/>
+</svg>
