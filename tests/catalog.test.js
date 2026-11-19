@@ -29,3 +29,12 @@ test('rng is deterministic and in range', () => {
   const a = makeRng(42), b = makeRng(42);
   for (let i = 0; i < 100; i++) { const x = a(); assert.equal(x, b()); assert.ok(x >= 0 && x < 1); }
 });
+
+test('shop colours follow the Glaçage level: ready-made at N1, bases marron (12) and noir (14) at N2-N3', async () => {
+  const { shopItems, itemById: byId } = await import('../jeux/stand-desserts/src/logic/catalog.js');
+  assert.deepEqual(shopItems('color', 1).map(i => i.key), ['bleu', 'vert']);
+  for (const n of [2, 3]) assert.deepEqual(shopItems('color', n).map(i => i.key), ['marron', 'noir']);
+  assert.equal(byId('color:marron').price, 12);
+  assert.equal(byId('color:noir').price, 14);
+  assert.deepEqual(shopItems('topping', 3), shopItems('topping', 1));
+});

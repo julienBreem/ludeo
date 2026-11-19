@@ -8,7 +8,9 @@
 // wrong, the recipe comes back at the top left: per kind what was needed (with the operation) and
 // what she poured. Moule N2: the mould she needed with the clue; N3: the mould's pieces put
 // together. Cuisson N2 / N3: beside the pale / burnt cake, the timer on the number or the clock with
-// the alarm on the hour she had to set.
+// the alarm on the hour she had to set. Glaçage N2 / N3: the failed zone (with fractions, the
+// whole part of that colour) painted with the expected colour, and that colour's recipe
+// (pot + pot = pot), or its pot alone for a base.
 import { W, H, TOUCH, COLOR_HEX, OUTLINE, BATTER, TOP_SQUASH } from '../config.js';
 import { getRound, getState, updateState } from '../game-state.js';
 import { addIconButton } from '../ui/button.js';
@@ -18,12 +20,13 @@ import { blink, popIn, confetti, talk } from '../ui/fx.js';
 import { goNext } from '../ui/flow.js';
 import { STEPS, scoreRound, bitesFor } from '../logic/scoring.js';
 import { GRID } from '../logic/paint.js';
-import { zoneEdges } from '../logic/zones.js';
+import { zoneEdges, zoneMap } from '../logic/zones.js';
+import { recipeFor } from '../logic/colors.js';
 import { INGREDIENTS, DESSERTS } from '../logic/catalog.js';
 import { fixedRecipe, toPour } from '../logic/recipe.js';
 import { addCoins } from '../logic/economy.js';
 import { dur } from '../ui/pace.js';
-import { orderSentenceParts, orderWordParts, failedElements } from '../logic/orderText.js';
+import { orderSentenceParts, orderWordParts, failedElements, colorRuns } from '../logic/orderText.js';
 import { ensureWordTextures, flowParts } from '../ui/words.js';
 import { recordPhaseResult } from '../../../../shared/runtime.js';
 import { rightAlarm } from '../logic/bake.js';
@@ -398,7 +401,7 @@ export class ServiceScene extends Phaser.Scene {
       c.add(this.fit(`shape-${o.shape}-fill`, 84, x).setTint(0xe6e6e6));
       c.add(this.fit(`shape-${o.shape}-line`, 84, x));
     } else if (step === 'cuisson') c.add(this.fit('flame', 84, x));
-    else if (step === 'couleur') this.row(c, o.glaze.map(k => ['pot', COLOR_HEX[k]]), x);
+    else if (step === 'couleur') this.row(c, [...new Set(o.glaze)].map(k => ['pot', COLOR_HEX[k]]), x);
     else this.row(c, o.toppings.map(t => [`topping-${t.key}`, null]), x);
     return c;
   }
@@ -518,6 +521,10 @@ export class ServiceScene extends Phaser.Scene {
         break;
       }
       case 'mauvaise-couleur': {
+        if (step === 'couleur' && (this.round.levels?.couleur ?? 1) >= 2) {
+          this.expectedColor(c, res.zone ?? 0, x);
+          break;
+        }
         const zone = res.zone ?? 0;
         const want = o.glaze[zone];
         const used = res.color && COLOR_HEX[res.color] !== undefined ? res.color : null;
@@ -550,6 +557,10 @@ export class ServiceScene extends Phaser.Scene {
         break;
       }
       case 'pas-couvert': {
+        if (step === 'couleur' && (this.round.levels?.couleur ?? 1) >= 2) {
+          this.expectedColor(c, res.zone ?? 0, x);
+          break;
+        }
         // a mini cake only half painted with that zone's colour
         const mask = shapeMask(this, 'rond');
         const cells = new Uint8Array(GRID * GRID);
@@ -562,6 +573,41 @@ export class ServiceScene extends Phaser.Scene {
         return null;
     }
     return c;
+  }
+
+  // Glaçage N2 / N3: the order's cake with only the failed zone glazed, in the colour it needed
+  // (with fractions: every band of that colour), then how to get that colour: « a + b = c » in
+  // pots, or the base pot alone.
+  expectedColor(c, zone, x) {
+    const o = this.round.order;
+    const n = Math.max(1, o.glaze.length);
+    const z = Math.min(n - 1, Math.max(0, zone));
+    const want = o.glaze[z];
+    const bands = colorRuns(o.glaze).find(r => r.bands.includes(z))?.bands ?? [z];
+    const mask = shapeMask(this, o.shape);
+    const zones = zoneMap(mask, GRID, n);
+    const cells = new Uint8Array(GRID * GRID);
+    for (let i = 0; i < cells.length; i++) if (bands.includes(zones[i])) cells[i] = 1;
+    const cake = { dessert: o.dessert, doughOk: true, shape: o.shape, toppings: [], bake: 'dore', glaze: { cells, size: GRID, colorKeys: [want] } };
+    c.add(this.miniCake(cake, x - 50, 100));
+    const pot = (px, key, size) => c.add(this.fit('pot', size, px).setTint(COLOR_HEX[key] ?? 0xffffff));
+    const recipe = recipeFor(want);
+    if (!recipe) {
+      pot(x + 60, want, 72);
+      return;
+    }
+    const g = this.add.graphics();
+    const sign = (sx, plus) => {
+      g.fillStyle(OUTLINE, 1).fillRoundedRect(sx - 12, plus ? -4 : -9, 24, 8, 4);
+      if (plus) g.fillRoundedRect(sx - 4, -12, 8, 24, 4);
+      else g.fillRoundedRect(sx - 12, 1, 24, 8, 4);
+    };
+    sign(x + 52, true);
+    sign(x + 118, false);
+    c.add(g);
+    pot(x + 20, recipe[0], 48);
+    pot(x + 85, recipe[1], 48);
+    pot(x + 160, want, 64);
   }
 
   // Moule N2: the mould she needed (3/4) and, on a small card, the clue that told it.

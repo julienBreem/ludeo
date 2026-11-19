@@ -71,7 +71,7 @@ test('the stand phases, their themes and which ones have levels', () => {
   const g = GAMES.find(x => x.id === 'stand-desserts');
   assert.deepEqual(g.phases.map(p => [p.id, p.theme, p.levels]), [
     ['commande', 'lecture', 3], ['pate', 'nombres', 3], ['moule', 'geometrie', 3], ['cuisson', 'temps', 3],
-    ['couleur', 'couleurs-fractions', 1], ['toppings', 'logique', 1], ['service', 'monnaie', 1],
+    ['couleur', 'couleurs-fractions', 3], ['toppings', 'logique', 1], ['service', 'monnaie', 1],
   ]);
   assert.deepEqual(g.phases.filter(p => p.scored === false).map(p => p.id), ['commande']);
 });

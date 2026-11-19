@@ -1,5 +1,5 @@
 import { DESSERTS, ITEMS, ownedKeys } from './catalog.js';
-import { basesOf, obtainable, mixedColors } from './colors.js';
+import { basesOf, obtainable, mixedColors, BASES, EXTRA_BASES, RECIPES } from './colors.js';
 
 export const ZONE_WEIGHTS = [0.5, 0.35, 0.15];
 export const KIND_WEIGHTS = [0.5, 0.35, 0.15];
@@ -40,6 +40,17 @@ export const BAND_PATTERNS = [
 // Motifs of level 2, one period (letters are topping kinds): AB, then AAB, then ABC.
 export const MOTIFS = [[0, 1], [0, 0, 1], [0, 1, 2]];
 
+export const N1_MAX_BANDS = 2;
+
+// The letters of a band list (first colour 0, next new one 1, ...): [rose, rose, vert] -> [0, 0, 1].
+function lettersOf(bands) {
+  const seen = [];
+  return bands.map((c) => {
+    if (!seen.includes(c)) seen.push(c);
+    return seen.indexOf(c);
+  });
+}
+
 const levelOf = (levels, phase) => ([1, 2, 3].includes(levels?.[phase]) ? levels[phase] : 1);
 
 function countsOf(keys) {
@@ -60,8 +71,9 @@ function ensureMixed(colors, mixed, rng) {
 
 function glazeBandsFor(level, owned, rng) {
   if (level === 1) {
+    // N1: halves at most (1 or 2 bands)
     const colors = ownedKeys(owned, 'color');
-    return pickDistinct(colors, pickSize(ZONE_WEIGHTS, colors.length, rng), rng);
+    return pickDistinct(colors, pickSize(ZONE_WEIGHTS, Math.min(N1_MAX_BANDS, colors.length), rng), rng);
   }
   const bases = basesOf(owned);
   const all = obtainable(bases);
@@ -199,7 +211,9 @@ export function ringPositions(n, radius = 115) {
  * parseOrderParam(value) -> Order | null (debug: ?debug&order=<value>)
  * `<shape>/<colour>-<colour>/<topping>:<n>-<topping>:<n>[/<dessert>]`, e.g.
  * `licorne/rose-violet-jaune/fraise:2-bougie:1-chantilly:3`. Any catalog key is accepted, owned
- * or not; anything unknown or malformed gives null. The dessert defaults to gateau.
+ * or not (colours: also the mixing bases and mixes, e.g. rouge, orange); anything unknown or
+ * malformed gives null. The dessert defaults to gateau. The glaze is 1 to 3 distinct colours, or
+ * a level-3 fraction pattern (BAND_PATTERNS, e.g. rose-rose-violet, jaune-vert-vert-vert).
  */
 export function parseOrderParam(value) {
   if (typeof value !== 'string') return null;
@@ -208,7 +222,10 @@ export function parseOrderParam(value) {
   const known = (kind, key) => ITEMS.some(i => i.kind === kind && i.key === key);
   if (!known('shape', shape) || !(dessert in DESSERTS)) return null;
   const glaze = glazeStr.split('-');
-  if (glaze.length > 3 || new Set(glaze).size !== glaze.length || !glaze.every(c => known('color', c))) return null;
+  const colour = c => known('color', c) || BASES.includes(c) || EXTRA_BASES.includes(c) || c in RECIPES;
+  const distinct = glaze.length <= 3 && new Set(glaze).size === glaze.length;
+  const pattern = BAND_PATTERNS.some(p => p.join() === lettersOf(glaze).join());
+  if (!(distinct || pattern) || !glaze.every(colour)) return null;
   const toppings = [];
   for (const t of toppingStr.split('-')) {
     const m = /^([a-z]+):([1-6])$/.exec(t);

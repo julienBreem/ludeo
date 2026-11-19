@@ -1,12 +1,17 @@
 // Shop: one card per item with a price, four rows by kind (shapes, colours, toppings, decos).
 // Coins are spent with economy.buy; a failed tap (unaffordable or owned) only shakes the card.
+// Colours follow the Glaçage level: N1 sells ready-made colours (bleu, vert), N2-N3 sells new
+// bases to mix (marron, noir) instead.
 import { W, H, TOUCH, COLOR_HEX, OUTLINE } from '../config.js';
 import { getState, updateState } from '../game-state.js';
 import { addIconButton } from '../ui/button.js';
 import { goTo } from '../ui/flow.js';
 import { splash, sparkle } from '../ui/fx.js';
-import { ITEMS } from '../logic/catalog.js';
+import { shopItems } from '../logic/catalog.js';
 import { canBuy, buy } from '../logic/economy.js';
+import { phaseLevels } from '../../../../shared/runtime.js';
+import { ID } from '../../collection.js';
+
 
 const KINDS = ['shape', 'color', 'topping', 'deco'];
 const ROW_Y = [165, 325, 485, 645];
@@ -54,8 +59,9 @@ export class ShopScene extends Phaser.Scene {
       this.cards.destroy();
     }
     this.cards = this.add.container(0, 0);
+    const colorLevel = phaseLevels(ID).couleur ?? 1;
     KINDS.forEach((kind, row) => {
-      const items = ITEMS.filter(i => i.kind === kind && i.price > 0);
+      const items = shopItems(kind, colorLevel);
       const cw = kind === 'deco' ? 230 : 160;
       const gap = 24;
       const total = items.length * cw + (items.length - 1) * gap;

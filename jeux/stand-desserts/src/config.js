@@ -13,6 +13,16 @@ export const COLOR_HEX = {
   blanc: 0xffffff,
   bleu: 0x2979ff,
   vert: 0x00e676,
+  // bases and mixes of the Glaçage N2-N3 (values from the lot 3 art notes; noir is not pure black:
+  // a multiply tint would wipe out the pot's shading)
+  rouge: 0xff3d2e,
+  orange: 0xff9800,
+  bleuclair: 0x7fd0ff,
+  marron: 0x8d5a3b,
+  noir: 0x3d3944,
+  beige: 0xe6cfa4,
+  gris: 0x9aa3b0,
+  melange: 0x8a7d54, // « mélange raté »: a mix with no recipe (colors.js MELANGE)
 };
 
 // Pale backdrop behind order pictures (bubble, strip card), so a white glaze stands out.

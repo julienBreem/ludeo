@@ -145,7 +145,11 @@ export class StandScene extends Phaser.Scene {
     const items = orderWords(order, 1).map(w => ({ w, tag: addTag(this, 0, 0, w.word, { fontSize: 28, maxWidth: 220 }) }));
     const point = (w) => {
       if (w.kind === 'forme') return { x: geo.shape.x * s, y: geo.shape.y * s };
-      if (w.kind === 'couleur') return { x: geo.zones[w.index].x * s, y: geo.zones[w.index].y * s };
+      if (w.kind === 'couleur') {
+        // a colour over several bands (fractions): the middle of its bands
+        const zs = (w.bands ?? [w.index]).map(b => geo.zones[b]);
+        return { x: (zs.reduce((a, z) => a + z.x, 0) / zs.length) * s, y: (zs.reduce((a, z) => a + z.y, 0) / zs.length) * s };
+      }
       return { x: geo.toppings[w.index].x * s, y: geo.toppings[w.index].y * s };
     };
     // the shape on the right, the toppings above, the colours (zones left to right) below
@@ -208,7 +212,7 @@ export class StandScene extends Phaser.Scene {
       obj = this.add.image(0, 0, highlightKey(this, this.order, 'moule', true)).setScale(s / K);
     } else if (w.kind === 'couleur') {
       obj = this.add.graphics();
-      const cells = new Set(geo.zones[w.index].cells);
+      const cells = new Set((w.bands ?? [w.index]).flatMap(b => geo.zones[b].cells));
       const cx = u => (u * CELL - FRAME / 2) * s;
       const cy = v => (v * CELL - FRAME / 2) * TOP_SQUASH * s;
       obj.fillStyle(GLOW, 0.45);

@@ -129,3 +129,16 @@ test('judgeOrderToppings: motif by slots, counts and hints by exact counts', () 
   assert.equal(judgeOrderToppings(['a', 'a', 'a', 'b', 'b', 'b', 'b', 'b'], hintOrder).reason, 'trop');
   assert.equal(judgeOrderToppings(['a'], { toppings: [{ key: 'a', count: 1 }] }).ok, true);
 });
+
+test('Glaçage N3 shelf: bases + pots she made (append-only keys), repeated bands, mélange always wrong', () => {
+  const judge = judgeColor;
+  // 4 bands of 1 cell each; glaze: one quarter jaune, three quarters vert
+  const zones = Int8Array.from([0, 1, 2, 3]);
+  const keys = ['rouge', 'bleu', 'jaune', 'blanc', 'vert', 'melange']; // vert = 5, melange = 6
+  const glaze = ['jaune', 'vert', 'vert', 'vert'];
+  assert.deepEqual(judge(Uint8Array.from([3, 5, 5, 5]), keys, zones, glaze), { ok: true });
+  assert.deepEqual(judge(Uint8Array.from([3, 5, 6, 5]), keys, zones, glaze), { ok: false, reason: 'mauvaise-couleur', zone: 2, color: 'melange' });
+  // two quarters vert, two jaune: the fraction is wrong on band 1
+  assert.deepEqual(judge(Uint8Array.from([3, 3, 5, 5]), keys, zones, glaze), { ok: false, reason: 'mauvaise-couleur', zone: 1, color: 'jaune' });
+  assert.deepEqual(judge(Uint8Array.from([3, 0, 5, 5]), keys, zones, glaze), { ok: false, reason: 'pas-couvert', zone: 1 });
+});

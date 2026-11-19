@@ -10,7 +10,9 @@
 // (shared/runtime.js phaseLevels), for the sample round and every new client.
 // Half hours: ?debug&half=1 lets Cuisson N3 ask for ½ h and snap the alarm to half hours.
 // Order: ?debug&order=<shape>/<colours>/<toppings>[/<dessert>] (e.g. licorne/rose-violet-jaune/
-// fraise:2-bougie:1-chantilly:3) gives every new client that order (game-state.js newRound).
+// fraise:2-bougie:1-chantilly:3) gives every new client that order (game-state.js newRound), and
+// the sample round of ?debug&scene= too (its ideal cake), e.g. ?debug&scene=Paint&level=couleur:3&order=
+// rond/rose-violet-violet/fraise:1.
 import { createRound } from './logic/round.js';
 import { STEPS } from './logic/scoring.js';
 import { generateClient } from '../../../shared/client.js';
@@ -18,6 +20,7 @@ import { setRound } from './game-state.js';
 import { phaseLevels } from '../../../shared/runtime.js';
 import { ID } from '../collection.js';
 import { idealCake } from './ui/orderCake.js';
+import { parseOrderParam } from './logic/order.js';
 
 const PARAM = 'scene';
 
@@ -78,8 +81,9 @@ function urlScore() {
 }
 
 export function installSampleRound(scene) {
-  const round = createRound(sampleOrder());
-  round.cake = sampleCake(scene);
+  const order = parseOrderParam(debugParams()?.get('order') ?? null) ?? sampleOrder();
+  const round = createRound(order);
+  round.cake = idealCake(scene, order);
   round.client = generateClient();
   round.levels = phaseLevels(ID);
   const { score, alt } = urlScore();

@@ -33,6 +33,7 @@ import { bitesFor } from '../../jeux/stand-desserts/src/logic/scoring.js';
 import { BRUSH_RADIUS } from '../../jeux/stand-desserts/src/logic/paint.js';
 import { clueHolds } from '../../jeux/stand-desserts/src/logic/shapes.js';
 import { NOUNS } from '../../jeux/stand-desserts/src/logic/orderText.js';
+import { recipeFor } from '../../jeux/stand-desserts/src/logic/colors.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const outDir = process.argv[2] ?? fs.mkdtempSync(path.join(os.tmpdir(), 'stand-smoke-'));
@@ -598,17 +599,58 @@ const actions = {
 
   // Paints each glaze zone with its colour: the zone's columns in zig-zags, the brush path kept
   // a brush radius inside the inner zone lines so it does not spill on the neighbour.
-  // color 'wrong': zone 0 gets an owned colour that is not in the order.
-  async paint({ color = 'order', shot: name } = {}) {
+  // color 'wrong': zone 0 gets an owned colour that is not in the order (N1).
+  // N2 / N3 (Glaçage level from the scene; `level` checks it): every ordered colour that is not a
+  // base pot is mixed first: its two bases dragged onto the bowl, then the pot button. N2 also
+  // pours one pot and taps the bowl to empty it; N3 checks the rim graduations (no dotted lines).
+  async paint({ color = 'order', level, shot: name } = {}) {
     await waitScene('Paint');
     // (a smoke run once saw colorKeys undefined here under heavy load: wait for create() to have run)
     await waitFor('Paint create()', () => sceneEval('Paint', 's => Array.isArray(s.colorKeys) && !!s.pots && s.pots.length > 0'));
+    const n = await sceneEval('Paint', 's => s.level');
+    if (level !== undefined) check(n === level, `Glaçage plays level ${level} (${n})`);
+    const zoneCount = order.glaze.length;
+    if (n === 1) check(zoneCount <= 2, `N1: ${zoneCount} band(s), halves at most`);
+    if (n === 2) check(zoneCount <= 3 && new Set(order.glaze).size === zoneCount, `N2: ${zoneCount} distinct band(s)`);
+    if (n === 3) {
+      check([3, 4].includes(zoneCount) && new Set(order.glaze).size < zoneCount, `N3: ${zoneCount} bands, a colour over several (${order.glaze.join(' ')})`);
+      const ticks = await sceneEval('Paint', 's => s.ticks?.length ?? 0');
+      check(ticks === 2 * (zoneCount - 1), `N3: ${ticks} rim graduations at the band edges`);
+    }
+    const potX = key => sceneEval('Paint', `s => s.pots.find(p => p.key === ${JSON.stringify(key)})?.x ?? null`);
+    if (n >= 2) {
+      const bowl = await sceneEval('Paint', 's => ({ x: s.bowlRect.centerX, y: s.bowlRect.centerY, bx: s.potButton.x, by: s.potButton.y })');
+      const pourPot = async (key) => {
+        const x = await potX(key);
+        await drag([[x, 728], [x, 640], [bowl.x, bowl.y]]);
+        await waitFor(`${key} poured`, () => sceneEval('Paint', 's => s.bowl.pours > 0 && !s.potDrag'));
+        await sleep(300);
+      };
+      if (n === 2) {
+        await pourPot('jaune');
+        check(await sceneEval('Paint', 's => s.bowl.content') === 'jaune', 'a pot poured into the bowl');
+        await tap([bowl.x, bowl.y]);
+        check(await sceneEval('Paint', 's => s.bowl.content') === null, 'tapping the bowl empties it');
+      }
+      for (const key of new Set(order.glaze)) {
+        if (await potX(key) !== null) continue;
+        const recipe = recipeFor(key);
+        check(!!recipe, `${key} has a recipe`);
+        await pourPot(recipe[0]);
+        await pourPot(recipe[1]);
+        await waitFor(`pot button for ${key}`, () => sceneEval('Paint', `s => s.bowl.content === ${JSON.stringify(key)} && s.potButton.visible && s.potButton.scale === 1`));
+        if (name) await shot(`${name}-mix-${key}`);
+        await tap([bowl.bx, bowl.by]);
+        await waitFor(`${key} pot on the shelf`, () => sceneEval('Paint', `s => s.pots.some(p => p.key === ${JSON.stringify(key)} && p.y < 728 && !s.tweens.isTweening(p))`));
+        log(`  mixed ${recipe.join(' + ')} = ${key}`);
+      }
+    }
     const geo = await sceneEval('Paint', `s => {
       const zones = Array.from(s.zones); const n = Math.max(...zones) + 1; const box = [];
       for (let z = 0; z < n; z++) box.push({ x0: 99, x1: -1, y0: 99, y1: -1 });
       zones.forEach((z, i) => { if (z < 0) return; const b = box[z]; const x = i % 64; const y = Math.floor(i / 64);
         b.x0 = Math.min(b.x0, x); b.x1 = Math.max(b.x1, x); b.y0 = Math.min(b.y0, y); b.y1 = Math.max(b.y1, y); });
-      return { keys: s.colorKeys, box, pots: s.pots.map(p => p.x) };
+      return { keys: s.colorKeys, box, pots: Object.fromEntries(s.pots.map(p => [p.key, p.x])) };
     }`);
     const zoneColors = [...order.glaze];
     wrongColor = null;
@@ -624,7 +666,7 @@ const actions = {
       const b = geo.box[z];
       const u0 = z === 0 ? b.x0 - 1 : b.x0 + inset;
       const u1 = z === zoneColors.length - 1 ? b.x1 + 2 : b.x1 + 1 - inset;
-      await tap([geo.pots[geo.keys.indexOf(zoneColors[z])], 728]);
+      await tap([geo.pots[zoneColors[z]], 728]);
       await sleep(250);
       const pts = [];
       for (let v = b.y0 - 1, dir = 1; v <= b.y1 + 2; v += 2, dir = -dir) {
@@ -727,14 +769,14 @@ const actions = {
   },
 
   // Lot 1: from the home, the parent space sets the levels with real taps: `themes` = theme levels
-  // ({lecture: n, nombres: n, temps: n}), `phase` = pâte's own level (n, or 'theme' for « Comme le thème »).
+  // ({lecture: n, nombres: n, temps: n, 'couleurs-fractions': n}), `phase` = pâte's own level (n, or 'theme' for « Comme le thème »).
   async parentLevels({ themes = {}, phase } = {}) {
     await loadHome(URL);
     await tapEl('#gear');
     await waitFor('difficulty section', () => evaluate(`!!document.querySelector('#sec-difficulte [data-theme]')`));
     for (const [t, n] of Object.entries(themes)) {
       await tapEl(`#sec-difficulte [data-theme=${t}] [data-level="${n}"]`);
-      await waitFor(`${t} level ${n}`, () => evaluate(`JSON.parse(localStorage.getItem('collection.v1')).levels?.${t} === ${n}`));
+      await waitFor(`${t} level ${n}`, () => evaluate(`JSON.parse(localStorage.getItem('collection.v1')).levels?.[${JSON.stringify(t)}] === ${n}`));
     }
     if (phase !== undefined) {
       await tapEl(`#sec-difficulte [data-phase=pate] [data-level="${phase}"]`);

@@ -28,6 +28,15 @@ export const NOUNS = {
     blanc: { m: 'blanc', f: 'blanche' },
     bleu: { m: 'bleu', f: 'bleue' },
     vert: { m: 'vert', f: 'verte' },
+    // Glaçage N2-N3 bases and mixes; « bleu clair » (compound colour) and « marron » / « orange »
+    // (nouns used as colours) do not agree
+    rouge: { m: 'rouge', f: 'rouge' },
+    orange: { m: 'orange', f: 'orange' },
+    bleuclair: { m: 'bleu clair', f: 'bleu clair' },
+    beige: { m: 'beige', f: 'beige' },
+    gris: { m: 'gris', f: 'grise' },
+    marron: { m: 'marron', f: 'marron' },
+    noir: { m: 'noir', f: 'noire' },
   },
   topping: {
     fraise: { one: 'fraise', many: 'fraises', g: 'f' },
@@ -43,6 +52,52 @@ export const NOUNS = {
 };
 
 const NUMBERS = [null, null, 'deux', 'trois', 'quatre', 'cinq', 'six'];
+
+// Glaçage N3: a colour over several adjacent bands is read as a fraction of the cake. The colour
+// agrees with the fraction's noun: « une moitié violette », « un tiers violet », « deux tiers
+// violet » (the colour of that part, kept singular), « trois quarts vert ».
+export const FRACTIONS = {
+  '1/2': { text: 'une moitié', g: 'f' },
+  '1/3': { text: 'un tiers', g: 'm' },
+  '2/3': { text: 'deux tiers', g: 'm' },
+  '1/4': { text: 'un quart', g: 'm' },
+  '3/4': { text: 'trois quarts', g: 'm' },
+};
+
+const gcd = (a, b) => (b ? gcd(b, a % b) : a);
+
+/**
+ * colorRuns(glaze) -> Array<{key, start, bands: number[], fraction: '1/3'|...}>
+ * Adjacent bands of the same colour, left to right; fraction = the run's share of the bands, reduced.
+ */
+export function colorRuns(glaze = []) {
+  const runs = [];
+  glaze.forEach((key, i) => {
+    const last = runs[runs.length - 1];
+    if (last && last.key === key) last.bands.push(i);
+    else runs.push({ key, start: i, bands: [i] });
+  });
+  for (const r of runs) {
+    const d = gcd(r.bands.length, glaze.length);
+    r.fraction = `${r.bands.length / d}/${glaze.length / d}`;
+  }
+  return runs;
+}
+
+// True when a colour covers several bands (Glaçage N3): the colours are then read as fractions.
+export const hasFractions = (glaze = []) => colorRuns(glaze).length < glaze.length;
+
+// The colour words of the order: one per band (« rose », « violette »), or one per run with its
+// fraction when a colour covers several bands (« un tiers rose », « deux tiers violet »). `index`
+// is the run's first band, `bands` every band it covers.
+function colorItems(glaze, g) {
+  if (!hasFractions(glaze)) return glaze.map((key, index) => ({ key, index, bands: [index], word: colorWord(key, g) }));
+  return colorRuns(glaze).map((r) => {
+    const f = FRACTIONS[r.fraction];
+    const word = f ? `${f.text} ${colorWord(r.key, f.g)}` : colorWord(r.key, g);
+    return { key: r.key, index: r.start, bands: r.bands, word };
+  });
+}
 
 // A number in letters (1..6), agreeing with the noun's gender for 1.
 export function numberWord(n, g = 'm') {
@@ -66,11 +121,13 @@ const counted = (t, count) => (count === 1 ? t.one : t.many);
  * One word per element, in the order shape, colours (zones left to right), toppings.
  * Level 1: toppings named without a number (« fraises »); level ≥ 2: « 2 fraises ».
  * `index` is the zone index for colours, the position in order.toppings for toppings, 0 for the shape.
+ * When a colour covers several adjacent bands (Glaçage N3) there is one word per colour, as a
+ * fraction (« un tiers rose », « deux tiers violet »): `index` is its first band, `bands` all of them.
  */
 export function orderWords(order, level = 1, { hideShape = false } = {}) {
   const shape = shapeOf(order, hideShape);
   const out = [{ key: order.shape, kind: 'forme', word: shape.word, index: 0 }];
-  (order.glaze ?? []).forEach((key, index) => out.push({ key, kind: 'couleur', word: colorWord(key, shape.g), index }));
+  for (const c of colorItems(order.glaze ?? [], shape.g)) out.push({ key: c.key, kind: 'couleur', word: c.word, index: c.index, bands: c.bands });
   (order.toppings ?? []).forEach(({ key, count }, index) => {
     const t = toppingNoun(key);
     const word = level >= 2
@@ -101,8 +158,9 @@ export function orderSentenceParts(order, { hideShape = false } = {}) {
   };
   const glaze = order.glaze ?? [];
   if (glaze.length) {
-    glue(' ');
-    listInto(glaze.map((key, index) => ({ text: colorWord(key, shape.g), kind: 'couleur', key, index })));
+    // « Un cœur rose et violet », « Un cœur, un tiers rose et deux tiers violet »
+    glue(hasFractions(glaze) ? ', ' : ' ');
+    listInto(colorItems(glaze, shape.g).map(c => ({ text: c.word, kind: 'couleur', key: c.key, index: c.index })));
   }
   const toppings = order.toppings ?? [];
   if (toppings.length) {
@@ -131,7 +189,7 @@ export function orderSentence(order) {
 /**
  * failedElements(order, results) -> Array<{kind, index}>
  * The order's elements tied to a failed point at Service: moule -> the shape; couleur -> the
- * failing zone's colour (every colour if the zone is unknown); toppings -> the topping kind named
+ * failing zone's colour word (its run's first band with fractions; every colour if the zone is unknown); toppings -> the topping kind named
  * by the result when it is in the order, else every topping. Dough and bake have no word.
  */
 export function failedElements(order, results = {}) {
@@ -139,9 +197,11 @@ export function failedElements(order, results = {}) {
   if (results.moule && !results.moule.ok) out.push({ kind: 'forme', index: 0 });
   const c = results.couleur;
   if (c && !c.ok) {
-    const n = (order.glaze ?? []).length;
-    if (Number.isInteger(c.zone) && c.zone >= 0 && c.zone < n) out.push({ kind: 'couleur', index: c.zone });
-    else for (let i = 0; i < n; i++) out.push({ kind: 'couleur', index: i });
+    // the colour word of the failing zone (with fractions: the word of the run holding it)
+    const items = colorItems(order.glaze ?? [], 'm');
+    const hit = Number.isInteger(c.zone) ? items.find(it => it.bands.includes(c.zone)) : null;
+    if (hit) out.push({ kind: 'couleur', index: hit.index });
+    else for (const it of items) out.push({ kind: 'couleur', index: it.index });
   }
   const t = results.toppings;
   if (t && !t.ok) {
