@@ -23,17 +23,16 @@ Le cœur du jeu — **le mini-jeu où l'enfant apprend des mots au singe** — d
 2. Une maison = une lettre (son principal), présentée par le singe (« le m fait mmm »).
 3. Le mini-jeu des mots : **écouter** (toucher les syllabes, le singe les dit), puis **écrire** (remettre des cubes-lettres dans l'ordre, chaque cube dit son son, chaque syllabe finie est dite).
 4. Chaque mot réussi débloque un objet à placer dans la maison ; ~4 objets installent le singe ; 8 à 10 objets par maison pour revenir.
-5. **3 niveaux de difficulté progressifs** dans l'écriture (recopier → modèle caché → dictée), qui montent quand l'enfant revient dans une maison.
+5. **3 niveaux de difficulté progressifs** dans l'écriture (recopier → modèle caché → dictée), qui montent quand l'enfant revient dans une maison, **sans jamais dépasser le niveau réglé par le parent** (plafond).
 6. La **révision** : les mots des nouvelles maisons mélangent les lettres déjà vues ; les singes font des demandes d'objets des anciennes maisons.
 7. Une **collection** (dans la maison de l'enfant) : lettres apprises, objets gagnés, emplacements vides pour ce qui reste.
-8. Le jeu applique toutes les règles communes de la collection (rythme, mode soir, 3 niveaux).
+8. Le jeu applique toutes les règles communes de la collection (rythme, mode soir, niveaux et thèmes communs).
 
 ## Non-objectifs
 
 - Pas de tracé de lettres au doigt : « écrire » = choisir et ordonner des cubes-lettres.
 - Pas de lecture de phrases ni de textes.
 - Pas de monnaie ni de boutique (la récompense, ce sont les objets et le singe).
-- Pas de réglage manuel de la difficulté par le parent dans cette version (les niveaux montent seuls).
 - Pas de voix de synthèse de la tablette pendant le jeu (indisponible dans Chrome sur la tablette du test).
 - Pas d'images générées par IA dans cette version (testées, écartées par le parent — voir Approches).
 - Pas de mots à lettres muettes dans la version 1 (« lime », « lit », « riz »).
@@ -55,9 +54,15 @@ Le cœur du jeu — **le mini-jeu où l'enfant apprend des mots au singe** — d
 - Tout ce qui est publié (sons, images) doit avoir une licence qui permet la **diffusion publique**.
 - Taille : le jeu est mis en cache hors ligne ; viser des fichiers légers (audio AAC/m4a courts, SVG).
 
-## Nouvelle règle de la collection : 3 niveaux
+## Niveaux : la couche commune de la collection
 
-Décision du parent : **chaque jeu de la collection a 3 niveaux de difficulté progressifs**, comme il applique le rythme et le mode soir. Le registre le déclare (par exemple `SUPPORTS` gagne `'niveaux'`) et `tests/registry.test.js` le vérifie. Le village l'applique dès sa création. **Le stand de desserts n'a pas encore de niveaux : c'est un chantier à part, à concevoir après le village** ; d'ici là, le contrôle du registre doit tolérer le stand (exception nommée et datée) ou la règle n'entre en vigueur qu'avec ce chantier — choix au constructeur, sans casser le stand.
+La collection a déjà une couche commune de difficulté (spec `2026-11-19-educatif-design.md`, construite dans `shared/themes.js`, `difficulty.js`, `history.js`, `runtime.js`) : chaque **thème** a un niveau 1–3 réglé par le parent (section « Difficulté » de l'espace parent, recommandation par âge), chaque **phase** d'un jeu peut avoir sa surcharge, et le jeu **propose** de monter/baisser une phase d'après ses derniers résultats — **rien ne change sans validation du parent**.
+
+Le village s'y branche (décision du parent, option « plafond ») :
+- Il déclare dans `collection.js` une phase **`mots`** (nom parent « Mots », thème **`lecture`**, 3 niveaux).
+- Le niveau effectif de cette phase (`phaseLevels`) est le **plafond** : dans chaque maison, l'enfant commence au niveau 1 et monte seule selon la règle « Montée des niveaux » ci-dessous, **sans jamais dépasser le plafond**. Si le parent baisse le plafond, les maisons au-dessus jouent désormais au plafond.
+- Les **résultats** (pour les propositions) ne sont enregistrés que pour les mots joués **au niveau du plafond** (`recordPhaseResult(…, playedLevel)` ignore déjà les autres). Un mot est **réussi** s'il est écrit avec **au plus 2 cubes mal placés**, raté sinon (décision de l'auteur).
+- Les propositions déplacent donc le plafond, comme pour le stand.
 
 ## Approches
 
@@ -129,7 +134,7 @@ Tests faits :
    - **2 — modèle caché** : le modèle s'affiche, puis se cache quand elle commence (un bouton œil le remontre) ;
    - **3 — dictée** : seulement l'image et le singe qui dit le mot (bouton pour le réentendre).
    - Cubes en trop : niveau 1 aucun ; niveau 2 un ou deux très différents ; niveau 3 des lettres proches (b/d, m/n) quand elles ont été vues.
-4. **Montée des niveaux** : les 4 premiers mots d'une maison au niveau 1 ; les suivants au niveau 2 ; une fois tous les objets gagnés au niveau 2, la maison propose de refaire ses mots au niveau 3 (le singe gagne alors une petite décoration bonus — détail au constructeur).
+4. **Montée des niveaux** (dans la limite du plafond, voir « Niveaux ») : les 4 premiers mots d'une maison au niveau 1 ; les suivants au niveau 2 ; une fois tous les objets gagnés, la maison propose de refaire ses mots au niveau 3 (le singe gagne alors une petite décoration bonus — détail au constructeur). Plafond à 1 : tout au niveau 1, pas de reprise. Plafond à 2 : la reprise se fait au niveau 2.
 5. Aucune limite de temps, aucun échec compté.
 
 ### Collection (maison de l'enfant)
@@ -166,7 +171,7 @@ Tests faits :
 
 - **Rythme** : multiplie les durées d'animation, les pauses entre deux paroles du singe et les transitions (calme = plus lent), comme le stand (`shared/runtime.js`).
 - **Mode soir** : filtre doux sur le canvas, pas de confettis ni d'étincelles, rythme calme ; réévalué chaque minute.
-- **Niveaux** : ceux du mini-jeu des mots (ci-dessus).
+- **Niveaux** : couche commune, phase `mots` (thème `lecture`), plafond (voir « Niveaux »).
 
 ### Sauvegarde et espace parent
 
@@ -197,7 +202,6 @@ Un fichier `jeux/village-singes/ASSETS-LICENSES.md` liste chaque dessin et chaqu
 - Technique des sons isolés voisés et courts ; page de validation des sons pour le parent.
 - La police (licence libre vérifiée).
 - Récompense bonus du niveau 3 ; fréquence des bulles de demande des singes.
-- Comment la règle des 3 niveaux entre dans le registre sans casser le stand (voir plus haut).
 - Tests : logique pure (progression, niveaux, cubes pré-posés et cubes en trop, sauvegarde, cohérence entre découpage des mots et fichiers son/dessin) ; le test du registre couvre l'ajout du jeu ; le script de partie automatique (`tests/e2e`) parcourt une maison.
 
 ## Sources
