@@ -1,6 +1,6 @@
 // Stand: the client walks in and shows the order as the finished cake in one big bubble.
 // Also hosts the parent zone (3 s press top-left: reset the save).
-import { W, H, TOUCH, OUTLINE } from '../config.js';
+import { W, H, TOUCH, OUTLINE, BACKDROP } from '../config.js';
 import { newRound, getState, updateState, getStorage } from '../game-state.js';
 import { addIconButton } from '../ui/button.js';
 import { drawClient } from '../ui/client.js';
@@ -48,7 +48,9 @@ export class StandScene extends Phaser.Scene {
     }
 
     // bubble, picture, validate button
-    this.bubble = this.add.image(BUBBLE_X, BUBBLE_Y, 'bubble').setScale(BUBBLE_SCALE).setDepth(30).setVisible(false);
+    // a pale tint on the bubble so a white glaze still stands out from it
+    this.bubble = this.add.image(BUBBLE_X, BUBBLE_Y, 'bubble').setScale(BUBBLE_SCALE).setDepth(30).setVisible(false)
+      .setTint(BACKDROP);
     this.bubble.setInteractive({ useHandCursor: true });
     this.bubble.on('pointerup', () => this.advance());
     // the finished cake of the order, in one big bubble (cached texture, no mask)

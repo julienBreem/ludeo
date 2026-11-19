@@ -5,7 +5,7 @@
 // whatever its own colours) plus a gentle bounce of the cake. Light is never added over the top
 // face or the toppings, whose colours are the order: only the side band (dough, bake) and the
 // outline (mould) get a pulsing additive fill.
-import { TOP_SQUASH } from '../config.js';
+import { TOP_SQUASH, BACKDROP } from '../config.js';
 import { FRAME, TOPPING_SIZE } from './cakeView.js';
 import { idealCake, orderCakeKey, orderSig, ORDER_PX } from './orderCake.js';
 
@@ -79,7 +79,7 @@ export function addOrderReminder(scene, order, step) {
   const c = scene.add.container(X, Y).setDepth(400);
   const bg = scene.add.graphics();
   bg.fillStyle(0x000000, 0.15).fillRoundedRect(3, 5, CARD_W, CARD_H, 22);
-  bg.fillStyle(0xffffff, 1).fillRoundedRect(0, 0, CARD_W, CARD_H, 22);
+  bg.fillStyle(BACKDROP, 1).fillRoundedRect(0, 0, CARD_W, CARD_H, 22); // pale: white glaze shows
   c.add(bg);
   const scale = UNIT / K;
   const cx = CARD_W / 2;

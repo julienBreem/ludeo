@@ -15,6 +15,9 @@ export const COLOR_HEX = {
   vert: 0x00e676,
 };
 
+// Pale backdrop behind order pictures (bubble, strip card), so a white glaze stands out.
+export const BACKDROP = 0xe6f0fb;
+
 // Multiply tints applied to dessert-* and shape-*-side (raw = as drawn).
 export const BAKE_TINT = { raw: 0xffffff, pale: 0xfff3c4, dore: 0xe0a65a, brule: 0x5d4037 };
 
