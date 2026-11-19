@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 300 300" width="300" height="300">
+<!-- accessory: full beard, light grey values (white beard as drawn; may be tinted with the hair colour); the mouth layer goes on top -->
+<defs><linearGradient id="h" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f2f2f2"/><stop offset="1" stop-color="#bababa"/></linearGradient></defs>
+<path d="M64 138 C62 190 100 234 150 234 C200 234 238 190 236 138 C228 150 214 157 198 155 C182 146 164 145 150 151 C136 145 118 146 102 155 C86 157 72 150 64 138 Z" fill="url(#h)" stroke="#666666" stroke-width="3" stroke-linejoin="round"/>
+<path d="M82 178 C90 200 108 216 130 222" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round" opacity=".8"/>
+<path d="M150 204 V224 M126 202 L130 218 M174 202 L170 218 M104 186 L110 198 M196 186 L190 198" fill="none" stroke="#666666" stroke-width="3" stroke-linecap="round" opacity=".45"/>
+</svg>
