@@ -2,9 +2,12 @@
 // the whisk. The recipe (logic/recipe.js) is generated once per round at the phase's level and kept
 // on the round (↺ keeps it). Each poured ingredient's empty packaging flies onto the board beside
 // the bowl, one lane per kind, eggs' shells into the egg boxes (a second box after 10): that is her
-// only feedback, nothing is counted or grouped for her. N1: the card shows dice; N2: digits and one
-// "a + b"; N3: one complement (what is already in the bowl sits on the tray, the card shows "n" with
-// the tray and its number), sometimes "×2", sums. The 5-egg carton is on the shelf at N2-N3.
+// only feedback. Nothing is counted for her; the empties are laid out by fives (a small gap after
+// the 5th, like the egg box's rows), a structure that helps her see a quantity, not a count. N1: the
+// card shows dice; N2: digits and one "a + b"; N3: one complement (what is already in the bowl sits
+// on the tray, the card shows the total "n" with the tray and its number; the complement is never
+// doubled), sometimes one column "n" with « ×2 » under it, sums. The 5-egg carton is on the shelf at
+// N2-N3.
 import { W, H, OUTLINE, BATTER } from '../config.js';
 import { getRound } from '../game-state.js';
 import { INGREDIENTS } from '../logic/catalog.js';
@@ -108,6 +111,9 @@ export class DoughScene extends Phaser.Scene {
     this.drag = null;
     this.stirring = false;
     this.lastAngle = null;
+    // per-run fields set only in some runs (Phaser reuses the scene instance)
+    this.tray = null;
+    this.cardBounds = null;
 
     this.cameras.main.setBackgroundColor(0xfff3e0);
     addOrderReminder(this, round.order, 'pate', round.levels?.commande);
@@ -152,9 +158,9 @@ export class DoughScene extends Phaser.Scene {
   }
 
   // The recipe card, top right: one column per kind (ingredient picture, then its number as dice /
-  // digit / "a + b" / complement with the tray pill), and the "×2" badge on its corner.
+  // digit / "a + b" / complement with the tray pill / a doubled digit with its « ×2 » badge under it).
   drawRecipeCard() {
-    const { display, prefilled, double } = this.recipe;
+    const { display, prefilled } = this.recipe;
     const cols = Object.keys(display).map(k => this.recipeColumn(k, display[k], prefilled[k] ?? 0));
     const pad = 14;
     const gap = 14;
@@ -171,16 +177,6 @@ export class DoughScene extends Phaser.Scene {
       x += c.w + gap;
     }
     this.cardBounds = { x: x0, y: CARD_TOP, w, h };
-    if (double) {
-      const b = this.add.container(x0 + 4, CARD_TOP + 8).setDepth(402);
-      const bg = this.add.graphics();
-      bg.fillStyle(BADGE, 1).fillCircle(0, 0, 30);
-      bg.lineStyle(4, 0xffffff, 1).strokeCircle(0, 0, 30);
-      bg.lineStyle(3, OUTLINE, 1).strokeCircle(0, 0, 33);
-      b.add(bg);
-      b.add(this.add.text(0, 1, '×2', { fontFamily: FONT, fontSize: '28px', color: '#ffffff' }).setOrigin(0.5));
-      this.doubleBadge = b;
-    }
   }
 
   // One card column, built around x = 0 (top at y = 0): {box, w, pill}.
@@ -197,6 +193,17 @@ export class DoughScene extends Phaser.Scene {
       w = Math.max(w, t.width + 8);
     }
     let pill = false;
+    if (disp.times === 2) {
+      // this column only is doubled: the badge sits under its number
+      pill = true;
+      const b = this.add.container(0, 130);
+      const bg = this.add.graphics();
+      bg.fillStyle(BADGE, 1).fillCircle(0, 0, 22);
+      bg.lineStyle(3, OUTLINE, 1).strokeCircle(0, 0, 22);
+      b.add(bg);
+      b.add(this.add.text(0, 1, '×2', { fontFamily: FONT, fontSize: '22px', color: '#ffffff' }).setOrigin(0.5));
+      box.add(b);
+    }
     if (disp.kind === 'complement') {
       // what is already in the bowl: the tray and its number
       pill = true;
