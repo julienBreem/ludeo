@@ -2,8 +2,9 @@
 // Home → parent space (profile of a 6-year-old, both recommendations applied: pace calme, evening
 // mode on) → the stand's tile → full rounds at calme pace (Stand → Dough → Mold → Bake → Paint →
 // Toppings → Service → Stand → …) → the stand's home button → the evening forced with ?debug&now= (the
-// stand runs with the canvas filter and no confetti). Coins seeded in standDesserts.v1 must
-// survive. Fails on any console error/warning, uncaught exception, off-origin request, or a scene
+// stand runs with the canvas filter and no confetti) → the parent resets the stand, then the back
+// gesture returns to it: it shows 0 coins. Coins seeded in standDesserts.v1 must survive until
+// that reset. Fails on any console error/warning, uncaught exception, off-origin request, or a scene
 // that does not move on.
 //
 // Not part of `npm test` (its glob only picks tests/**/*.test.js). No dependencies (Node ≥ 22,
@@ -42,7 +43,6 @@ const EVENING_NOW = '2026-11-19T20:00'; // ?debug&now= values (shared/runtime.js
 const DAY_NOW = '2026-11-19T12:00';
 const ORIGIN = new globalThis.URL(URL).origin;
 const CHROME = process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
-const PORT = 9334;
 const SCENE_TIMEOUT = 10000;
 
 // Layout constants of the scenes (screen px, 1280×800 canvas at 1:1).
@@ -50,12 +50,20 @@ const OK_BTN = [1201, 721];
 const LEFT_BTN = [79, 721]; // ↺ in prep scenes, shop in Stand, back in Shop
 
 fs.mkdirSync(outDir, { recursive: true });
+// One Chrome per run, with its own profile and a DevTools port the OS picks (read back from
+// DevToolsActivePort in that profile), so two runs never drive each other's page. The profile
+// is removed at the end: one still there means a run is going on (or crashed) in this outDir.
+const PROFILE = path.join(outDir, 'profile');
+if (fs.existsSync(PROFILE)) {
+  console.error(`SMOKE FAIL: ${PROFILE} exists: another smoke run uses this folder (or one crashed; then remove it).`);
+  process.exit(1);
+}
 const steps = JSON.parse(fs.readFileSync(stepsFile, 'utf8'));
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const log = (...a) => console.log(...a);
 
 const chrome = spawn(CHROME, ['--headless=new', '--use-angle=swiftshader', '--enable-unsafe-swiftshader',
-  `--remote-debugging-port=${PORT}`, '--window-size=1280,800', `--user-data-dir=${path.join(outDir, 'profile')}`,
+  '--remote-debugging-port=0', '--window-size=1280,800', `--user-data-dir=${PROFILE}`,
   '--no-first-run', '--no-default-browser-check', 'about:blank'], { stdio: 'ignore' });
 
 let ws;
@@ -232,7 +240,10 @@ const actions = {
 
   // Home → tap the stand's tile (a real tap on its centre) → the stand's page.
   async start({ shot: name } = {}) {
-    await waitFor('home tile', () => evaluate(`!!document.querySelector('${TILE}')`), 15000);
+    await waitFor('home tile', () => evaluate(`!!document.querySelector('${TILE}.has-art')`), 15000);
+    // the category's card is shown whole: the tile has the art's 4:3 ratio, at least 96 px
+    const [tw, th] = await evaluate(`(() => { const r = document.querySelector('${TILE}').getBoundingClientRect(); return [r.width, r.height]; })()`);
+    check(Math.abs(tw / th - 4 / 3) < 0.02 && th >= 96, `category tile is 4:3 (${Math.round(tw)}x${Math.round(th)})`);
     const c = await elCenter(TILE);
     if (name) await shot(name);
     await tap(c);
@@ -251,6 +262,8 @@ const actions = {
     storedCoins = await evaluate(`JSON.parse(localStorage.getItem('standDesserts.v1')).coins`);
     check(storedCoins >= SEED_COINS, `the seeded coins are kept and grew with the rounds (${SEED_COINS} -> ${storedCoins})`);
     await tap([79, 79]);
+    await waitFor('the stand fades out', () => evaluate(`!!window.__sm?.getScene('Stand')?.cameras.main.fadeEffect.isRunning`).catch(() => false), 3000);
+    log('  ok: the home button fades the stand out');
     await waitFor('home', () => evaluate(`location.href === ${JSON.stringify(new globalThis.URL('index.html', URL).href)} && !!document.querySelector('${TILE}')`).catch(() => false), 15000);
     log('  ok: home button returns to the collection home');
     const after = await evaluate(`JSON.parse(localStorage.getItem('standDesserts.v1')).coins`);
@@ -526,6 +539,35 @@ const actions = {
     await waitScene('Stand');
   },
 
+  // I1: the stand (fresh page) → home button → the parent resets the stand → back gesture
+  // (history.back) → the stand must show 0 coins, not the old ones from the back-forward cache.
+  async resetThenBack({ shot: name } = {}) {
+    await send('Page.navigate', { url: GAME_URL });
+    await waitFor('Phaser hook', () => evaluate(HOOK).catch(() => false), 15000);
+    await waitScene('Stand', 20000);
+    const before = await evaluate(`JSON.parse(localStorage.getItem('standDesserts.v1')).coins`);
+    check(before > 0, `coins before the reset (${before})`);
+    await evaluate('window.__smokeMarker = 1; true');
+    await tap([79, 79]);
+    await waitFor('home', () => evaluate(`location.pathname.endsWith('/index.html') && !!document.querySelector('${TILE}')`).catch(() => false), 15000);
+    await tapEl('#gear');
+    await waitFor('parent space', () => evaluate(`!!document.querySelector('[data-game="stand-desserts"] button')`));
+    await tapEl('[data-game="stand-desserts"] button');
+    await waitFor('confirmation', () => evaluate(`!!document.querySelector('[data-game="stand-desserts"] button.danger')`));
+    await tapEl('[data-game="stand-desserts"] button.danger');
+    await waitFor('reset', () => evaluate(`localStorage.getItem('standDesserts.v1') === null`));
+    await tapEl('.p-head button');
+    await evaluate('history.back(); true');
+    await waitFor('back on the stand', () => evaluate(`location.href === ${JSON.stringify(GAME_URL)} && document.readyState === 'complete'`).catch(() => false), 15000);
+    await waitFor('Phaser hook', () => evaluate(HOOK).catch(() => false), 15000);
+    await waitScene('Stand', 20000);
+    check(await evaluate('window.__smokeMarker === undefined'), 'the stand restored by the back gesture reloaded');
+    const shown = await sceneEval('Stand', `s => s.children.list.find(o => o.type === 'Text' && o.depth === 500)?.text`);
+    check(shown === '0', `after the reset and the back gesture the stand shows 0 coins (${shown})`);
+    check(await evaluate(`localStorage.getItem('standDesserts.v1') === null`), 'the reset still holds');
+    if (name) await shot(name);
+  },
+
   // Opens the Service directly with the debug sample round and a forced score
   // (?scene=Service&score=N), runs the Service checks, then goes on to the Stand.
   async forcedService({ score, now, expectConfetti, shot: name }) {
@@ -546,9 +588,16 @@ const actions = {
 // ---- run ----------------------------------------------------------------------------------------
 let failed = null;
 try {
+  // This run's Chrome writes its port (first line) into its own profile.
+  const portFile = path.join(PROFILE, 'DevToolsActivePort');
+  let port = null;
+  for (let i = 0; i < 150 && !port; i++) {
+    try { port = Number(fs.readFileSync(portFile, 'utf8').split('\n')[0]) || null; } catch { /* not yet */ }
+    if (!port) await sleep(200);
+  }
   let targets;
-  for (let i = 0; i < 75 && !targets; i++) {
-    try { targets = await (await fetch(`http://127.0.0.1:${PORT}/json`)).json(); } catch { await sleep(200); }
+  for (let i = 0; port && i < 75 && !targets; i++) {
+    try { targets = await (await fetch(`http://127.0.0.1:${port}/json`)).json(); } catch { await sleep(200); }
   }
   if (!targets) throw new Error(`Chrome did not start (${CHROME})`);
   ws = new WebSocket(targets.find(t => t.type === 'page').webSocketDebuggerUrl);
@@ -583,6 +632,8 @@ try {
 }
 try { ws?.close(); } catch {}
 chrome.kill();
+await new Promise(r => (chrome.exitCode !== null || chrome.signalCode !== null ? r() : chrome.once('exit', r)));
+fs.rmSync(PROFILE, { recursive: true, force: true });
 log(`screenshots: ${outDir}`);
 if (failed) {
   console.error(`SMOKE FAIL: ${failed.message}`);

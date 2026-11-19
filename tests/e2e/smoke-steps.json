@@ -29,5 +29,6 @@
   {"do": "forcedService", "score": 0, "shot": "f0-service"},
   {"do": "goHome", "shot": "home-back"},
   {"do": "evening", "shot": "evening-shop"},
-  {"do": "forcedService", "score": 5, "now": "2026-11-19T20:00", "expectConfetti": false, "shot": "evening-service"}
+  {"do": "forcedService", "score": 5, "now": "2026-11-19T20:00", "expectConfetti": false, "shot": "evening-service"},
+  {"do": "resetThenBack", "shot": "reset-back-stand"}
 ]
