@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 300 300" width="300" height="300">
+<!-- animal head: cat. Full head (ears, muzzle, nose, whiskers), no eyes or mouth: client-eyes-* and client-mouth-* go on top (eye line y 128, mouth anchor y 172); untinted -->
+<defs><radialGradient id="s" cx="0.38" cy="0.32" r="0.8"><stop offset="0" stop-color="#eef1fb"/><stop offset="0.7" stop-color="#bcc4de"/><stop offset="1" stop-color="#98a1c4"/></radialGradient><filter id="f" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="6"/></filter></defs>
+<g fill="url(#s)" stroke="#646c94" stroke-width="3" stroke-linejoin="round"><path d="M72 84 L58 12 L128 46 Z"/><path d="M228 84 L242 12 L172 46 Z"/><ellipse cx="150" cy="124" rx="90" ry="86"/></g>
+<g fill="#ff9db5"><path d="M78 66 L70 30 L106 48 Z"/><path d="M222 66 L230 30 L194 48 Z"/></g>
+<g fill="none" stroke="#7a84ad" stroke-width="7" stroke-linecap="round"><path d="M150 44 V68 M124 50 L130 70 M176 50 L170 70"/></g>
+<ellipse cx="150" cy="170" rx="50" ry="33" fill="#fbfcff"/>
+<g fill="#ff7a7a" opacity=".55" filter="url(#f)"><ellipse cx="90" cy="156" rx="15" ry="10"/><ellipse cx="210" cy="156" rx="15" ry="10"/></g>
+<g fill="none" stroke="#646c94" stroke-width="2.5" stroke-linecap="round"><path d="M98 164 L46 152 M96 172 L42 172 M98 180 L48 192 M202 164 L254 152 M204 172 L258 172 M202 180 L252 192"/></g>
+<path d="M140 142 Q150 138 160 142 Q158 151 150 153 Q142 151 140 142 Z" fill="#ff7b93" stroke="#c2114a" stroke-width="2.5" stroke-linejoin="round"/>
+<ellipse cx="146" cy="143.500" rx="4" ry="1.800" fill="#fff" opacity=".8"/>
+</svg>

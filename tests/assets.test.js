@@ -26,7 +26,7 @@ test('every catalog item has its textures', () => {
   ];
   for (const item of ITEMS) {
     if (item.kind === 'shape') {
-      expected.push(...['fill', 'line', 'side'].map(p => `shape-${item.key}-${p}`));
+      expected.push(...['fill', 'line', 'side', 'rim'].map(p => `shape-${item.key}-${p}`));
       expected.push(`mold-${item.key}-back`, `mold-${item.key}-front`);
     }
     if (item.kind === 'topping') expected.push(`topping-${item.key}`);
@@ -34,8 +34,14 @@ test('every catalog item has its textures', () => {
   }
   expected.push(
     'pot', 'bowl', 'whisk', 'oven', 'flame', 'lumps',
-    'client-head', 'client-hair-1', 'client-hair-2', 'client-hair-3', 'client-body',
-    'face-content', 'face-bof', 'face-fache',
+    ...Object.keys(DESSERTS).map(d => `side-pattern-${d}`),
+    'client-head', 'client-body',
+    ...[1, 2, 3, 4, 5].map(n => `client-hair-${n}`),
+    ...['glasses', 'cap', 'bow', 'beard', 'moustache', 'earrings'].map(a => `client-acc-${a}`),
+    ...['chat', 'ours', 'lapin', 'chien'].map(a => `client-animal-${a}`),
+    'client-eyes-open', 'client-eyes-closed',
+    'client-mouth-content', 'client-mouth-bof', 'client-mouth-fache',
+    'plate', 'crumbs',
     'stand-awning', 'stand-counter', 'bubble', 'coin',
     'icon-ok', 'icon-ko', 'icon-restart', 'icon-next', 'icon-shop', 'icon-go', 'icon-out',
   );
