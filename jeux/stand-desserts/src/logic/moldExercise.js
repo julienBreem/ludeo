@@ -1,9 +1,15 @@
 import { SHAPE_PROPS, clueHolds, cluesFor } from './shapes.js';
 import { cutTangram } from './tangram.js';
 
-const CLOSE = {
-  rond: ['ovale'], ovale: ['rond'],
-  carre: ['rectangle', 'losange'], rectangle: ['carre', 'losange'], losange: ['carre', 'rectangle'],
+// N1 « piège proche »: for every shape, the shapes that look most like it (one is offered when
+// she owns it). Polygons: same number of corners, or a pointed / round look alike; fun shapes:
+// a shape sharing part of the outline (the heart's round top / pointed bottom, the star's points),
+// the unicorn has no geometric twin and gets the other fun shapes.
+export const CLOSE = {
+  rond: ['ovale', 'hexagone'], ovale: ['rond', 'hexagone'],
+  carre: ['rectangle', 'losange'], rectangle: ['carre', 'losange'], losange: ['carre', 'rectangle', 'triangle'],
+  triangle: ['losange'], hexagone: ['rond', 'ovale'],
+  coeur: ['rond', 'triangle'], etoile: ['hexagone', 'losange'], licorne: ['coeur', 'etoile'],
 };
 const ALL = Object.keys(SHAPE_PROPS);
 const pick = (list, rng) => list[Math.floor(rng() * list.length)];

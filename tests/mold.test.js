@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { makeMoldExercise } from '../jeux/stand-desserts/src/logic/moldExercise.js';
-import { SHAPE_PROPS, clueHolds } from '../jeux/stand-desserts/src/logic/shapes.js';
+import { SHAPE_PROPS, clueHolds, cluesFor, cluePict, clueWord, FUN_PICT } from '../jeux/stand-desserts/src/logic/shapes.js';
+import { CLOSE } from '../jeux/stand-desserts/src/logic/moldExercise.js';
 import { cutTangram, cutSide, pieceFits, pieceMasks } from '../jeux/stand-desserts/src/logic/tangram.js';
 import { ITEMS, itemById, starterOwned, ownedKeys } from '../jeux/stand-desserts/src/logic/catalog.js';
 import { loadState, STORAGE_KEY } from '../jeux/stand-desserts/src/logic/save.js';
@@ -77,14 +78,89 @@ for (const level of [1, 2, 3]) {
   });
 }
 
-test('N1 offers the close distractor when owned', () => {
-  const close = { rond: ['ovale'], ovale: ['rond'], carre: ['rectangle', 'losange'], rectangle: ['carre', 'losange'], losange: ['carre', 'rectangle'] };
+test('N1 offers a close distractor for every shape, when owned', () => {
   const owned = Object.keys(SHAPE_PROPS);
   const rng = makeRng(5);
-  for (const [shape, list] of Object.entries(close)) for (let i = 0; i < 50; i++) {
-    const ex = makeMoldExercise({ shape }, 1, owned, rng);
-    assert.ok(ex.choices.some(c => list.includes(c)), shape);
+  for (const shape of owned) {
+    assert.ok(CLOSE[shape]?.length, `${shape} has a close trap`);
+    for (let i = 0; i < 50; i++) {
+      const ex = makeMoldExercise({ shape }, 1, owned, rng);
+      assert.ok(ex.choices.some(c => CLOSE[shape].includes(c)), shape);
+    }
   }
+});
+
+// What a child sees on each outline, written apart from shapes.js: corners, sides, equal sides,
+// sharp tips (corners, the heart's tip, the star's points, the horn), rounded bumps, star branches,
+// a horn. A clue must be true of the target and false of every other mould shown.
+const SEEN = {
+  rond: {}, ovale: {},
+  triangle: { coins: 3, cotes: 3, pointes: 3 },
+  carre: { coins: 4, cotes: 4, pointes: 4, pareils: true },
+  rectangle: { coins: 4, cotes: 4, pointes: 4 },
+  losange: { coins: 4, cotes: 4, pointes: 4, pareils: true },
+  hexagone: { coins: 6, cotes: 6, pointes: 6, pareils: true },
+  coeur: { pointes: 1, bosses: 2 },
+  etoile: { pointes: 5, branches: 5 },
+  licorne: { pointes: 1, corne: 1, bosses: 5 },
+};
+function childReads(clue, shape) {
+  const s = SEEN[shape];
+  switch (clue.kind) {
+    case 'corners': return s.coins === clue.n;
+    case 'sides': return s.cotes === clue.n;
+    case 'equalSides': return s.cotes === clue.n && !!s.pareils;
+    case 'noCorner': return !s.pointes;
+    case 'fun':
+      if (clue.fun === 'bosses') return (s.bosses ?? 0) > 0; // any bumps could be « des bosses »
+      if (clue.fun === 'branches') return s.branches === clue.n || s.pointes === clue.n;
+      if (clue.fun === 'corne') return (s.corne ?? 0) > 0;
+      return true;
+    default: return true;
+  }
+}
+
+// Every owned set the game can have: the starters plus any of the shop's shapes.
+const SHOP = ['etoile', 'licorne', 'losange', 'hexagone'];
+const STARTERS = ownedKeys(starterOwned(), 'shape');
+const everyOwnedSet = [];
+for (let m = 0; m < 1 << SHOP.length; m++) everyOwnedSet.push([...STARTERS, ...SHOP.filter((_, i) => m & (1 << i))]);
+
+test('N2: over every owned set, the clue is true of the target only among the moulds shown', () => {
+  assert.equal(everyOwnedSet.length, 16);
+  const rng = makeRng(77);
+  for (const owned of everyOwnedSet) {
+    for (const shape of owned) {
+      for (let i = 0; i < 40; i++) {
+        const ex = makeMoldExercise({ shape }, 2, owned, rng);
+        assert.equal(new Set(ex.choices).size, 4);
+        assert.ok(childReads(ex.clue, shape), `${shape}: ${clueWord(ex.clue)}`);
+        for (const c of ex.choices) {
+          if (c !== shape) assert.ok(!childReads(ex.clue, c), `${shape}: « ${clueWord(ex.clue)} » also fits ${c} (owned ${owned.join(',')})`);
+        }
+      }
+    }
+  }
+});
+
+test('N2: every clue has its own pictogram and word; no fun clue is drawn as a polygon or a point', () => {
+  const geo = new Set(['pict-coin', 'pict-cote', 'pict-rond']);
+  const funPicts = Object.values(FUN_PICT);
+  assert.equal(new Set(funPicts).size, funPicts.length, 'one pictogram per fun clue');
+  for (const shape of Object.keys(SHAPE_PROPS)) {
+    for (const clue of cluesFor(shape)) {
+      const pict = cluePict(clue);
+      assert.ok(pict, `${shape} ${JSON.stringify(clue)} has a pictogram`);
+      assert.ok(clueWord(clue), `${shape} ${JSON.stringify(clue)} has a word`);
+      if (clue.kind === 'fun') {
+        assert.ok(!geo.has(pict) && !/pointe|triangle/.test(pict), `${shape}: ${pict}`);
+        assert.ok(!/pointe/.test(clueWord(clue)) || clue.n >= 5, `${shape}: « ${clueWord(clue)} »`);
+      }
+    }
+  }
+  assert.equal(clueWord(cluesFor('coeur')[0]), '2 bosses');
+  assert.equal(cluePict(cluesFor('coeur')[0]), 'pict-bosses');
+  assert.equal(cluePict(cluesFor('etoile')[0]), 'pict-branche');
 });
 
 function check(maskIn, shape, parts) {

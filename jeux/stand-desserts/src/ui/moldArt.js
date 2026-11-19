@@ -2,6 +2,7 @@
 // from above in their own colour, their corners (N2), the clue card (N2) and the tangram pieces (N3).
 import { FRAME } from './cakeView.js';
 import { cutSide, pieceMasks } from '../logic/tangram.js';
+import { clueWord, cluePict } from '../logic/shapes.js';
 
 // Each mould's silicone colour (lot 2 art, mold-<k>-back/front): main and dark (outline, cut edges).
 export const MOLD_COLORS = {
@@ -20,15 +21,15 @@ const DEFAULT_COLORS = { main: 0xb0bec5, dark: 0x455a64 };
 export const moldColors = shape => MOLD_COLORS[shape] ?? DEFAULT_COLORS;
 
 // What she can tap on a mould seen from above at N2 (frame px, top-down 400 frame, art-geometry.md):
-// the corners of the polygons, the points of the fun shapes (the heart's tip, the star's five
-// points, the unicorn's horn). Round shapes have none.
+// the corners of the polygons, what the fun shapes' clues name (the heart's two bumps, the star's
+// five points, the unicorn's horn). Round shapes have none.
 export const CORNERS = {
   triangle: [[200, 40], [370, 344], [30, 344]],
   carre: [[48, 48], [352, 48], [352, 352], [48, 352]],
   rectangle: [[32, 92], [368, 92], [368, 308], [32, 308]],
   losange: [[200, 34], [334, 200], [200, 366], [66, 200]],
   hexagone: [[116, 54.5], [284, 54.5], [368, 200], [284, 345.5], [116, 345.5], [32, 200]],
-  coeur: [[200, 352]],
+  coeur: [[124, 52], [276, 52]],
   etoile: [[200, 30], [366, 160], [300, 358], [100, 358], [34, 160]],
   licorne: [[278, 26]],
 };
@@ -45,8 +46,10 @@ const GREY = 0xb8c0cc;
 const GREY_DARK = 0x6b7684;
 const FONT = 'Arial Black, Arial, sans-serif';
 
-// Pictograms of the fun clues (no art): a point (heart, star) and a horn, in the neutral greys of
-// pict-coin / pict-cote, 96 x 96. Drawn once per game.
+// Pictograms of the fun clues (no art), in the neutral greys of pict-coin / pict-cote, 96 x 96,
+// drawn once per game. Each one shows the feature itself, never a whole shape a choice could be:
+// the heart's top (two bumps, a dot on each), the top branch of a star with its neighbours'
+// shoulders (a dot on its tip), a horn.
 export function ensureMoldPicts(scene) {
   const make = (key, draw) => {
     if (scene.textures.exists(key)) return;
@@ -55,10 +58,24 @@ export function ensureMoldPicts(scene) {
     g.generateTexture(key, 96, 96);
     g.destroy();
   };
-  make('pict-pointe', (g) => {
-    g.fillStyle(GREY, 1).lineStyle(5, GREY_DARK, 1);
-    g.fillTriangle(48, 10, 16, 86, 80, 86).strokeTriangle(48, 10, 16, 86, 80, 86);
-    g.fillStyle(GREY_DARK, 1).fillCircle(48, 18, 10);
+  make('pict-bosses', (g) => {
+    g.fillStyle(GREY, 1);
+    g.fillCircle(30, 50, 24).fillCircle(66, 50, 24).fillRect(6, 50, 84, 34);
+    g.lineStyle(5, GREY_DARK, 1);
+    g.beginPath().arc(30, 50, 24, Math.PI, 2 * Math.PI).strokePath();
+    g.beginPath().arc(66, 50, 24, Math.PI, 2 * Math.PI).strokePath();
+    g.lineBetween(6, 50, 6, 84).lineBetween(90, 50, 90, 84);
+    g.fillStyle(GREY_DARK, 1).fillCircle(30, 28, 8).fillCircle(66, 28, 8);
+  });
+  make('pict-branche', (g) => {
+    const shoulders = [[4, 50], [36, 46], [48, 8], [60, 46], [92, 50], [68, 70], [28, 70]];
+    const pts = shoulders.map(([x, y]) => new Phaser.Geom.Point(x, y));
+    g.fillStyle(0xdde2ea, 1).fillPoints(pts, true);
+    g.lineStyle(4, GREY_DARK, 0.6).strokePoints(pts, true);
+    const arm = [[48, 8], [62, 52], [48, 62], [34, 52]].map(([x, y]) => new Phaser.Geom.Point(x, y));
+    g.fillStyle(GREY, 1).fillPoints(arm, true);
+    g.lineStyle(5, GREY_DARK, 1).strokePoints(arm, true);
+    g.fillStyle(GREY_DARK, 1).fillCircle(48, 16, 9);
   });
   make('pict-corne', (g) => {
     g.fillStyle(GREY, 1).lineStyle(5, GREY_DARK, 1);
@@ -71,28 +88,12 @@ export function ensureMoldPicts(scene) {
   });
 }
 
-const PICT = { corners: 'pict-coin', sides: 'pict-cote', equalSides: 'pict-cote', noCorner: 'pict-rond' };
-const FUN_PICT = { pointe: 'pict-pointe', branches: 'pict-pointe', corne: 'pict-corne' };
-
-// The clue in words, under its picture (« 3 côtés », « pas de coin », « une corne »).
-export function clueWord(clue) {
-  if (!clue) return '';
-  switch (clue.kind) {
-    case 'corners': return `${clue.n} coins`;
-    case 'sides': return `${clue.n} côtés`;
-    case 'equalSides': return `${clue.n} côtés pareils`;
-    case 'noCorner': return 'pas de coin';
-    case 'fun':
-      if (clue.fun === 'corne') return 'une corne';
-      return clue.n ? `${clue.n} pointes` : 'une pointe';
-    default: return '';
-  }
-}
+export { clueWord, cluePict };
 
 /**
  * clueRow(scene, clue, size) -> {items, w}
  * The clue as pictures, side by side and centred on x = 0, y = 0: the pictogram (a corner, a side,
- * no corner, a point, a horn), the number as a die (a face of size `size`), and « = » for equal
+ * no corner, two bumps, a star's branch, a horn), the number as a die (a face of size `size`), and « = » for equal
  * sides. No digit: the word under it (clueWord) is for the parent.
  */
 export function clueRow(scene, clue, size) {
@@ -100,7 +101,7 @@ export function clueRow(scene, clue, size) {
   const gap = Math.round(size * 0.18);
   const items = [];
   const widths = [];
-  const pict = clue.kind === 'fun' ? FUN_PICT[clue.fun] : PICT[clue.kind];
+  const pict = cluePict(clue);
   if (pict) {
     items.push(scene.add.image(0, 0, pict).setDisplaySize(size, size));
     widths.push(size);
