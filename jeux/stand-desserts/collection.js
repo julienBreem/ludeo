@@ -12,6 +12,20 @@ export const TILE = 'assets/toppings/topping-fraise.svg';
 // Shared settings this game applies (registry SHARED_SETTINGS; a test checks it).
 export const SUPPORTS = ['rythme', 'soir'];
 
+// The game's phases, in play order, each with its common theme (shared/themes.js) and the number
+// of levels it plays today: `levels: 1` = not educational yet (the parent sees « bientôt », no
+// proposals). `scored: false`: the phase has no point at Service (the order), so no results and
+// no proposals; its level is set by hand.
+export const PHASES = [
+  { id: 'commande', name: 'Commande', theme: 'lecture', levels: 3, scored: false },
+  { id: 'pate', name: 'Pâte', theme: 'nombres', levels: 3 },
+  { id: 'moule', name: 'Moule', theme: 'geometrie', levels: 1 },
+  { id: 'cuisson', name: 'Cuisson', theme: 'temps', levels: 1 },
+  { id: 'couleur', name: 'Glaçage', theme: 'couleurs-fractions', levels: 1 },
+  { id: 'toppings', name: 'Toppings', theme: 'logique', levels: 1 },
+  { id: 'service', name: 'Service', theme: 'monnaie', levels: 1 },
+];
+
 const DIR = `jeux/${ID}/`;
 
 // Files to cache for offline play, relative to the site root.

@@ -1,6 +1,6 @@
 import { test, mock } from 'node:test';
 import assert from 'node:assert/strict';
-import { clock, getCollection, getEffective, onEffectiveChange, updateCollection, CHECK_MS } from '../../shared/runtime.js';
+import { clock, getCollection, getEffective, onEffectiveChange, updateCollection, CHECK_MS, phaseLevels, recordPhaseResult } from '../../shared/runtime.js';
 import { COLLECTION_KEY, defaultCollection } from '../../shared/store.js';
 
 function memoryStorage() {
@@ -91,4 +91,45 @@ test('clock: ?debug&now= overrides the time only when well formed; ?now= alone i
   assert.ok(Math.abs(withSearch('').getTime() - real) < 5000);
   assert.ok(Math.abs(withSearch('?debug&now=garbage').getTime() - real) < 5000);
   assert.ok(Math.abs(clock().getTime() - real) < 5000); // no location at all
+});
+
+function withSearch(search, fn) {
+  const desc = Object.getOwnPropertyDescriptor(globalThis, 'location');
+  Object.defineProperty(globalThis, 'location', { configurable: true, value: { search } });
+  try { return fn(); } finally { if (desc) Object.defineProperty(globalThis, 'location', desc); else delete globalThis.location; }
+}
+
+const ALL_ONE = { commande: 1, pate: 1, moule: 1, cuisson: 1, couleur: 1, toppings: 1, service: 1 };
+
+test('phaseLevels: theme level, then the phase override; phases without levels stay at 1', () => {
+  withStorage(memoryStorage(), () => {
+    assert.deepEqual(phaseLevels('stand-desserts'), ALL_ONE);
+    updateCollection(c => ({ ...c, levels: { nombres: 2, lecture: 3, geometrie: 3 } }));
+    assert.deepEqual(phaseLevels('stand-desserts'), { ...ALL_ONE, commande: 3, pate: 2 });
+    updateCollection(c => ({ ...c, overrides: { 'stand-desserts/pate': 3, 'stand-desserts/moule': 2 } }));
+    assert.deepEqual(phaseLevels('stand-desserts'), { ...ALL_ONE, commande: 3, pate: 3 });
+    assert.deepEqual(phaseLevels('inconnu'), {});
+  });
+});
+
+test('phaseLevels: ?debug&level= forces levels; ignored without the debug flag or when invalid', () => {
+  withStorage(memoryStorage(), () => {
+    assert.deepEqual(withSearch('?debug&level=pate:3,commande:2', () => phaseLevels('stand-desserts')), { ...ALL_ONE, pate: 3, commande: 2 });
+    assert.deepEqual(withSearch('?debug=1&level=pate%3A2', () => phaseLevels('stand-desserts')).pate, 2);
+    assert.deepEqual(withSearch('?level=pate:3', () => phaseLevels('stand-desserts')), ALL_ONE);
+    assert.deepEqual(withSearch('?debug&level=pate:4,x:2,moule,cuisson:0', () => phaseLevels('stand-desserts')), ALL_ONE);
+  });
+});
+
+test('recordPhaseResult saves results only for scored phases that have levels', () => {
+  const s = memoryStorage();
+  withStorage(s, () => {
+    recordPhaseResult('stand-desserts', 'pate', false);
+    recordPhaseResult('stand-desserts', 'pate', true);
+    recordPhaseResult('stand-desserts', 'commande', false); // no point of its own
+    recordPhaseResult('stand-desserts', 'moule', false); // not educational yet
+    recordPhaseResult('stand-desserts', 'nope', false);
+    recordPhaseResult('inconnu', 'pate', false);
+    assert.deepEqual(getCollection().history, { 'stand-desserts/pate': [false, true] });
+  });
 });

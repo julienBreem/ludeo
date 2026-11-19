@@ -5,6 +5,8 @@ import { currentState, updateStored } from './logic/save.js';
 import { generateOrder } from './logic/order.js';
 import { createRound } from './logic/round.js';
 import { generateClient } from '../../../shared/client.js';
+import { phaseLevels } from '../../../shared/runtime.js';
+import { ID } from '../collection.js';
 
 let state = null; // last State read or written (fallback when storage is refused)
 let round = null;
@@ -32,11 +34,14 @@ export function updateState(fn) {
   return state;
 }
 
-// A fresh Round for a new client: order from owned items + client look.
+// A fresh Round for a new client: order from owned items + client look + the level of each phase,
+// read now and kept until Service (a change in the parent space applies to the next client).
 export function newRound() {
   const previous = round?.client ?? null;
+  const levels = phaseLevels(ID);
   round = createRound(generateOrder(getState().owned));
   round.client = generateClient(Math.random, previous);
+  round.levels = levels;
   return round;
 }
 

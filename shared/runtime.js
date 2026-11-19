@@ -2,6 +2,9 @@
 // (pace, evening mode) through this module, never the storage key themselves.
 import { loadCollection, saveCollection } from './store.js';
 import { effectiveSettings } from './effective.js';
+import { GAMES } from '../jeux/registry.js';
+import { phaseLevel, isLevel } from './difficulty.js';
+import { recordResult } from './history.js';
 
 export const CHECK_MS = 60 * 1000;
 
@@ -9,6 +12,15 @@ export const CHECK_MS = 60 * 1000;
 function storage() {
   try {
     return globalThis.localStorage ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function debugParams() {
+  try {
+    const q = new URLSearchParams(globalThis.location?.search ?? '');
+    return q.has('debug') ? q : null;
   } catch {
     return null;
   }
@@ -24,8 +36,7 @@ export function getCollection() {
 export function clock() {
   try {
     // URLSearchParams: a URL built by script has the ':' encoded as %3A
-    const q = new URLSearchParams(globalThis.location?.search ?? '');
-    const v = q.has('debug') ? q.get('now') : null;
+    const v = debugParams()?.get('now');
     if (v && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(v)) {
       const d = new Date(v);
       if (!Number.isNaN(d.getTime())) return d;
@@ -57,4 +68,37 @@ export function updateCollection(fn) {
   const next = fn(getCollection());
   saveCollection(storage(), next);
   return next;
+}
+
+const phasesOf = gameId => GAMES.find(g => g.id === gameId)?.phases ?? [];
+
+// Debug only: ?debug&level=<phase>:<n>,... forces those phases' levels (1..3) for this page, without
+// saving anything. Unknown phases and bad levels are ignored; ?level= alone is ignored.
+function debugLevels(phases) {
+  const v = debugParams()?.get('level');
+  const out = {};
+  if (!v) return out;
+  for (const part of v.split(',')) {
+    const [id, n] = part.split(':');
+    if (phases.some(p => p.id === id) && isLevel(Number(n))) out[id] = Number(n);
+  }
+  return out;
+}
+
+// The level of each phase of a game, for the next client: { [phaseId]: 1|2|3 }. A phase that is
+// not educational yet (`levels: 1`) always plays level 1, whatever its theme says.
+export function phaseLevels(gameId) {
+  const c = getCollection();
+  const phases = phasesOf(gameId);
+  const out = {};
+  for (const p of phases) out[p.id] = Math.min(phaseLevel(c, gameId, p), p.levels ?? 3);
+  return { ...out, ...debugLevels(phases) };
+}
+
+// Saves a phase's result (its point at Service) for the parent's proposals. Nothing for a phase
+// that is not educational yet (`levels: 1`), has no point of its own (`scored: false`) or is unknown.
+export function recordPhaseResult(gameId, phaseId, ok) {
+  const p = phasesOf(gameId).find(x => x.id === phaseId);
+  if (!p || p.levels === 1 || p.scored === false) return;
+  updateCollection(c => recordResult(c, gameId, phaseId, ok));
 }

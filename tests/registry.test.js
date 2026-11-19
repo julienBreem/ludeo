@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { SHARED_SETTINGS, CATEGORIES, GAMES, HOME_PRECACHE, categoriesWithGames } from '../jeux/registry.js';
+import { isTheme } from '../shared/themes.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const exists = f => fs.existsSync(path.join(ROOT, f));
@@ -50,6 +51,29 @@ test('every game has its own tile picture, on disk and in its precache', () => {
     assert.ok(exists(g.tile), `${g.tile} is missing`);
     assert.ok(g.precache.includes(g.tile), `${g.tile} not in ${g.id}'s precache`);
   }
+});
+
+test('every game lists its phases: unique ids, a known theme, a French name, 1 or 3 levels', () => {
+  for (const g of GAMES) {
+    assert.ok(Array.isArray(g.phases) && g.phases.length > 0, `${g.id} has no PHASES`);
+    const ids = g.phases.map(p => p.id);
+    assert.equal(new Set(ids).size, ids.length, `${g.id}: duplicate phase ids`);
+    for (const p of g.phases) {
+      assert.ok(isTheme(p.theme), `${g.id}/${p.id}: unknown theme ${p.theme}`);
+      assert.ok(typeof p.name === 'string' && p.name.length > 0, `${g.id}/${p.id}: no name`);
+      assert.ok(p.levels === 1 || p.levels === 3, `${g.id}/${p.id}: levels must be 1 or 3`);
+      assert.ok(!/[/:]/.test(p.id), `${g.id}/${p.id}: '/' and ':' are reserved in phase ids`);
+    }
+  }
+});
+
+test('the stand phases, their themes and which ones have levels', () => {
+  const g = GAMES.find(x => x.id === 'stand-desserts');
+  assert.deepEqual(g.phases.map(p => [p.id, p.theme, p.levels]), [
+    ['commande', 'lecture', 3], ['pate', 'nombres', 3], ['moule', 'geometrie', 1], ['cuisson', 'temps', 1],
+    ['couleur', 'couleurs-fractions', 1], ['toppings', 'logique', 1], ['service', 'monnaie', 1],
+  ]);
+  assert.deepEqual(g.phases.filter(p => p.scored === false).map(p => p.id), ['commande']);
 });
 
 test('the stand is registered as specified', () => {

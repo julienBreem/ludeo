@@ -158,4 +158,9 @@ body:not(.has-home-icon) #back::after {
 .p-avatar { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
 .p-avatar canvas { width: 160px; height: 160px; border-radius: 50%; background: #ffd9b8; border: 6px solid #fff; box-shadow: 0 5px 0 rgba(0, 0, 0, 0.15); }
 .p-ok { color: #1f8a4d; font-weight: bold; }
+.p-phase { border-top: 3px dashed #ffd9a8; padding: 12px 0 0; margin: 12px 0 0; }
+.p-phase p { margin: 0; }
+.p-phase .p-row { margin: 10px 0 4px; }
+.p-soon { color: #8a8aa0; font-style: italic; }
+.p-level { color: #1f5fc4; font-weight: bold; }
 .p-warn { color: #b3261e; font-weight: bold; margin: 8px 0; }

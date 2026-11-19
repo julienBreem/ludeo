@@ -1,10 +1,12 @@
 // The parent space (French, plain words). An overlay on the home: Profil, Rythme, Mode soir,
-// Recommandations, Jeux. Every change is saved at once through updateCollection.
+// Recommandations, Difficulté, Jeux. Every change is saved at once through updateCollection.
 import { GAMES } from '../jeux/registry.js';
 import { getCollection, updateCollection, clock } from './runtime.js';
 import { ageFrom, ageLabel, isFutureBirth } from './profile.js';
 import { PACES, recommendedPace } from './pace.js';
 import { recommendations, applyRecommendation, ignoreRecommendation } from './recommendations.js';
+import { THEMES } from './themes.js';
+import { recommendedLevel, themeLevel, phaseLevel, setThemeLevel, setOverride, phaseKey, isLevel } from './difficulty.js';
 import { drawAvatar, stepAvatar, randomAvatar, DEFAULT_AVATAR } from './avatar.js';
 
 const MONTHS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
@@ -78,7 +80,7 @@ export function openParent(root, { onClose } = {}) {
       draft.month = Number(month.value);
       draft.year = Number(year.value);
       saveProfile();
-      refresh('profil', 'rythme', 'recos');
+      refresh('profil', 'rythme', 'difficulte', 'recos');
     };
     month.addEventListener('change', onDate);
     year.addEventListener('change', onDate);
@@ -140,16 +142,64 @@ export function openParent(root, { onClose } = {}) {
         : null);
   }
 
+  // ---- Difficulté ----
+  // One level per theme (all games), then each game's phases: their level now, and for the phases
+  // that have levels, a level of their own or « comme le thème ».
+  function difficulte() {
+    const c = getCollection();
+    const rec = c.profile ? recommendedLevel(ageFrom(c.profile, now())) : null;
+    const themeName = id => THEMES.find(t => t.id === id)?.name ?? id;
+    const setTheme = (id, n) => { save(cc => setThemeLevel(cc, id, n, GAMES)); refresh('difficulte', 'recos'); };
+    const setPhase = (g, p, n) => { save(cc => setOverride(cc, g.id, p.id, n)); refresh('difficulte', 'recos'); };
+    const themeRow = t => h('div', { class: 'p-card', 'data-theme': t.id },
+      h('p', {}, h('b', {}, t.name)),
+      h('div', { class: 'p-choices' }, [1, 2, 3].map(n => {
+        const on = themeLevel(c, t.id) === n;
+        return h('button', {
+          type: 'button', class: on ? 'picked' : '', 'data-level': n, 'aria-pressed': on,
+          onclick: () => setTheme(t.id, n),
+        }, `Niveau ${n}`, n === rec ? h('span', { class: 'p-badge' }, 'conseillé') : null,
+        h('br'), h('small', {}, t.levels[n - 1]));
+      })));
+    const phaseRow = (g, p) => {
+      const own = c.overrides[phaseKey(g.id, p.id)];
+      const hasOwn = isLevel(own);
+      const head = h('p', {}, h('b', {}, p.name), ` · ${themeName(p.theme)} · `,
+        p.levels === 1
+          ? h('span', { class: 'p-soon' }, 'bientôt')
+          : h('span', { class: 'p-level' }, `niveau ${phaseLevel(c, g.id, p)}`,
+            hasOwn ? ' (propre à cette phase)' : ' (comme le thème)'));
+      if (p.levels === 1) return h('div', { class: 'p-phase', 'data-phase': p.id }, head);
+      const choice = (label, n) => {
+        const on = n === null ? !hasOwn : own === n;
+        return h('button', {
+          type: 'button', class: on ? 'picked' : '', 'data-level': n ?? 'theme', 'aria-pressed': on,
+          onclick: () => setPhase(g, p, n),
+        }, label);
+      };
+      return h('div', { class: 'p-phase', 'data-phase': p.id }, head,
+        h('div', { class: 'p-row' }, choice('Comme le thème', null), choice('1', 1), choice('2', 2), choice('3', 3)));
+    };
+    return h('section', { class: 'p-sec', id: 'sec-difficulte' },
+      h('h2', {}, 'Difficulté'),
+      h('p', { class: 'p-note' }, 'Un niveau par thème, valable dans tous les jeux : 1 ≈ grande section, 2 ≈ CP, 3 ≈ CE1. Un changement compte à partir de la partie suivante.'),
+      THEMES.map(themeRow),
+      h('p', { class: 'p-note' }, 'Dans chaque jeu, une phase peut avoir son propre niveau, par exemple si elle est trop dure ou trop facile. « Bientôt » : les niveaux de cette phase arrivent plus tard.'),
+      GAMES.filter(g => g.phases?.length).map(g => h('div', { class: 'p-card', 'data-game-levels': g.id },
+        h('p', {}, h('b', {}, g.name ?? g.id)),
+        g.phases.map(p => phaseRow(g, p)))));
+  }
+
   // ---- Recommandations ----
   function recos() {
     const c = getCollection();
-    const list = recommendations(c, now());
+    const list = recommendations(c, now(), GAMES);
     const card = r => h('div', { class: 'p-card', 'data-reco': r.id },
       h('p', {}, r.text),
       h('div', { class: 'p-row' },
         r.id === 'profil'
           ? button('Remplir le profil', () => { document.getElementById('p-name')?.focus(); sections.profil.scrollIntoView({ behavior: 'smooth' }); }, 'primary')
-          : button('Appliquer', () => { save(cc => applyRecommendation(cc, r.id, now())); refresh('rythme', 'soir', 'recos'); }, 'primary'),
+          : button('Appliquer', () => { save(cc => applyRecommendation(cc, r.id, now(), GAMES)); refresh('rythme', 'soir', 'difficulte', 'recos'); }, 'primary'),
         button('Ignorer', () => { save(cc => ignoreRecommendation(cc, r)); refresh('recos'); })));
     return h('section', { class: 'p-sec', id: 'sec-recos' },
       h('h2', {}, 'Recommandations'),
@@ -177,7 +227,7 @@ export function openParent(root, { onClose } = {}) {
             done.has(g.id) ? h('span', { class: 'p-ok' }, 'Progression effacée.') : null))));
   }
 
-  const builders = { profil, rythme, soir, recos, jeux };
+  const builders = { profil, rythme, soir, recos, difficulte, jeux };
   const wrap = h('div', { class: 'p-wrap' });
 
   function refresh(...names) {

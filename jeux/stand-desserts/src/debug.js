@@ -2,10 +2,14 @@
 // (heart gateau, golden, rose | violet glaze, 2 strawberries + 3 stars, order matching).
 // &score=N (0..5) also fills the round's results: the first N steps ok, the others failed
 // (&alt=1 picks the other colour/topping failure reasons), e.g. ?scene=Service&score=3.
+// Levels: ?debug&level=<phase>:<n>,... (e.g. ?debug&level=pate:3) forces phase levels for this page
+// (shared/runtime.js phaseLevels), for the sample round and every new client.
 import { createRound } from './logic/round.js';
 import { STEPS } from './logic/scoring.js';
 import { generateClient } from '../../../shared/client.js';
 import { setRound } from './game-state.js';
+import { phaseLevels } from '../../../shared/runtime.js';
+import { ID } from '../collection.js';
 import { idealCake } from './ui/orderCake.js';
 
 const PARAM = 'scene';
@@ -69,6 +73,7 @@ export function installSampleRound(scene) {
   const round = createRound(sampleOrder());
   round.cake = sampleCake(scene);
   round.client = generateClient();
+  round.levels = phaseLevels(ID);
   const { score, alt } = urlScore();
   round.results = sampleResults(score, alt);
   setRound(round);

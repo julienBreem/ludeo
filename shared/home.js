@@ -1,6 +1,6 @@
 // The child's home: avatar, parent gear (red dot when a recommendation waits) and one big tile
 // per category that has a game. No text. Pace and evening mode come from shared/runtime.js.
-import { categoriesWithGames } from '../jeux/registry.js';
+import { categoriesWithGames, GAMES } from '../jeux/registry.js';
 import { getCollection, getEffective, onEffectiveChange, clock } from './runtime.js';
 import { recommendations } from './recommendations.js';
 import { drawAvatar } from './avatar.js';
@@ -99,7 +99,7 @@ function refresh() {
   effective = getEffective();
   applyEffective();
   drawAvatar($('avatar').querySelector('canvas'), c.avatar);
-  $('gear').querySelector('.dot').hidden = recommendations(c, clock()).length === 0;
+  $('gear').querySelector('.dot').hidden = recommendations(c, clock(), GAMES).length === 0;
 }
 
 useArt(document.body, 'shared/assets/icon-gear.svg', '--gear', 'has-gear');

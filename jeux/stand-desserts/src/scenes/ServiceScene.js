@@ -2,7 +2,8 @@
 // score earns (bitesFor: 5/5 eats it all, 0/5 nibbles and pushes the plate away), with mouth
 // animation and crumbs. Then the 5 steps are revealed one by one (icon, ok/ko, small "what went
 // wrong" picture), the face changes, coins fly into the counter and are saved once (round.paid),
-// then icon-next leads to a new client.
+// then icon-next leads to a new client. Each scored phase's result is saved once (round.recorded)
+// for the parent's level proposals.
 import { W, H, TOUCH, COLOR_HEX, OUTLINE, BATTER, TOP_SQUASH } from '../config.js';
 import { getRound, getState, updateState } from '../game-state.js';
 import { addIconButton } from '../ui/button.js';
@@ -16,6 +17,8 @@ import { zoneEdges } from '../logic/zones.js';
 import { DESSERTS } from '../logic/catalog.js';
 import { addCoins } from '../logic/economy.js';
 import { dur } from '../ui/pace.js';
+import { recordPhaseResult } from '../../../../shared/runtime.js';
+import { ID } from '../../collection.js';
 
 const CLIENT_X = 300;
 const CLIENT_Y = 470;
@@ -60,6 +63,7 @@ export class ServiceScene extends Phaser.Scene {
     this.leaving = false;
     const { coins, mood } = scoreRound(round.results);
     this.coinsEarned = coins;
+    this.recordResults();
     this.cameras.main.setBackgroundColor(0xfffde7);
 
     this.add.image(W / 2, 90, getState().owned.includes('deco:auvent') ? 'deco-auvent' : 'stand-awning').setDepth(40);
@@ -92,6 +96,17 @@ export class ServiceScene extends Phaser.Scene {
       },
     });
     this.events.once('shutdown', () => this.stopBlink?.());
+  }
+
+  // Once per round (a restarted scene does not count twice): each step's point, ok or not, for the
+  // level proposals (shared/runtime.js keeps only the phases that have levels).
+  recordResults() {
+    if (this.round.recorded) return;
+    this.round.recorded = true;
+    for (const step of STEPS) {
+      const res = this.round.results[step];
+      if (res) recordPhaseResult(ID, step, res.ok === true); // no result: not played (debug entry)
+    }
   }
 
   // Eats this.bites bites one after the other (chewing mouth each time), or nibbles and pushes
