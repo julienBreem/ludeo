@@ -1,4 +1,5 @@
 [
+  {"do": "setup", "shot": "setup-parent"},
   {"do": "start", "shot": "home"},
   {"do": "stand", "shot": "r1-stand"},
   {"do": "dough", "shot": "r1-dough"},
@@ -17,7 +18,7 @@
   {"do": "service", "expectCoins": 4, "shot": "r2-service"},
   {"do": "shopBuy", "shot": "r3-shop-bought"},
   {"do": "stand", "shot": "r3-stand"},
-  {"do": "forcedService", "score": 5, "shot": "f5-service"},
+  {"do": "forcedService", "score": 5, "shot": "f5-service", "now": "2026-11-19T12:00", "expectConfetti": true},
   {"do": "stand", "shot": "f5-stand"},
   {"do": "dough"},
   {"do": "mold"},
@@ -26,5 +27,7 @@
   {"do": "toppings"},
   {"do": "service", "expectCoins": 5},
   {"do": "forcedService", "score": 0, "shot": "f0-service"},
-  {"do": "stand", "shot": "f0-stand"}
+  {"do": "goHome", "shot": "home-back"},
+  {"do": "evening", "shot": "evening-shop"},
+  {"do": "forcedService", "score": 5, "now": "2026-11-19T20:00", "expectConfetti": false, "shot": "evening-service"}
 ]

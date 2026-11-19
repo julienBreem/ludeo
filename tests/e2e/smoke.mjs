@@ -1,6 +1,10 @@
-// End-to-end smoke test: opens the collection home, taps the stand's tile, then plays full rounds
-// in headless Chrome over CDP with real mouse gestures (Home → Stand → Dough → Mold → Bake → Paint → Toppings → Service → Stand → …) and fails on any console
-// error/warning, uncaught exception, off-origin request, or a scene that does not move on.
+// End-to-end smoke test of the collection, in headless Chrome over CDP with real mouse gestures:
+// Home → parent space (profile of a 6-year-old, both recommendations applied: pace calme, evening
+// mode on) → the stand's tile → full rounds at calme pace (Stand → Dough → Mold → Bake → Paint →
+// Toppings → Service → Stand → …) → the stand's home button → the evening forced with ?now= (the
+// stand runs with the canvas filter and no confetti). Coins seeded in standDesserts.v1 must
+// survive. Fails on any console error/warning, uncaught exception, off-origin request, or a scene
+// that does not move on.
 //
 // Not part of `npm test` (its glob only picks tests/**/*.test.js). No dependencies (Node ≥ 22,
 // for the global WebSocket). To run, from the repo root:
@@ -10,7 +14,8 @@
 //   kill %1
 //
 // Env: CHROME=<path to Chrome> (default: macOS Google Chrome), URL=<collection home url>
-// (default http://localhost:8000/; the stand is at jeux/stand-desserts/index.html below it). Screenshots go to outDir (default: a temp folder).
+// (default http://localhost:8000/; the stand is at jeux/stand-desserts/index.html below it; a
+// sub-path such as http://localhost:8000/foodStand/ works too). Screenshots go to outDir (default: a temp folder).
 // Exit code 0 = pass, 1 = fail.
 //
 // The game state is read (never written) through a hook on Phaser's SceneManager.update that
@@ -32,6 +37,9 @@ const stepsFile = process.argv[3] ?? path.join(HERE, 'smoke-steps.json');
 const URL = process.env.URL ?? 'http://localhost:8000/';
 const GAME_URL = new globalThis.URL('jeux/stand-desserts/index.html', URL).href;
 const TILE = '#tile-compter-observer';
+const SEED_COINS = 7; // seeded in standDesserts.v1 before the first visit; must survive everything
+const EVENING_NOW = '2026-11-19T20:00'; // ?now= values (shared/runtime.js clock)
+const DAY_NOW = '2026-11-19T12:00';
 const ORIGIN = new globalThis.URL(URL).origin;
 const CHROME = process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 const PORT = 9334;
@@ -105,6 +113,9 @@ const HOOK = `(() => {
   if (typeof Phaser === 'undefined') return false;
   const P = Phaser.Scenes.SceneManager.prototype;
   if (!P.__smokeHook) { P.__smokeHook = true; const o = P.update; P.update = function (...a) { window.__sm = this; return o.apply(this, a); }; }
+  // Counts the confetti emitters (they are created at y = -20 and destroyed after ~3 s, too short to poll).
+  const F = Phaser.GameObjects.GameObjectFactory.prototype;
+  if (!F.__smokeHook) { F.__smokeHook = true; window.__confetti = 0; const o = F.particles; F.particles = function (x, y, ...a) { if (y === -20) window.__confetti++; return o.call(this, x, y, ...a); }; }
   return !!window.__sm;
 })()`;
 
@@ -112,6 +123,19 @@ const activeScenes = () => evaluate(`window.__sm ? window.__sm.getScenes(true).m
 const sceneEval = (key, body) => evaluate(`(() => { const s = window.__sm.getScene(${JSON.stringify(key)}); return (${body})(s); })()`);
 // Screen x of the first image with that texture at shelf height (toppings shelf).
 const shelfX = (key, texture) => sceneEval(key, `s => s.children.list.find(o => o.texture?.key === ${JSON.stringify(texture)} && Math.abs(o.y - 728) < 4)?.x`);
+
+async function elCenter(sel) {
+  const c = await evaluate(`(() => { const e = document.querySelector(${JSON.stringify(sel)}); if (!e) return null; e.scrollIntoView({ block: 'center' }); const r = e.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`);
+  if (!c) throw new Error(`no element ${sel}`);
+  return c;
+}
+const tapEl = async sel => tap(await elCenter(sel));
+
+// Loads a page of the collection (home) and waits for its tile.
+async function loadHome(url) {
+  await send('Page.navigate', { url });
+  await waitFor('home tile', () => evaluate(`document.readyState === 'complete' && !!document.querySelector('${TILE}')`).catch(() => false), 15000);
+}
 
 async function waitScene(key, timeout = SCENE_TIMEOUT) {
   const t0 = Date.now();
@@ -150,6 +174,7 @@ function check(cond, msg) {
 
 let order = null; // order of the current round, read in Dough
 let wrongColor = null; // colour painted on zone 0 in a 'wrong' paint (not in the order)
+let storedCoins = null; // standDesserts.v1 coins when the stand's home button was pressed
 let lastClient = null; // client of the previous Stand (null after a page load)
 let roundClient = null; // client of the current round
 const toppingTotal = o => o.toppings.reduce((n, t) => n + t.count, 0);
@@ -172,17 +197,89 @@ const EATEN_INK = `s => new Promise(resolve => {
 
 // ---- one action per scene ------------------------------------------------------------------------
 const actions = {
+  // Fresh profile with seeded coins; the parent space sets the profile (a 6-year-old) and applies
+  // both recommendations (rythme → calme, soir → evening mode on). Selects are set by script
+  // (a native select popup cannot be tapped over CDP); every button is a real tap.
+  async setup({ shot: name } = {}) {
+    await loadHome(URL);
+    await evaluate(`localStorage.clear(); localStorage.setItem('standDesserts.v1', JSON.stringify({ version: 1, coins: ${SEED_COINS}, owned: [] })); true`);
+    await loadHome(URL);
+    check(await evaluate(`!document.querySelector('#gear .dot').hidden`), 'first launch: the gear shows its red dot');
+    await tapEl('#gear');
+    await waitFor('parent space', () => evaluate(`!document.querySelector('#parent').hidden && !!document.querySelector('#p-name')`));
+    const year = new Date().getFullYear() - 6;
+    await evaluate(`(() => {
+      const set = (el, v, ev) => { el.value = v; el.dispatchEvent(new Event(ev, { bubbles: true })); };
+      set(document.getElementById('p-name'), 'Test', 'input');
+      set(document.getElementById('p-month'), '1', 'change');
+      set(document.getElementById('p-year'), '${year}', 'change');
+    })()`);
+    await waitFor('age 6 recommendation', () => evaluate(`!!document.querySelector('[data-reco=rythme]')`));
+    if (name) await shot(name);
+    await tapEl('[data-reco=rythme] .primary');
+    await waitFor('rythme applied', () => evaluate(`JSON.parse(localStorage.getItem('collection.v1')).pace === 'calme'`));
+    await tapEl('[data-reco=soir] .primary');
+    await waitFor('soir applied', () => evaluate(`JSON.parse(localStorage.getItem('collection.v1')).evening.enabled === true`));
+    const c = await evaluate(`JSON.parse(localStorage.getItem('collection.v1'))`);
+    check(c.profile.name === 'Test' && c.profile.year === year && c.pace === 'calme' && c.evening.enabled,
+      `profile saved, pace calme, evening mode on (${JSON.stringify(c.profile)})`);
+    await tapEl('.p-head button');
+    await waitFor('parent closed', () => evaluate(`document.querySelector('#parent').hidden`));
+    check(await evaluate(`document.querySelector('#gear .dot').hidden`), 'recommendations applied: the red dot is gone');
+    const fade = await evaluate(`document.body.style.getPropertyValue('--fade')`);
+    check(fade === '750ms', `home fade follows calme (${fade})`);
+  },
+
   // Home → tap the stand's tile (a real tap on its centre) → the stand's page.
   async start({ shot: name } = {}) {
-    await send('Page.navigate', { url: URL });
-    await waitFor('home tile', () => evaluate(`document.readyState === 'complete' && !!document.querySelector('${TILE}')`), 15000);
-    const c = await evaluate(`(() => { const r = document.querySelector('${TILE}').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`);
+    await waitFor('home tile', () => evaluate(`!!document.querySelector('${TILE}')`), 15000);
+    const c = await elCenter(TILE);
     if (name) await shot(name);
     await tap(c);
     await waitFor('stand page', () => evaluate(`location.href === ${JSON.stringify(GAME_URL)}`).catch(() => false), 15000);
     log('  ok: home tile opens', GAME_URL);
     await waitFor('Phaser hook', () => evaluate(HOOK).catch(() => false), 15000);
     await waitScene('Stand', 20000);
+    lastClient = null;
+    const pace = await evaluate(`import('../../shared/runtime.js').then(m => m.getEffective().pace)`);
+    check(pace === 'calme', `the stand runs at the shared pace (${pace})`);
+  },
+
+  // The stand's home button (top-left) → the collection home, coins untouched.
+  async goHome({ shot: name } = {}) {
+    await waitScene('Stand');
+    storedCoins = await evaluate(`JSON.parse(localStorage.getItem('standDesserts.v1')).coins`);
+    check(storedCoins >= SEED_COINS, `the seeded coins are kept and grew with the rounds (${SEED_COINS} -> ${storedCoins})`);
+    await tap([79, 79]);
+    await waitFor('home', () => evaluate(`location.href === ${JSON.stringify(new globalThis.URL('index.html', URL).href)} && !!document.querySelector('${TILE}')`).catch(() => false), 15000);
+    log('  ok: home button returns to the collection home');
+    const after = await evaluate(`JSON.parse(localStorage.getItem('standDesserts.v1')).coins`);
+    check(after === storedCoins, `coins survive the trip home (${after})`);
+    if (name) await shot(name);
+  },
+
+  // Evening forced with ?now=: the home darkens, the stand runs with the canvas filter, the shop
+  // still shows the coins, and a 5/5 service throws no confetti.
+  async evening({ shot: name } = {}) {
+    await loadHome(`${URL}?now=${EVENING_NOW}`);
+    check(await evaluate(`document.body.classList.contains('evening') && !document.getElementById('moon').hidden`), `home in evening mode (?now=${EVENING_NOW})`);
+    const u = new globalThis.URL(GAME_URL);
+    u.searchParams.set('now', EVENING_NOW);
+    await send('Page.navigate', { url: u.href });
+    await waitFor('Phaser hook', () => evaluate(HOOK).catch(() => false), 15000);
+    await waitScene('Stand', 20000);
+    log('  at', await evaluate(`location.href + ' ' + document.querySelectorAll('canvas').length`));
+    const f = await evaluate(`document.querySelector('canvas').style.filter`);
+    check(f.includes('brightness(0.8)'), `the stand canvas has the evening filter (${f})`);
+    const ev = await evaluate(`import('../../shared/runtime.js').then(m => { const e = m.getEffective(); return [e.evening, e.pace]; })`);
+    check(ev[0] === true && ev[1] === 'calme', `evening forces calme (${ev})`);
+    await tap(LEFT_BTN);
+    await waitScene('Shop');
+    const coins = await sceneEval('Shop', 's => Number(s.coinText.text)');
+    check(coins === storedCoins, `the shop shows the coins that survived (${coins})`);
+    if (name) await shot(name);
+    await tap(LEFT_BTN);
+    await waitScene('Stand');
     lastClient = null;
   },
 
@@ -303,6 +400,8 @@ const actions = {
   // color 'wrong': zone 0 gets an owned colour that is not in the order.
   async paint({ color = 'order', shot: name } = {}) {
     await waitScene('Paint');
+    // (a smoke run once saw colorKeys undefined here under heavy load: wait for create() to have run)
+    await waitFor('Paint create()', () => sceneEval('Paint', 's => Array.isArray(s.colorKeys) && !!s.pots && s.pots.length > 0'));
     const geo = await sceneEval('Paint', `s => {
       const zones = Array.from(s.zones); const n = Math.max(...zones) + 1; const box = [];
       for (let z = 0; z < n; z++) box.push({ x0: 99, x1: -1, y0: 99, y1: -1 });
@@ -378,7 +477,7 @@ const actions = {
     check(res?.ok === true, `toppings result kept after ✓ (${JSON.stringify(res)})`);
   },
 
-  async service({ shot: name, expectCoins } = {}) {
+  async service({ shot: name, expectCoins, expectConfetti } = {}) {
     await waitScene('Service');
     const served = await sceneEval('Service', 's => JSON.stringify(s.client.client)');
     if (roundClient) check(served === roundClient, 'the Stand client is served');
@@ -417,6 +516,10 @@ const actions = {
       const want = COLOR_HEX[wrongColor];
       check(info.pots.includes(want), `wrong-colour picture shows the painted pot ${wrongColor} (pots ${info.pots.map(c => c.toString(16))})`);
     }
+    if (expectConfetti !== undefined) {
+      const n = await evaluate('window.__confetti ?? -1');
+      check(n >= 0 && (n > 0) === expectConfetti, expectConfetti ? `5/5 by day: confetti thrown (${n} emitter)` : `evening: no confetti (${n} emitter)`);
+    }
     if (name) await shot(name);
     await tap(OK_BTN);
     await waitScene('Stand');
@@ -424,8 +527,9 @@ const actions = {
 
   // Opens the Service directly with the debug sample round and a forced score
   // (?scene=Service&score=N), runs the Service checks, then goes on to the Stand.
-  async forcedService({ score, shot: name }) {
+  async forcedService({ score, now, expectConfetti, shot: name }) {
     const u = new globalThis.URL(GAME_URL);
+    if (now) u.searchParams.set('now', now);
     u.searchParams.set('scene', 'Service');
     u.searchParams.set('score', String(score));
     await send('Page.navigate', { url: u.href });
@@ -434,7 +538,7 @@ const actions = {
     roundClient = await sceneEval('Service', 's => JSON.stringify(s.client.client)');
     lastClient = roundClient; // the next Stand client must differ from the sample client
     wrongColor = null;
-    await actions.service({ shot: name, expectCoins: score });
+    await actions.service({ shot: name, expectCoins: score, expectConfetti });
   },
 };
 

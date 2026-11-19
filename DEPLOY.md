@@ -1,43 +1,57 @@
 # Mettre la collection de jeux en ligne et l'installer sur la tablette
 
-## 1. Ce qu'il faut envoyer sur le site (FTP)
+Le site est publié **gratuitement sur GitHub Pages**. Vous n'avez rien à envoyer à la main : à chaque mise à jour fusionnée dans la branche `master`, une action automatique teste le site puis le publie.
 
-Le site est une **collection** : un accueil (à la racine) et les jeux, chacun dans `jeux/<nom>/` (le stand de desserts est dans `jeux/stand-desserts/`).
+L'adresse du site sera : `https://<compte>.github.io/<dépôt>/` (remplacez `<compte>` par votre nom d'utilisateur GitHub et `<dépôt>` par le nom du dépôt). Le site vit dans un sous-dossier : c'est prévu, rien à modifier.
 
-Envoyez tout le contenu du dossier du projet **sauf** :
+Attention : le dépôt doit être **public** (c'est la condition de GitHub Pages gratuit), donc tout son contenu est visible de tous. Ne mettez jamais de mots de passe ou de données personnelles dans le dépôt. Les réglages et la progression de l'enfant restent sur la tablette, jamais dans le dépôt.
 
-- `docs/`, `tests/`, `.superpowers/` (dossiers de travail, inutiles en ligne)
-- `package.json`
+## 1. Première mise en ligne (une seule fois)
 
-Les fichiers `ASSETS-LICENSES.md` peuvent être envoyés ou non, au choix : les jeux n'en ont pas besoin.
+1. Sur github.com, créez un nouveau dépôt **public** (bouton **New**), sans fichier ajouté (ni README, ni licence).
+2. Envoyez-y le projet en suivant les instructions que GitHub affiche sur la page du dépôt vide (la branche s'appelle `master`).
+3. Dans le dépôt : **Settings** → **Pages** → à la ligne **Source**, choisissez **GitHub Actions**.
+4. Onglet **Actions** : la publication démarre toute seule (sinon : « Publier le site » → **Run workflow**). Attendez la coche verte (1 à 2 minutes). Le lien du site s'affiche à la fin.
+5. Ouvrez `https://<compte>.github.io/<dépôt>/` : l'accueil du jeu doit apparaître.
 
-Les dossiers essentiels sont `jeux/`, `shared/`, `vendor/`, et les fichiers `index.html`, `manifest.webmanifest`, `sw.js` (à la racine).
+Seuls les fichiers du site sont publiés : `index.html`, `manifest.webmanifest`, `sw.js` et les dossiers `shared/`, `jeux/`, `vendor/`. Les dossiers `docs/`, `tests/`, `.superpowers/` et le fichier `package.json` ne sont jamais publiés.
 
-La collection peut être à la racine d'un site, dans un sous-domaine (`jeu.monsite.fr`) ou dans un sous-dossier (`monsite.fr/jeu/`) : rien à modifier.
+Si la croix est rouge, c'est qu'un test automatique a échoué : rien n'est publié, l'ancienne version reste en ligne. Ouvrez l'exécution en échec dans l'onglet **Actions** pour lire l'erreur.
 
-## 2. Vérifier le cadenas (HTTPS)
-
-Ouvrez l'adresse du jeu dans Chrome. L'adresse doit commencer par `https://` et un cadenas doit apparaître à gauche. Sans HTTPS, le jeu fonctionne mais ne peut pas s'installer ni marcher hors connexion. Si besoin, activez le certificat HTTPS (souvent gratuit, "Let's Encrypt") dans l'espace client de l'hébergeur.
-
-## 3. Installer sur la tablette Android
+## 2. Installer sur la tablette Android (Chrome)
 
 1. Connectez la tablette à Internet (Wi-Fi).
-2. Ouvrez l'adresse du site dans **Chrome**. Laissez l'accueil s'afficher (la grande tuile du gâteau).
+2. Ouvrez l'adresse du site dans **Chrome**. L'adresse commence par `https://` (GitHub Pages l'assure). Laissez l'accueil s'afficher (la grande tuile du gâteau).
 3. Touchez le menu **⋮** (en haut à droite) puis **Installer l'application** (ou **Ajouter à l'écran d'accueil**).
 4. Une icône de gâteau apparaît sur l'écran d'accueil. Lancez l'application depuis cette icône : l'accueil s'ouvre en plein écran, en mode paysage ; la tuile du gâteau lance le stand de desserts.
 
 Après cette première visite, l'accueil et tous les jeux marchent **sans Internet**.
 
-**Tablette où le stand de desserts était déjà installé** : rien à réinstaller. La même icône ouvre désormais l'accueil (après la mise à jour de l'étape 4), et les pièces et achats du stand sont conservés.
+**Tablette où le stand de desserts était déjà installé à une autre adresse** : ce sont deux applications distinctes (les pièces ne se transfèrent pas). Installez la nouvelle comme ci-dessus.
 
-## 4. Mettre à jour le jeu
+## 3. Mettre à jour le jeu (à chaque version)
 
-1. Modifiez les fichiers (accueil ou jeux).
-2. Dans `sw.js` (à la racine), augmentez le numéro de la ligne `const CACHE_VERSION = 'v4';` : `'v5'`, puis `'v6'`, etc. (à chaque mise à jour, sans exception : sinon la tablette garde l'ancienne version). Un seul `sw.js` pour toute la collection.
-3. Envoyez de nouveau tous les fichiers modifiés (et `sw.js`). Si des fichiers ont été déplacés ou supprimés, supprimez aussi les anciens sur le site (pour la collection : les anciens dossiers `assets/` et `src/` à la racine), **après** avoir envoyé le nouveau `sw.js`. Le logiciel FTP ne doit pas conserver la date des fichiers envoyés (réglage par défaut) : sinon le site peut répondre à la tablette que `sw.js` n'a pas changé.
-4. Sur la tablette, avec Internet : ouvrez le jeu **deux fois** (le fermer complètement, puis le rouvrir). La première ouverture télécharge la nouvelle version, la seconde l'affiche.
-5. Après la 2ᵉ ouverture, vérifiez que la nouveauté apparaît ; sinon, re-changez `CACHE_VERSION` (`'v5'`, etc.), renvoyez `sw.js` et recommencez l'étape 4.
+1. Faites vos modifications, puis, dans `sw.js` (à la racine), augmentez le numéro de la ligne `const CACHE_VERSION = 'v4';` : `'v5'`, puis `'v6'`, etc. À **chaque** mise à jour, sans exception : sinon la tablette garde l'ancienne version. Un seul `sw.js` pour toute la collection.
+2. Fusionnez les modifications dans `master` (par exemple en acceptant la « pull request »). L'action **Publier le site** se lance toute seule : attendez la coche verte dans l'onglet **Actions**.
+3. Sur la tablette, **avec Internet** : ouvrez le jeu **deux fois** (fermez-le complètement, puis rouvrez-le). La première ouverture télécharge la nouvelle version, la seconde l'affiche.
+4. Après la 2ᵉ ouverture, vérifiez que la nouveauté apparaît ; sinon, vérifiez que `CACHE_VERSION` a bien changé et que la coche verte est apparue, puis recommencez l'étape 3.
+
+## 4. Organisation du projet et ajout d'un jeu
+
+- `index.html` (à la racine) : **l'accueil**, page de démarrage de la collection (l'icône de la tablette l'ouvre).
+- `shared/` : ce qui sert à tous (accueil, espace parent, profil, réglages, avatar).
+- `jeux/<nom>/` : un dossier par jeu (le stand de desserts est dans `jeux/stand-desserts/`).
+- `jeux/registry.js` : la liste des jeux et des catégories.
+- `sw.js` : le fonctionnement hors connexion, commun à toute la collection.
+
+Pour ajouter un jeu plus tard :
+
+1. Créez un dossier `jeux/<nom>/` avec sa page `index.html` et ses fichiers.
+2. Dans ce dossier, ajoutez `collection.js` sur le modèle de `jeux/stand-desserts/collection.js` : `ID` (le nom du dossier), `NAME` (nom français montré aux parents), `CATEGORY`, `SUPPORTS`, `PRECACHE` (tous les fichiers du jeu, pour le hors-connexion) et `reset` (efface la progression du jeu).
+3. Dans `jeux/registry.js`, ajoutez une ligne `import` pour ce `collection.js` et ajoutez le jeu à la liste `GAMES`. Si la catégorie n'existe pas encore, ajoutez-la à `CATEGORIES`.
+4. Le jeu **doit respecter tous les réglages partagés** : le **rythme** (calme, normal, rapide) et le **mode soir** (couleurs adoucies, pas de confettis). Il lit ces réglages via `shared/runtime.js` (voir `jeux/stand-desserts/src/ui/pace.js` pour un exemple) et les déclare dans `SUPPORTS` ; il doit aussi proposer un bouton retour vers l'accueil (`../../index.html`).
+5. Lancez `npm test` : un test vérifie le registre, les réglages pris en charge et la liste des fichiers du hors-connexion. Puis augmentez `CACHE_VERSION` (partie 3).
 
 ## 5. Tout remettre à zéro (réservé aux parents)
 
-Dans le stand de desserts, maintenez le doigt **3 secondes** sur le coin **en haut à gauche** de l'écran : la progression (pièces, achats) est effacée.
+Sur l'accueil, touchez la **roue dentée** en haut à droite (espace parent), puis la rubrique **Jeux** : **Remettre à zéro** efface la progression du jeu choisi (pièces, achats), après une confirmation.

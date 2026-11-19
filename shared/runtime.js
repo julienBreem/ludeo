@@ -22,9 +22,10 @@ export function getCollection() {
 // to check the evening look without waiting. Without the param it is the real clock.
 export function clock() {
   try {
-    const m = /[?&]now=(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})(?:&|$)/.exec(globalThis.location?.search ?? '');
-    if (m) {
-      const d = new Date(m[1]);
+    // URLSearchParams: a URL built by script has the ':' encoded as %3A
+    const v = new URLSearchParams(globalThis.location?.search ?? '').get('now');
+    if (v && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(v)) {
+      const d = new Date(v);
       if (!Number.isNaN(d.getTime())) return d;
     }
   } catch { /* no location: real clock */ }

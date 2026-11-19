@@ -1,6 +1,6 @@
 // Service worker (module) of the whole collection: makes the home and every game playable
 // offline after the first visit. It lives at the site root so its scope covers jeux/*.
-// UPDATING: bump CACHE_VERSION on every deploy, then re-upload (see DEPLOY.md).
+// UPDATING: bump CACHE_VERSION on every release, then merge into master (see DEPLOY.md).
 import { HOME_PRECACHE, GAMES } from './jeux/registry.js';
 
 const CACHE_VERSION = 'v4';
