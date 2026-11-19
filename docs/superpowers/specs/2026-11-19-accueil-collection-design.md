@@ -29,7 +29,7 @@ Le parent va créer plusieurs jeux éducatifs pour sa fille de 6 ans (tablette A
 
 ## Contraintes
 
-- Tablette Android, Chrome, paysage ; appli web installée (PWA), hors ligne, sur l'hébergement HTTPS du parent ; chemins relatifs (sous-dossier possible).
+- Tablette Android, Chrome, paysage ; appli web installée (PWA), hors ligne ; **hébergement : GitHub Pages** (dépôt public, adresse `https://<compte>.github.io/<dépôt>/`, donc en sous-dossier), publié automatiquement depuis `master` en ne publiant que les fichiers du site ; chemins relatifs. Rien n'est encore installé sur la tablette (pas de changement d'adresse à gérer).
 - Pas de dépendance npm ; Phaser 3.90.0 déjà embarqué ; style S2.
 - Stockage local uniquement.
 
