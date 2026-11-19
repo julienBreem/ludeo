@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { avatarLayers, PRESETS, stepAvatar, randomAvatar, DEFAULT_AVATAR } from '../../shared/avatar.js';
-import { CAP_HAIRS } from '../../jeux/stand-desserts/src/logic/client.js';
+import { CAP_HAIRS } from '../../shared/client.js';
 
 test('human layers: body, head, hair, accessory, eyes, mouth, tinted like the stand', () => {
   const l = avatarLayers({ kind: 'human', hair: 2, hairColor: 1, skin: 1, shirt: 0, accessory: 'cap' });

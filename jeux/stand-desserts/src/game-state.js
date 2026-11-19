@@ -2,7 +2,7 @@
 import { loadState, saveState } from './logic/save.js';
 import { generateOrder } from './logic/order.js';
 import { createRound } from './logic/round.js';
-import { generateClient } from './logic/client.js';
+import { generateClient } from '../../../shared/client.js';
 
 
 let state = null;

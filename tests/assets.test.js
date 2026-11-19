@@ -5,6 +5,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { INGREDIENTS, DESSERTS, ITEMS } from '../jeux/stand-desserts/src/logic/catalog.js';
 import { ASSETS, PRECACHE } from '../jeux/stand-desserts/src/assets.js';
+import { CLIENT_LAYERS } from '../shared/client.js';
+import { HOME_PRECACHE } from '../jeux/registry.js';
 
 // The stand's folder: ASSETS and PRECACHE paths are relative to it.
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', 'jeux', 'stand-desserts');
@@ -63,15 +65,17 @@ test('every ASSETS file exists on disk and is valid SVG', () => {
   }
 });
 
+const shared = f => f.startsWith('../');
+
 test('every file under assets/ is listed in ASSETS (no orphan, no forgotten)', () => {
   const onDisk = walk('assets', () => true).sort();
-  const listed = ASSETS.map(a => a.file).sort();
+  const listed = ASSETS.map(a => a.file).filter(f => !shared(f)).sort();
   assert.deepEqual(onDisk, listed);
 });
 
 test('every ASSETS file and every src/**/*.js is in PRECACHE', () => {
   const cached = new Set(PRECACHE);
-  const wanted = [...ASSETS.map(a => a.file), ...walk('src', f => f.endsWith('.js'))];
+  const wanted = [...ASSETS.map(a => a.file).filter(f => !shared(f)), ...walk('src', f => f.endsWith('.js'))];
   assert.deepEqual(wanted.filter(f => !cached.has(f)), []);
   assert.equal(cached.size, PRECACHE.length, 'PRECACHE has duplicates');
 });
@@ -90,4 +94,15 @@ test('the game precache leaves the collection files to the home', () => {
   for (const f of ['./', 'manifest.webmanifest', 'sw.js', 'vendor/phaser.min.js']) {
     assert.ok(!PRECACHE.includes(f), `${f} belongs to the home precache`);
   }
+});
+
+test('the client layers come from shared/ and are in the home precache, not the game one', () => {
+  const clients = ASSETS.filter(a => a.key.startsWith('client-'));
+  assert.equal(clients.length, CLIENT_LAYERS.length);
+  for (const a of clients) {
+    assert.equal(a.file, `../../shared/assets/client/${a.key}.svg`);
+    assert.ok(HOME_PRECACHE.includes(`shared/assets/client/${a.key}.svg`), `${a.key} not in HOME_PRECACHE`);
+    assert.ok(!PRECACHE.includes(a.file));
+  }
+  assert.deepEqual(ASSETS.filter(a => shared(a.file) && !a.key.startsWith('client-')), []);
 });

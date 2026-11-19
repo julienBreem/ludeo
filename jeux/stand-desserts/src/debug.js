@@ -4,7 +4,7 @@
 // (&alt=1 picks the other colour/topping failure reasons), e.g. ?scene=Service&score=3.
 import { createRound } from './logic/round.js';
 import { STEPS } from './logic/scoring.js';
-import { generateClient } from './logic/client.js';
+import { generateClient } from '../../../shared/client.js';
 import { setRound } from './game-state.js';
 import { idealCake } from './ui/orderCake.js';
 

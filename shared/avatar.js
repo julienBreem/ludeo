@@ -1,11 +1,11 @@
-// The child's avatar: a client of the stand's client system (same layers, same palettes), drawn
-// on a 2D canvas for the home and the parent space. The avatar is a plain Client object
-// (see jeux/stand-desserts/src/logic/client.js), stored in collection.avatar.
+// The child's avatar: a client of the collection's client system (shared/client.js: same layers
+// and palettes as the stand's customers), drawn on a 2D canvas for the home and the parent space.
+// The avatar is a plain Client object, stored in collection.avatar.
 import { HAIR_HEX, SKIN_HEX, SHIRT_HEX, ACC_TINT } from './avatar-palettes.js';
-import { generateClient, sameClient } from '../jeux/stand-desserts/src/logic/client.js';
+import { generateClient, sameClient } from './client.js';
 
 export const FRAME = 300; // every layer is 300x300 (art-geometry notes)
-const CLIENT_DIR = '../jeux/stand-desserts/assets/client/';
+const CLIENT_DIR = './assets/client/';
 
 // Shown until the parent picks one.
 export const DEFAULT_AVATAR = { kind: 'human', hair: 3, hairColor: 0, skin: 1, shirt: 1, accessory: null };

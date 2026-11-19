@@ -1,5 +1,11 @@
-// Every SVG the game loads. `file` is relative to the game folder (jeux/stand-desserts/);
-// `w`/`h` are the sizes to rasterise at (they match each file's viewBox).
+import { CLIENT_LAYERS } from '../../../shared/client.js';
+
+// The client layers live in shared/ (the home draws the avatar with them), two levels up.
+export const SHARED_CLIENT_DIR = '../../shared/assets/client/';
+
+// Every SVG the game loads. `file` is relative to the game folder (jeux/stand-desserts/), the
+// client layers included (SHARED_CLIENT_DIR); `w`/`h` are the sizes to rasterise at (they match
+// each file's viewBox).
 export const ASSETS = [
   // ingredients
   { key: 'ing-beurre', file: 'assets/ingredients/ing-beurre.svg', w: 160, h: 160 },
@@ -66,29 +72,8 @@ export const ASSETS = [
   { key: 'oven', file: 'assets/kitchen/oven.svg', w: 500, h: 450 },
   { key: 'pot', file: 'assets/kitchen/pot.svg', w: 200, h: 200 },
   { key: 'whisk', file: 'assets/kitchen/whisk.svg', w: 160, h: 400 },
-  // client
-  { key: 'client-acc-beard', file: 'assets/client/client-acc-beard.svg', w: 300, h: 300 },
-  { key: 'client-acc-bow', file: 'assets/client/client-acc-bow.svg', w: 300, h: 300 },
-  { key: 'client-acc-cap', file: 'assets/client/client-acc-cap.svg', w: 300, h: 300 },
-  { key: 'client-acc-earrings', file: 'assets/client/client-acc-earrings.svg', w: 300, h: 300 },
-  { key: 'client-acc-glasses', file: 'assets/client/client-acc-glasses.svg', w: 300, h: 300 },
-  { key: 'client-acc-moustache', file: 'assets/client/client-acc-moustache.svg', w: 300, h: 300 },
-  { key: 'client-animal-chat', file: 'assets/client/client-animal-chat.svg', w: 300, h: 300 },
-  { key: 'client-animal-chien', file: 'assets/client/client-animal-chien.svg', w: 300, h: 300 },
-  { key: 'client-animal-lapin', file: 'assets/client/client-animal-lapin.svg', w: 300, h: 300 },
-  { key: 'client-animal-ours', file: 'assets/client/client-animal-ours.svg', w: 300, h: 300 },
-  { key: 'client-eyes-closed', file: 'assets/client/client-eyes-closed.svg', w: 300, h: 300 },
-  { key: 'client-eyes-open', file: 'assets/client/client-eyes-open.svg', w: 300, h: 300 },
-  { key: 'client-hair-4', file: 'assets/client/client-hair-4.svg', w: 300, h: 300 },
-  { key: 'client-hair-5', file: 'assets/client/client-hair-5.svg', w: 300, h: 300 },
-  { key: 'client-mouth-bof', file: 'assets/client/client-mouth-bof.svg', w: 300, h: 300 },
-  { key: 'client-mouth-content', file: 'assets/client/client-mouth-content.svg', w: 300, h: 300 },
-  { key: 'client-mouth-fache', file: 'assets/client/client-mouth-fache.svg', w: 300, h: 300 },
-  { key: 'client-body', file: 'assets/client/client-body.svg', w: 300, h: 300 },
-  { key: 'client-hair-1', file: 'assets/client/client-hair-1.svg', w: 300, h: 300 },
-  { key: 'client-hair-2', file: 'assets/client/client-hair-2.svg', w: 300, h: 300 },
-  { key: 'client-hair-3', file: 'assets/client/client-hair-3.svg', w: 300, h: 300 },
-  { key: 'client-head', file: 'assets/client/client-head.svg', w: 300, h: 300 },
+  // client: shared with the home's avatar (shared/assets/client/, precached by the home)
+  ...CLIENT_LAYERS.map(key => ({ key, file: `${SHARED_CLIENT_DIR}${key}.svg`, w: 300, h: 300 })),
   // stand
   { key: 'bubble', file: 'assets/stand/bubble.svg', w: 440, h: 340 },
   { key: 'coin', file: 'assets/stand/coin.svg', w: 160, h: 160 },
@@ -118,7 +103,6 @@ export const PRECACHE = [
   'src/main.js',
   'src/logic/bake.js',
   'src/logic/catalog.js',
-  'src/logic/client.js',
   'src/logic/economy.js',
   'src/logic/order.js',
   'src/logic/paint.js',
@@ -146,5 +130,6 @@ export const PRECACHE = [
   'src/ui/orderReminder.js',
   'src/ui/pace.js',
   'src/ui/stepBar.js',
-  ...ASSETS.map(a => a.file),
+  // the shared client layers are in the home's precache
+  ...ASSETS.map(a => a.file).filter(f => !f.startsWith('../')),
 ];

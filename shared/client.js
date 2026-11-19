@@ -1,3 +1,5 @@
+// Clients of the collection: the stand's customers and the child's avatar on the home share this
+// generator and these layers (shared/assets/client/, 300x300 frames, art-geometry notes).
 export const HAIRS = 6;
 export const HAIR_COLORS = 5;
 export const SKINS = 4;
@@ -44,3 +46,13 @@ export function generateClient(rng = Math.random, previous = null) {
   do { c = draw(rng); } while (sameClient(c, previous));
   return c;
 }
+
+// Every layer file (without .svg) in shared/assets/client/.
+export const CLIENT_LAYERS = [
+  'client-body', 'client-head',
+  ...ACCESSORIES.map(a => `client-acc-${a}`),
+  ...ANIMALS.map(a => `client-animal-${a}`),
+  'client-eyes-open', 'client-eyes-closed',
+  ...[1, 2, 3, 4, 5].map(n => `client-hair-${n}`),
+  'client-mouth-content', 'client-mouth-bof', 'client-mouth-fache',
+];

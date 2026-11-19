@@ -5,6 +5,7 @@
 // Adding a game: create jeux/<id>/collection.js (ID, CATEGORY, SUPPORTS, PRECACHE, reset),
 // import it below and add it to GAMES. tests/registry.test.js checks it.
 import * as standDesserts from './stand-desserts/collection.js';
+import { CLIENT_LAYERS } from '../shared/client.js';
 
 // Settings every game must apply, like the home (tests/registry.test.js checks SUPPORTS).
 export const SHARED_SETTINGS = ['rythme', 'soir'];
@@ -42,6 +43,7 @@ export const HOME_PRECACHE = [
   'jeux/registry.js',
   'shared/avatar-palettes.js',
   'shared/avatar.js',
+  'shared/client.js',
   'shared/effective.js',
   'shared/evening.js',
   'shared/home.css',
@@ -52,6 +54,7 @@ export const HOME_PRECACHE = [
   'shared/recommendations.js',
   'shared/runtime.js',
   'shared/store.js',
+  ...CLIENT_LAYERS.map(f => `shared/assets/client/${f}.svg`), // the avatar and the stand's clients
   'shared/assets/cat-compter-observer.svg',
   'shared/assets/home-bg-day.svg',
   'shared/assets/home-bg-evening.svg',
