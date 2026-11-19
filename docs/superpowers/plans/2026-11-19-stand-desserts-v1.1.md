@@ -66,7 +66,7 @@ test('zone weights roughly 50/35/15', () => { /* 10000 orders, share of size 1 w
 test('zoneMap halves a 10-wide square', () => { /* mask columns 3..12 → cells x 3..7 zone 0, 8..12 zone 1 */ });
 test('zoneMap on n=1 is all 0 inside, -1 outside', () => {});
 test('zoneEdges returns n-1 boundaries', () => {});
-test('layoutToppings: 8 points inside a small disc mask, pairwise distance ≥ 4', () => {});
+test('layoutToppings: 6 points inside a small disc mask, pairwise distance ≥ 4', () => {});
 test('layoutToppings is deterministic', () => {});
 // scoring
 test('two zones painted correctly → ok', () => {});
