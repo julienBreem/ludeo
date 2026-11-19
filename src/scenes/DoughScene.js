@@ -253,6 +253,7 @@ export class DoughScene extends Phaser.Scene {
   validate() {
     const result = judgeDough(this.added, this.tracker.progress(), this.dessert);
     this.round.results.pate = result;
+    this.round.doughAdded = { ...this.added };
     this.round.cake.doughOk = result.ok;
     goNext(this);
   }
