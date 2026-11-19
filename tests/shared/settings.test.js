@@ -63,7 +63,7 @@ test('isEvening 22:00 -> 06:00, disabled, start==end, same-day window', () => {
 
 test('store: missing, round trip, garbage, wrong types, throwing', () => {
   assert.equal(COLLECTION_KEY, 'collection.v1');
-  assert.deepEqual(defaultCollection(), { version: 1, profile: null, draftName: '', avatar: null, pace: 'normal', evening: { enabled: false, start: '19:00', end: '07:00' }, ignored: {} });
+  assert.deepEqual(defaultCollection(), { version: 1, profile: null, draftName: '', avatar: null, pace: 'normal', evening: { enabled: false, start: '19:00', end: '07:00' }, ignored: {}, levels: {}, overrides: {}, history: {} });
   assert.deepEqual(loadCollection(fakeStorage()), defaultCollection());
   const s = fakeStorage();
   const c = { ...defaultCollection(), profile: { name: 'Léa', month: 3, year: 2020 }, pace: 'calme', ignored: { soir: 'off' } };

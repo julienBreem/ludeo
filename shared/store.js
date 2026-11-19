@@ -1,5 +1,6 @@
 import { PACES } from './pace.js';
 import { parseHHMM } from './evening.js';
+import { isTheme } from './themes.js';
 import { HAIRS, HAIR_COLORS, SKINS, SHIRTS, ACCESSORIES, ANIMALS } from './client.js';
 
 export const COLLECTION_KEY = 'collection.v1';
@@ -13,7 +14,36 @@ export function defaultCollection() {
     pace: 'normal',
     evening: { enabled: false, start: '19:00', end: '07:00' },
     ignored: {},
+    levels: {}, // theme id -> 1..3
+    overrides: {}, // "<gameId>/<phaseId>" -> 1..3
+    history: {}, // "<gameId>/<phaseId>" -> boolean[] (newest last, max 5)
   };
+}
+
+const isLevel = n => Number.isInteger(n) && n >= 1 && n <= 3;
+const isPhaseKey = k => /^[^/]+\/[^/]+$/.test(k);
+const isMap = o => o && typeof o === 'object' && !Array.isArray(o);
+
+function cleanLevels(o) {
+  const out = {};
+  if (isMap(o)) for (const [k, v] of Object.entries(o)) if (isTheme(k) && isLevel(v)) out[k] = v;
+  return out;
+}
+
+function cleanOverrides(o) {
+  const out = {};
+  if (isMap(o)) for (const [k, v] of Object.entries(o)) if (isPhaseKey(k) && isLevel(v)) out[k] = v;
+  return out;
+}
+
+function cleanHistory(o) {
+  const out = {};
+  if (isMap(o)) {
+    for (const [k, v] of Object.entries(o)) {
+      if (isPhaseKey(k) && Array.isArray(v)) out[k] = v.filter(x => typeof x === 'boolean').slice(-5);
+    }
+  }
+  return out;
 }
 
 function cleanProfile(p) {
@@ -73,6 +103,9 @@ export function loadCollection(storage) {
     pace: PACES.includes(data.pace) ? data.pace : def.pace,
     evening: cleanEvening(data.evening, def.evening),
     ignored,
+    levels: cleanLevels(data.levels),
+    overrides: cleanOverrides(data.overrides),
+    history: cleanHistory(data.history),
   };
 }
 
