@@ -116,3 +116,8 @@ Ensuite, **la commande complète reste affichée en petit en haut de tous les é
 - Choix précis des packs CC0 et liste des éléments redessinés ; fichier listant les licences.
 - Nombre et variété des clients (apparences), animations d'arrivée/départ.
 - Séparer la logique pure (génération de commande, notation, économie, sauvegarde) du rendu Phaser pour pouvoir la tester automatiquement.
+
+## Évolutions prévues (hors de cette version)
+
+- **Version éducative** : chaque mini-jeu recevra un thème (calcul, lecture, géométrie…) et deviendra un exercice interactif — par exemple la recette de la pâte affichera une petite opération (« 2 + 1 œufs »). Conséquence dès maintenant : ne pas ajouter d'aides qui comptent ou lisent à la place de l'enfant (refusé : afficher sur la recette combien d'ingrédients sont déjà dans le bol), et garder la recette, la bulle de commande et le choix du moule comme éléments séparés, remplaçables par des variantes « exercice ».
+- **Son** (bruitages, voix) : reporté.
