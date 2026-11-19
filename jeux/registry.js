@@ -15,6 +15,7 @@ export const CATEGORIES = [
 
 const game = m => ({
   id: m.ID,
+  name: m.NAME,
   category: m.CATEGORY,
   path: `jeux/${m.ID}/index.html`,
   supports: m.SUPPORTS,
@@ -39,9 +40,14 @@ export const HOME_PRECACHE = [
   'manifest.webmanifest',
   'vendor/phaser.min.js',
   'jeux/registry.js',
+  'shared/avatar-palettes.js',
+  'shared/avatar.js',
   'shared/effective.js',
   'shared/evening.js',
+  'shared/home.css',
+  'shared/home.js',
   'shared/pace.js',
+  'shared/parent.js',
   'shared/profile.js',
   'shared/recommendations.js',
   'shared/runtime.js',

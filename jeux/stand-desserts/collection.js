@@ -4,6 +4,8 @@ import { PRECACHE as GAME_FILES } from './src/assets.js';
 import { resetState } from './src/logic/save.js';
 
 export const ID = 'stand-desserts';
+// Name shown to the parent (French).
+export const NAME = 'Stand de desserts';
 export const CATEGORY = 'compter-observer';
 // Shared settings this game applies (registry SHARED_SETTINGS; a test checks it).
 export const SUPPORTS = ['rythme', 'soir'];

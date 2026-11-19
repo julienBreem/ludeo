@@ -1,6 +1,6 @@
 import { test, mock } from 'node:test';
 import assert from 'node:assert/strict';
-import { getCollection, getEffective, onEffectiveChange, updateCollection, CHECK_MS } from '../../shared/runtime.js';
+import { clock, getCollection, getEffective, onEffectiveChange, updateCollection, CHECK_MS } from '../../shared/runtime.js';
 import { COLLECTION_KEY, defaultCollection } from '../../shared/store.js';
 
 function memoryStorage() {
@@ -74,4 +74,19 @@ test('onEffectiveChange calls back only when pace or evening changes, every 60 s
   } finally {
     mock.timers.reset();
   }
+});
+
+test('clock: ?now= overrides the time only when present and well formed', () => {
+  const real = Date.now();
+  const withSearch = search => {
+    const desc = Object.getOwnPropertyDescriptor(globalThis, 'location');
+    Object.defineProperty(globalThis, 'location', { configurable: true, value: { search } });
+    try { return clock(); } finally { if (desc) Object.defineProperty(globalThis, 'location', desc); else delete globalThis.location; }
+  };
+  const d = withSearch('?now=2026-11-19T20:05');
+  assert.equal(d.getHours(), 20);
+  assert.equal(d.getMinutes(), 5);
+  assert.ok(Math.abs(withSearch('').getTime() - real) < 5000);
+  assert.ok(Math.abs(withSearch('?now=garbage').getTime() - real) < 5000);
+  assert.ok(Math.abs(clock().getTime() - real) < 5000); // no location at all
 });

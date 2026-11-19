@@ -18,7 +18,20 @@ export function getCollection() {
   return loadCollection(storage());
 }
 
-export function getEffective(now = new Date()) {
+// The clock. Debug only: a page opened with ?now=YYYY-MM-DDTHH:MM (local time) sees that time,
+// to check the evening look without waiting. Without the param it is the real clock.
+export function clock() {
+  try {
+    const m = /[?&]now=(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})(?:&|$)/.exec(globalThis.location?.search ?? '');
+    if (m) {
+      const d = new Date(m[1]);
+      if (!Number.isNaN(d.getTime())) return d;
+    }
+  } catch { /* no location: real clock */ }
+  return new Date();
+}
+
+export function getEffective(now = clock()) {
   return effectiveSettings(getCollection(), now);
 }
 
