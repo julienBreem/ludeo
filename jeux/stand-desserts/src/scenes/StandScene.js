@@ -1,13 +1,13 @@
 // Stand: the client walks in and shows the order as the finished cake in one big bubble.
 // The home button (top-left) goes back to the collection home. Reset lives in the home's parent space.
 import { W, H, TOUCH, BACKDROP } from '../config.js';
-import { newRound, getState, updateState, getStorage } from '../game-state.js';
+import { newRound, getState } from '../game-state.js';
 import { addIconButton } from '../ui/button.js';
 import { drawClient } from '../ui/client.js';
 import { orderCakeKey } from '../ui/orderCake.js';
 import { blink, popIn, talk } from '../ui/fx.js';
-import { goNext, goTo } from '../ui/flow.js';
-import { dur } from '../ui/pace.js';
+import { goNext, goTo, isLeaving } from '../ui/flow.js';
+import { dur, fade } from '../ui/pace.js';
 
 const CLIENT_X = 360;
 const CLIENT_Y = 470;
@@ -38,7 +38,7 @@ export class StandScene extends Phaser.Scene {
     this.drawCoins();
     addIconButton(this, 24 + TOUCH / 2, H - 24 - TOUCH / 2, 'icon-shop', () => goTo(this, 'Shop')).setDepth(500);
     // Top-left: clear of the shop (bottom-left) and of the coin counter (top-right). No confirmation.
-    addIconButton(this, 24 + TOUCH / 2, 24 + TOUCH / 2, 'icon-home', () => { window.location.href = HOME_URL; }).setDepth(500);
+    addIconButton(this, 24 + TOUCH / 2, 24 + TOUCH / 2, 'icon-home', () => this.goHome()).setDepth(500);
 
     this.client = drawClient(this, W + 220, CLIENT_Y, round.client, 'content');
     this.client.setDepth(10);
@@ -86,6 +86,16 @@ export class StandScene extends Phaser.Scene {
     this.add.image(W - 250, 60, 'coin').setScale(0.8).setDepth(500);
     this.add.text(W - 175, 60, String(coins), { ...TEXT_STYLE, fontSize: '56px', stroke: '#ffffff', strokeThickness: 8 })
       .setOrigin(0, 0.5).setDepth(500);
+  }
+
+  // Fades out (like every scene change, at the pace's speed), then opens the collection home.
+  // Coming back with the back gesture reloads the game (main.js), so the fade never stays.
+  goHome() {
+    if (isLeaving(this)) return;
+    this.__leaving = true; // goTo and repeated taps are ignored from now on
+    this.ready = false;
+    this.cameras.main.once('camerafadeoutcomplete', () => { window.location.href = HOME_URL; });
+    this.cameras.main.fadeOut(fade());
   }
 
   advance() {
