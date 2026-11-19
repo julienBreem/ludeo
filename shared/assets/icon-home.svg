@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 160 160" width="160" height="160">
+<!-- home: back to the collection home (glossy disc like the stand icons) -->
+<defs><radialGradient id="g" cx="0.4" cy="0.3" r="0.85"><stop offset="0" stop-color="#7df5e6"/><stop offset="1" stop-color="#00b8ad"/></radialGradient></defs>
+<circle cx="80" cy="84" r="70" fill="#00706e"/><circle cx="80" cy="78" r="70" fill="url(#g)" stroke="#00706e" stroke-width="3"/>
+<ellipse cx="80" cy="118" rx="52" ry="24" fill="#fff" opacity=".12"/><path d="M52 78 H108 V118 Q108 126 100 126 H60 Q52 126 52 118 Z" fill="#fff" stroke="#00706e" stroke-width="4" stroke-linejoin="round"/><path d="M70 126 V104 Q70 94 80 94 Q90 94 90 104 V126 Z" fill="#ffc107" stroke="#c98a00" stroke-width="3" stroke-linejoin="round"/><circle cx="85" cy="111" r="2.4" fill="#c98a00"/><path d="M100 44 H112 V62 L100 52 Z" fill="#fff" stroke="#00706e" stroke-width="4" stroke-linejoin="round"/><path d="M36 82 L80 40 L124 82" fill="none" stroke="#00706e" stroke-width="19" stroke-linecap="round" stroke-linejoin="round"/><path d="M36 82 L80 40 L124 82" fill="none" stroke="#fff" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/><path d="M24 64 C30 40 52 22 78 18" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round" opacity="0.7"/>
+</svg>

@@ -52,6 +52,12 @@ export const HOME_PRECACHE = [
   'shared/recommendations.js',
   'shared/runtime.js',
   'shared/store.js',
+  'shared/assets/cat-compter-observer.svg',
+  'shared/assets/home-bg-day.svg',
+  'shared/assets/home-bg-evening.svg',
+  'shared/assets/icon-gear.svg',
+  'shared/assets/icon-home.svg',
+  'shared/assets/moon.svg',
   'shared/icons/icon-192.png',
   'shared/icons/icon-512.png',
 ];
