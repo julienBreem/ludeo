@@ -352,7 +352,8 @@ export function cakeTexture(scene, key, cake, { size = FRAME, bakeGauge } = {}) 
 
 function addEating(scene, c, state) {
   let snap = null; // { key, tex, k (texture px per frame unit), img, g }
-  let eaten = 0;
+  let eaten = 0; // bites taken
+  let gone = 0; // quarters of the cake's width eaten (a small bite takes less than one)
   let busy = false;
   const ext = shapeExtent(shapeMask(scene, state.cake.shape));
   const quarter = (ext.right - ext.left) / BITES;
@@ -383,16 +384,17 @@ function addEating(scene, c, state) {
   let dir = 1;
   // Erases everything beyond x on the eaten side (frame units), with tooth scallops bulging
   // toward the part that is left.
-  const eraseFrom = (x) => {
+  // r: the scallop radius (a small bite has smaller teeth marks).
+  const eraseFrom = (x, r = jaw) => {
     const { g, tex, k } = snap;
     const toPx = v => (v + BOX / 2) * k;
     g.clear();
     g.fillStyle(0xffffff, 1);
     if (dir > 0) g.fillRect(toPx(x), 0, BOX * k, BOX * k);
     else g.fillRect(0, 0, toPx(x), BOX * k);
-    const step = jaw * 1.3;
-    for (let y = -BOX / 2 + jaw * 0.4; y < BOX / 2; y += step) {
-      g.fillCircle(toPx(x + dir * jaw * 0.25), toPx(y), jaw * k);
+    const step = r * 1.3;
+    for (let y = -BOX / 2 + r * 0.4; y < BOX / 2; y += step) {
+      g.fillCircle(toPx(x + dir * r * 0.25), toPx(y), r * k);
     }
     tex.erase(g);
   };
@@ -402,21 +404,25 @@ function addEating(scene, c, state) {
     crumbs(scene, p.x, p.y, CRUMB_COLORS, n);
   };
 
-  const oneBite = (done) => {
+  // size: the share of a quarter this bite takes (1 = a full bite).
+  const oneBite = (done, size = 1) => {
     eaten++;
-    const last = eaten >= BITES;
+    const start = gone;
+    gone = Math.min(BITES, gone + size);
+    const last = gone >= BITES - 1e-6;
+    const r = jaw * Math.min(1, Math.max(0.5, size));
     const edge = dir > 0 ? ext.right : ext.left;
-    const from = edge - dir * ((eaten - 1) * quarter - jaw * 1.4);
-    const to = edge - dir * eaten * quarter;
+    const from = edge - dir * (start * quarter - r * 1.4);
+    const to = edge - dir * gone * quarter;
     const sx = snap.img.scaleX;
     const sy = snap.img.scaleY;
     scene.tweens.addCounter({
       from, to, duration: BITE_MS, ease: 'Quad.easeOut',
-      onUpdate: tw => { if (snap.img.active) eraseFrom(tw.getValue()); },
+      onUpdate: tw => { if (snap.img.active) eraseFrom(tw.getValue(), r); },
       onComplete: () => {
         if (!snap.img.active) return;
         if (last) snap.tex.clear();
-        crumbAt(to + dir * jaw * 0.3, 20, 8);
+        crumbAt(to + dir * r * 0.3, 20, Math.round(8 * Math.min(1, size)));
         scene.tweens.add({
           targets: snap.img, scaleX: sx * 1.04, scaleY: sy * 0.96, duration: 90, yoyo: true,
           onComplete: () => { if (snap.img.active) snap.img.setScale(sx, sy); },
@@ -426,12 +432,14 @@ function addEating(scene, c, state) {
     });
   };
 
-  // eat(bites): plays `bites` more bites (total capped at 4); 4 eaten = nothing left.
+  // eat(bites): plays `bites` more bites (total capped at 4); 4 full bites = nothing left.
   // eat(0) is nibble(). onDone runs once after the last bite. fromLeft: bites start at the
-  // left edge (the eater stands on the left); taken from the first call.
-  c.eat = (bites, { onDone, fromLeft = false } = {}) => {
+  // left edge (the eater stands on the left); taken from the first call. size (0..1]: each
+  // bite takes that share of a quarter (0.5 = a small bite).
+  c.eat = (bites, { onDone, fromLeft = false, size = 1 } = {}) => {
     if (!snap && !busy) dir = fromLeft ? -1 : 1;
-    const n = Math.max(0, Math.min(BITES - eaten, Math.floor(bites ?? 0)));
+    const n = gone >= BITES - 1e-6 ? 0 : Math.max(0, Math.min(BITES - eaten, Math.floor(bites ?? 0)));
+    const sz = Math.min(1, Math.max(0.1, size));
     if (n === 0 || busy) {
       if (!busy && (bites ?? 0) <= 0) return c.nibble({ onDone });
       onDone?.();
@@ -443,7 +451,7 @@ function addEating(scene, c, state) {
     const next = () => {
       if (!c.active) return;
       if (left-- <= 0) { busy = false; onDone?.(); return; }
-      oneBite(next);
+      oneBite(next, sz);
     };
     next();
   };

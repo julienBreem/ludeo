@@ -3,7 +3,7 @@
 // animation and crumbs. Then the 5 steps are revealed one by one (icon, ok/ko, small "what went
 // wrong" picture), the face changes, coins fly into the counter and are saved once (round.paid),
 // then icon-next leads to a new client.
-import { W, H, TOUCH, COLOR_HEX, OUTLINE } from '../config.js';
+import { W, H, TOUCH, COLOR_HEX, OUTLINE, BATTER } from '../config.js';
 import { getRound, getState, updateState } from '../game-state.js';
 import { addIconButton } from '../ui/button.js';
 import { drawClient } from '../ui/client.js';
@@ -12,6 +12,7 @@ import { blink, popIn, confetti, talk } from '../ui/fx.js';
 import { goNext } from '../ui/flow.js';
 import { STEPS, scoreRound, bitesFor } from '../logic/scoring.js';
 import { GRID } from '../logic/paint.js';
+import { zoneEdges } from '../logic/zones.js';
 import { DESSERTS } from '../logic/catalog.js';
 import { addCoins } from '../logic/economy.js';
 
@@ -30,6 +31,7 @@ const CAKE_Y = BASE_Y - CAKE_BASE_Y * CAKE_SCALE;
 const FROM_X = PLATE_X + 260; // slides in from behind the result card
 const PUSH_X = 46; // 0/5: the plate is pushed away by this much
 const CHEW_MS = 520; // mouth animation per bite
+const SMALL_BITE = 0.5; // 1-2/5: one small bite (half a quarter of the cake)
 const SAFETY_MS = 1800; // per bite: the flow moves on even if a bite never reports back
 const CARD_X = 650;
 const CARD_Y = 192;
@@ -37,6 +39,7 @@ const CARD_W = 590;
 const CARD_H = 470;
 const ROW_H = 90;
 const STEP_MS = 600;
+const MINI = 110; // mini cake pictures, px
 const CX = CARD_X + CARD_W / 2; // rows pop in around the card's centre line
 const ICON_X = 720;
 const STATUS_X = 850;
@@ -77,9 +80,14 @@ export class ServiceScene extends Phaser.Scene {
     // 1. plate + cake slide in, 2. the client eats, 3. reveal steps, 4. face + coins, 5. next
     this.bites = bitesFor(coins);
     this.revealed = false;
+    // The face follows the eating: the client waits neutral, then eats with the round's mood
+    // (a perfect cake is eaten happily, a 0/5 pushed away cross).
     this.tweens.add({
       targets: [this.plate, this.cake], x: PLATE_X, duration: 700, ease: 'Sine.easeOut',
-      onComplete: () => this.eat(() => this.time.delayedCall(350, () => this.startReveal(mood))),
+      onComplete: () => {
+        this.client.setMood(mood);
+        this.eat(() => this.time.delayedCall(350, () => this.startReveal(mood)));
+      },
     });
     this.events.once('shutdown', () => this.stopBlink?.());
   }
@@ -117,7 +125,8 @@ export class ServiceScene extends Phaser.Scene {
         return;
       }
       talk(this, this.client, CHEW_MS);
-      this.cake.eat(1, { onDone: bite, fromLeft: true }); // the client stands on the left
+      // the client stands on the left; 1-2/5 is one small bite
+      this.cake.eat(1, { onDone: bite, fromLeft: true, size: this.coinsEarned <= 2 ? SMALL_BITE : 1 });
     };
     bite();
   }
@@ -211,17 +220,20 @@ export class ServiceScene extends Phaser.Scene {
   }
 
   // sign: -1, +1, 'x' or 0 (none): a red minus / green plus / red cross badge at the bottom
-  // right of the picture.
-  badge(c, x, sign) {
+  // right of the picture (or at `at` = {x, y, r}).
+  badge(c, x, sign, at = null) {
     if (!sign) return;
     const g = this.add.graphics();
-    const bx = x + 36;
-    const by = 30;
-    g.fillStyle(sign === 1 ? 0x43a047 : 0xe53935, 1).fillCircle(bx, by, 22);
-    g.lineStyle(4, OUTLINE, 1).strokeCircle(bx, by, 22);
+    const bx = at?.x ?? x + 36;
+    const by = at?.y ?? 30;
+    const r = at?.r ?? 22;
+    const u = r / 22; // cross scale
+    g.fillStyle(sign === 1 ? 0x43a047 : 0xe53935, 1).fillCircle(bx, by, r);
+    g.lineStyle(4, OUTLINE, 1).strokeCircle(bx, by, r);
     if (sign === 'x') {
-      g.lineStyle(7, 0xffffff, 1);
-      g.lineBetween(bx - 10, by - 10, bx + 10, by + 10).lineBetween(bx - 10, by + 10, bx + 10, by - 10);
+      g.lineStyle(7 * u, 0xffffff, 1);
+      const d = 10 * u;
+      g.lineBetween(bx - d, by - d, bx + d, by + d).lineBetween(bx - d, by + d, bx + d, by - d);
     } else {
       g.fillStyle(0xffffff, 1).fillRect(bx - 12, by - 3, 24, 6);
       if (sign > 0) g.fillRect(bx - 3, by - 12, 6, 24);
@@ -231,7 +243,7 @@ export class ServiceScene extends Phaser.Scene {
 
   miniCake(cake, x) {
     const c = this.add.container(0, 0);
-    const inner = drawCake(this, x, 6, cake, { size: 110, view: '3q' });
+    const inner = drawCake(this, x, 6, cake, { size: MINI, view: '3q' });
     c.add(inner);
     return c;
   }
@@ -271,9 +283,15 @@ export class ServiceScene extends Phaser.Scene {
         c.add(this.fit(`topping-${res.key ?? o.toppings[0].key}`, 76, x));
         this.badge(c, x, 'x');
         break;
-      case 'pas-melange':
-        c.add(this.fit('lumps', 84, x));
+      case 'pas-melange': {
+        // lumpy batter, close up: a batter disc with the lumps filling it
+        const g = this.add.graphics();
+        g.fillStyle(BATTER, 1).fillEllipse(x, 4, 104, 80);
+        g.lineStyle(4, OUTLINE, 1).strokeEllipse(x, 4, 104, 80);
+        c.add(g);
+        c.add(this.add.image(x - 4, 0, 'lumps').setScale(0.5, 0.42));
         break;
+      }
       case 'mauvaise-forme': {
         const shape = cake.shape ?? o.shape;
         c.add(this.fit(`shape-${shape}-fill`, 80, x).setTint(0xe6e6e6));
@@ -285,11 +303,31 @@ export class ServiceScene extends Phaser.Scene {
         c.add(this.miniCake({ ...base, bake: reason }, x));
         break;
       case 'mauvaise-couleur': {
-        // the pot she used on that zone (the judge says it is not the ordered one)
-        const want = o.glaze[res.zone ?? 0];
-        const key = res.color && COLOR_HEX[res.color] !== undefined ? res.color
-          : Object.keys(COLOR_HEX).find(k => k !== want);
-        c.add(this.fit('pot', 80, x).setTint(COLOR_HEX[key]));
+        const zone = res.zone ?? 0;
+        const want = o.glaze[zone];
+        const used = res.color && COLOR_HEX[res.color] !== undefined ? res.color : null;
+        if ((used && !o.glaze.includes(used)) || !cake.glaze?.cells) {
+          // a colour that is not in the order at all: the pot she used on that zone
+          const key = used ?? Object.keys(COLOR_HEX).find(k => k !== want);
+          c.add(this.fit('pot', 80, x).setTint(COLOR_HEX[key]));
+          break;
+        }
+        // an ordered colour in the wrong zone (left and right mixed up): her cake as she painted
+        // it, in the order's shape, with a cross on the failing zone
+        c.add(this.miniCake({ ...base, shape: o.shape, bake: 'dore', glaze: cake.glaze }, x));
+        const mask = shapeMask(this, o.shape);
+        const edges = [-Infinity, ...zoneEdges(mask, GRID, o.glaze.length), Infinity];
+        let minX = GRID;
+        let maxX = -1;
+        for (let n = 0; n < mask.length; n++) {
+          if (!mask[n]) continue;
+          minX = Math.min(minX, n % GRID);
+          maxX = Math.max(maxX, n % GRID);
+        }
+        const a = Math.max(minX, edges[zone]);
+        const b = Math.min(maxX + 1, edges[zone + 1]);
+        const fx = ((a + b) / 2) * (FRAME / GRID) - FRAME / 2; // zone centre, frame units
+        this.badge(c, x, 'x', { x: x + fx * (MINI / FRAME), y: 6, r: 16 });
         break;
       }
       case 'pas-couvert': {
