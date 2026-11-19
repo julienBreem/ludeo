@@ -1,0 +1,76 @@
+# Asset licences
+
+All art in `assets/` was drawn by hand as SVG for this project. No third-party art is used.
+The files are released under CC0 1.0 (https://creativecommons.org/publicdomain/zero/1.0/).
+
+| File | Source | Licence |
+| --- | --- | --- |
+| `assets/ingredients/ing-beurre.svg` | original — drawn for this project | CC0 |
+| `assets/ingredients/ing-chocolat.svg` | original — drawn for this project | CC0 |
+| `assets/ingredients/ing-farine.svg` | original — drawn for this project | CC0 |
+| `assets/ingredients/ing-lait.svg` | original — drawn for this project | CC0 |
+| `assets/ingredients/ing-oeuf.svg` | original — drawn for this project | CC0 |
+| `assets/ingredients/ing-sucre.svg` | original — drawn for this project | CC0 |
+| `assets/desserts/dessert-cupcake.svg` | original — drawn for this project | CC0 |
+| `assets/desserts/dessert-gateau.svg` | original — drawn for this project | CC0 |
+| `assets/desserts/dessert-tarte.svg` | original — drawn for this project | CC0 |
+| `assets/shapes/shape-carre-fill.svg` | original — drawn for this project | CC0 |
+| `assets/shapes/shape-carre-line.svg` | original — drawn for this project | CC0 |
+| `assets/shapes/shape-carre-side.svg` | original — drawn for this project | CC0 |
+| `assets/shapes/shape-coeur-fill.svg` | original — drawn for this project | CC0 |
+| `assets/shapes/shape-coeur-line.svg` | original — drawn for this project | CC0 |
+| `assets/shapes/shape-coeur-side.svg` | original — drawn for this project | CC0 |
+| `assets/shapes/shape-etoile-fill.svg` | original — drawn for this project | CC0 |
+| `assets/shapes/shape-etoile-line.svg` | original — drawn for this project | CC0 |
+| `assets/shapes/shape-etoile-side.svg` | original — drawn for this project | CC0 |
+| `assets/shapes/shape-licorne-fill.svg` | original — drawn for this project | CC0 |
+| `assets/shapes/shape-licorne-line.svg` | original — drawn for this project | CC0 |
+| `assets/shapes/shape-licorne-side.svg` | original — drawn for this project | CC0 |
+| `assets/shapes/shape-rond-fill.svg` | original — drawn for this project | CC0 |
+| `assets/shapes/shape-rond-line.svg` | original — drawn for this project | CC0 |
+| `assets/shapes/shape-rond-side.svg` | original — drawn for this project | CC0 |
+| `assets/molds/mold-carre-back.svg` | original — drawn for this project | CC0 |
+| `assets/molds/mold-carre-front.svg` | original — drawn for this project | CC0 |
+| `assets/molds/mold-coeur-back.svg` | original — drawn for this project | CC0 |
+| `assets/molds/mold-coeur-front.svg` | original — drawn for this project | CC0 |
+| `assets/molds/mold-etoile-back.svg` | original — drawn for this project | CC0 |
+| `assets/molds/mold-etoile-front.svg` | original — drawn for this project | CC0 |
+| `assets/molds/mold-licorne-back.svg` | original — drawn for this project | CC0 |
+| `assets/molds/mold-licorne-front.svg` | original — drawn for this project | CC0 |
+| `assets/molds/mold-rond-back.svg` | original — drawn for this project | CC0 |
+| `assets/molds/mold-rond-front.svg` | original — drawn for this project | CC0 |
+| `assets/toppings/topping-bonbon.svg` | original — drawn for this project | CC0 |
+| `assets/toppings/topping-bougie.svg` | original — drawn for this project | CC0 |
+| `assets/toppings/topping-chantilly.svg` | original — drawn for this project | CC0 |
+| `assets/toppings/topping-etoile.svg` | original — drawn for this project | CC0 |
+| `assets/toppings/topping-fraise.svg` | original — drawn for this project | CC0 |
+| `assets/toppings/topping-pepites.svg` | original — drawn for this project | CC0 |
+| `assets/toppings/topping-vermicelles.svg` | original — drawn for this project | CC0 |
+| `assets/decos/deco-auvent.svg` | original — drawn for this project | CC0 |
+| `assets/decos/deco-guirlande.svg` | original — drawn for this project | CC0 |
+| `assets/decos/deco-pancarte.svg` | original — drawn for this project | CC0 |
+| `assets/kitchen/bowl.svg` | original — drawn for this project | CC0 |
+| `assets/kitchen/flame.svg` | original — drawn for this project | CC0 |
+| `assets/kitchen/lumps.svg` | original — drawn for this project | CC0 |
+| `assets/kitchen/oven.svg` | original — drawn for this project | CC0 |
+| `assets/kitchen/pot.svg` | original — drawn for this project | CC0 |
+| `assets/kitchen/whisk.svg` | original — drawn for this project | CC0 |
+| `assets/client/client-body.svg` | original — drawn for this project | CC0 |
+| `assets/client/client-hair-1.svg` | original — drawn for this project | CC0 |
+| `assets/client/client-hair-2.svg` | original — drawn for this project | CC0 |
+| `assets/client/client-hair-3.svg` | original — drawn for this project | CC0 |
+| `assets/client/client-head.svg` | original — drawn for this project | CC0 |
+| `assets/client/face-bof.svg` | original — drawn for this project | CC0 |
+| `assets/client/face-content.svg` | original — drawn for this project | CC0 |
+| `assets/client/face-fache.svg` | original — drawn for this project | CC0 |
+| `assets/stand/bubble.svg` | original — drawn for this project | CC0 |
+| `assets/stand/coin.svg` | original — drawn for this project | CC0 |
+| `assets/stand/stand-awning.svg` | original — drawn for this project | CC0 |
+| `assets/stand/stand-counter.svg` | original — drawn for this project | CC0 |
+| `assets/ui/icon-go.svg` | original — drawn for this project | CC0 |
+| `assets/ui/icon-ko.svg` | original — drawn for this project | CC0 |
+| `assets/ui/icon-next.svg` | original — drawn for this project | CC0 |
+| `assets/ui/icon-ok.svg` | original — drawn for this project | CC0 |
+| `assets/ui/icon-out.svg` | original — drawn for this project | CC0 |
+| `assets/ui/icon-restart.svg` | original — drawn for this project | CC0 |
+| `assets/ui/icon-shop.svg` | original — drawn for this project | CC0 |
