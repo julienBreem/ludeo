@@ -10,27 +10,49 @@ function extremeColumns(mask, size) {
   return maxX < minX ? null : { minX, maxX };
 }
 
+// Equal-area bands: the n bands split the silhouette's cells into (nearly) equal counts. Whole
+// columns go to one band; each cut is the column boundary whose cumulative cell count is closest
+// to k/n of the total (every band keeps at least one column when the silhouette is wide enough).
+// Returns the n-1 cut columns (absolute x of the first column of bands 1..n-1), or null.
+function zoneCuts(mask, size, n) {
+  const ext = extremeColumns(mask, size);
+  if (!ext) return null;
+  const width = ext.maxX - ext.minX + 1;
+  const cum = new Array(width + 1).fill(0); // cum[b] = cells in columns minX .. minX+b-1
+  for (let i = 0; i < mask.length; i++) if (mask[i]) cum[(i % size) - ext.minX + 1]++;
+  for (let b = 1; b <= width; b++) cum[b] += cum[b - 1];
+  const total = cum[width];
+  const cuts = [];
+  let prev = 0;
+  for (let k = 1; k < n; k++) {
+    const target = (total * k) / n;
+    const lo = Math.min(width, prev + 1);
+    const hi = Math.max(lo, width - (n - k));
+    let best = lo;
+    for (let b = lo; b <= hi; b++) if (Math.abs(cum[b] - target) < Math.abs(cum[best] - target)) best = b;
+    cuts.push(ext.minX + best);
+    prev = best;
+  }
+  return cuts;
+}
+
 export function zoneMap(mask, size, n) {
   const out = new Int8Array(size * size).fill(-1);
-  const ext = extremeColumns(mask, size);
-  if (!ext) return out;
-  const width = ext.maxX - ext.minX + 1;
+  const cuts = zoneCuts(mask, size, n);
+  if (!cuts) return out;
   for (let i = 0; i < mask.length; i++) {
     if (!mask[i]) continue;
     const x = i % size;
-    out[i] = Math.min(n - 1, Math.floor(((x - ext.minX) * n) / width));
+    let z = 0;
+    while (z < cuts.length && x >= cuts[z]) z++;
+    out[i] = z;
   }
   return out;
 }
 
-// Band boundaries in cell x units: the n-1 x values where a band starts.
+// Band boundaries in cell x units: the n-1 x values where a band starts (the dotted guides).
 export function zoneEdges(mask, size, n) {
-  const ext = extremeColumns(mask, size);
-  if (!ext) return [];
-  const width = ext.maxX - ext.minX + 1;
-  const edges = [];
-  for (let k = 1; k < n; k++) edges.push(ext.minX + (width * k) / n);
-  return edges;
+  return zoneCuts(mask, size, n) ?? [];
 }
 
 // Topping anchors in cell units, laid out symmetrically about the mask's vertical axis (the
