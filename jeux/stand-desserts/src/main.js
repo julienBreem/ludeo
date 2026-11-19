@@ -26,6 +26,13 @@ const game = new Phaser.Game({
 
 if (window.__errors) window.__game = game;
 
+// Back gesture to the game after a trip home: the browser may restore this page as it was left
+// (back-forward cache), with the coins, the pace and the evening look of that time, although the
+// parent may have reset the game or changed the settings meanwhile. Start again from storage.
+window.addEventListener('pageshow', (e) => {
+  if (e.persisted) window.location.reload();
+});
+
 // Offline play: the collection's single service worker lives at the site root (two levels up).
 // Relative path so it works from a sub-folder or sub-domain.
 if ('serviceWorker' in navigator) {

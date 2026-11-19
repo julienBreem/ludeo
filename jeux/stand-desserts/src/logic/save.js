@@ -47,3 +47,16 @@ export function resetState(storage) {
   }
   return defaultState();
 }
+
+// The State to work on. Storage is the only truth: a copy kept in memory can be stale (a page
+// restored by the back gesture after the parent reset the game on the home must not write its
+// old coins back). memory is used only when storage is refused (null).
+export function currentState(storage, memory) {
+  return storage ? loadState(storage) : (memory ?? defaultState());
+}
+
+// Reads the current State, applies fn and saves the result. Returns { state, saved }.
+export function updateStored(storage, memory, fn) {
+  const state = fn(currentState(storage, memory));
+  return { state, saved: storage ? saveState(storage, state) : false };
+}

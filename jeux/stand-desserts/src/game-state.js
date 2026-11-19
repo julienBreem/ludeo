@@ -1,11 +1,12 @@
-// In-memory game State (persisted through logic/save.js) and the current Round.
-import { loadState, saveState } from './logic/save.js';
+// Game State (persisted through logic/save.js) and the current Round.
+// The State is always re-read from storage (logic/save.js currentState): the copy kept here is
+// only a fallback for a browser that refuses storage, never written over the stored one.
+import { currentState, updateStored } from './logic/save.js';
 import { generateOrder } from './logic/order.js';
 import { createRound } from './logic/round.js';
 import { generateClient } from '../../../shared/client.js';
 
-
-let state = null;
+let state = null; // last State read or written (fallback when storage is refused)
 let round = null;
 
 // localStorage, or null when the browser refuses access (private mode, blocked storage).
@@ -21,14 +22,13 @@ export function getStorage() {
 }
 
 export function getState() {
-  if (!state) state = loadState(getStorage());
+  state = currentState(getStorage(), state);
   return state;
 }
 
-// Applies fn to the current State, keeps the result and saves it.
+// Applies fn to the stored State (not to an older copy) and saves the result.
 export function updateState(fn) {
-  state = fn(getState());
-  saveState(getStorage(), state);
+  state = updateStored(getStorage(), state, fn).state;
   return state;
 }
 

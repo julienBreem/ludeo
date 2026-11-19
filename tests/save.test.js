@@ -1,6 +1,7 @@
 import test from 'node:test';
+import fs from 'node:fs';
 import assert from 'node:assert/strict';
-import { STORAGE_KEY, defaultState, loadState, saveState, resetState } from '../jeux/stand-desserts/src/logic/save.js';
+import { STORAGE_KEY, defaultState, loadState, saveState, resetState, currentState, updateStored } from '../jeux/stand-desserts/src/logic/save.js';
 import { starterOwned } from '../jeux/stand-desserts/src/logic/catalog.js';
 
 function fakeStorage() {
@@ -78,4 +79,39 @@ test('reset removes the key', () => {
   saveState(s, { ...defaultState(), coins: 4 });
   assert.deepEqual(resetState(s), defaultState());
   assert.equal(s.getItem(STORAGE_KEY), null);
+});
+
+// I1: a page restored by the back gesture still holds the old State in memory; the parent has
+// reset the game meanwhile. Its next save must build on the reset, not on the stale copy.
+test('a save after a reset builds on storage, not on a stale copy in memory', () => {
+  const s = fakeStorage();
+  const stale = { ...defaultState(), coins: 37 };
+  saveState(s, stale);
+  resetState(s); // the parent space, on the home
+  const add2 = st => ({ ...st, coins: st.coins + 2 });
+  const { state, saved } = updateStored(s, stale, add2);
+  assert.equal(saved, true);
+  assert.equal(state.coins, 2);
+  assert.equal(loadState(s).coins, 2);
+});
+
+test('currentState reads storage first, memory only when storage is refused', () => {
+  const s = fakeStorage();
+  const mem = { ...defaultState(), coins: 9 };
+  assert.deepEqual(currentState(s, mem), defaultState()); // stored nothing: the reset wins
+  saveState(s, { ...defaultState(), coins: 4 });
+  assert.equal(currentState(s, mem).coins, 4);
+  assert.equal(currentState(null, mem).coins, 9);
+  assert.deepEqual(currentState(null, null), defaultState());
+});
+
+test('updateStored without storage keeps going in memory', () => {
+  const { state, saved } = updateStored(null, { ...defaultState(), coins: 3 }, st => ({ ...st, coins: st.coins + 1 }));
+  assert.equal(state.coins, 4);
+  assert.equal(saved, false);
+});
+
+test('the game reloads when the browser restores it from the back-forward cache', () => {
+  const main = fs.readFileSync(new URL('../jeux/stand-desserts/src/main.js', import.meta.url), 'utf8');
+  assert.match(main, /addEventListener\('pageshow', \(e\) => \{\s*if \(e\.persisted\) window\.location\.reload\(\);/);
 });
