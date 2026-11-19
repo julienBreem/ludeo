@@ -58,3 +58,17 @@ test('with a single colour and topping owned, sizes cap at 1', () => {
   assert.deepEqual(o.glaze, ['rose']);
   assert.equal(o.toppings.length, 1);
 });
+
+test('parseOrderParam (debug order): valid, defaults, rejects unknown or malformed', async () => {
+  const { parseOrderParam } = await import('../jeux/stand-desserts/src/logic/order.js');
+  assert.deepEqual(parseOrderParam('licorne/rose-violet-jaune/fraise:2-bougie:1-chantilly:3'), {
+    dessert: 'gateau', shape: 'licorne', glaze: ['rose', 'violet', 'jaune'],
+    toppings: [{ key: 'fraise', count: 2 }, { key: 'bougie', count: 1 }, { key: 'chantilly', count: 3 }],
+  });
+  assert.equal(parseOrderParam('rond/rose/fraise:1/tarte').dessert, 'tarte');
+  for (const bad of [null, '', 'rond', 'rond/rose', 'triangle/rose/fraise:1', 'rond/noir/fraise:1', 'rond/rose-rose/fraise:1',
+    'rond/rose/fraise:7', 'rond/rose/fraise', 'rond/rose/fraise:1-fraise:2', 'rond/rose/fraise:1/pizza', 'rond/rose/fraise:1/gateau/x',
+    'rond/rose-violet-jaune-blanc/fraise:1', 'rond/rose/fraise:1-bougie:1-bonbon:1-etoile:1']) {
+    assert.equal(parseOrderParam(bad), null, String(bad));
+  }
+});

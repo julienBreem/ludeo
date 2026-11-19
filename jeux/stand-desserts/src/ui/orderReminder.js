@@ -1,5 +1,6 @@
-// Order strip, top-left: the ordered cake in 3/4 (one cached texture per order), with the layer
-// of the current step glowing: dough -> side band, mould -> outline, bake -> the whole cake,
+// Order strip, top-left. At Commande N2 / N3 it shows the order's words / sentence instead (the
+// memory part of those levels), with the current step's words marked. At N1: the ordered cake in
+// 3/4 (one cached texture per order), with the layer of the current step glowing: dough -> side band, mould -> outline, bake -> the whole cake,
 // paint -> the glazed top, toppings -> the toppings. No digits, no icon list.
 // The glow is a solid-colour halo behind the cake (setTintFill: the layer's silhouette in GLOW,
 // whatever its own colours; for toppings a yellow ring around each one, over the cake) plus a
@@ -9,6 +10,8 @@
 import { TOP_SQUASH, BACKDROP } from '../config.js';
 import { FRAME, TOPPING_SIZE } from './cakeView.js';
 import { idealCake, orderCakeKey, orderSig, ORDER_PX } from './orderCake.js';
+import { orderSentenceParts, orderWordParts } from '../logic/orderText.js';
+import { ensureWordTextures, flowParts } from './words.js';
 
 const X = 16;
 const Y = 16;
@@ -25,7 +28,7 @@ const FILL_STEPS = ['pate', 'moule', 'cuisson'];
 
 // A highlight texture: the step's layer as a solid GLOW silhouette, at the same scale and centre as the
 // cake texture. `halo` spreads it around (copies on two rings) so it shows beyond the cake.
-function highlightKey(scene, order, step, halo) {
+export function highlightKey(scene, order, step, halo) {
   const key = `order-hl-${orderSig(order)}-${step}-${halo ? 'halo' : 'fill'}`;
   if (scene.textures.exists(key)) return key;
   const cake = idealCake(scene, order);
@@ -84,11 +87,43 @@ function highlightKey(scene, order, step, halo) {
   return key;
 }
 
+// The words of the order that belong to a step (the dough and the bake have none).
+const STEP_KIND = { moule: 'forme', couleur: 'couleur', toppings: 'topping' };
+const WORDS_W = 300; // text width of the word card
+const WORDS_PAD = 14;
+
+// Commande N2 / N3: the card shows the words (N2, by category with pictograms) or the sentence
+// (N3) instead of the picture; the step's words get a pulsing marker.
+function addWordReminder(scene, order, step, level) {
+  ensureWordTextures(scene);
+  const kind = STEP_KIND[step];
+  const parts = level >= 3 ? orderSentenceParts(order) : orderWordParts(order);
+  const text = flowParts(scene, parts, { width: WORDS_W, fontSize: 22, mark: p => !!kind && p.kind === kind });
+  const w = text.w + 2 * WORDS_PAD;
+  const h = text.h + 2 * WORDS_PAD - 4;
+  const c = scene.add.container(X, Y).setDepth(400);
+  const bg = scene.add.graphics();
+  bg.fillStyle(0x000000, 0.15).fillRoundedRect(3, 5, w, h, 22);
+  bg.fillStyle(0xffffff, 1).fillRoundedRect(0, 0, w, h, 22);
+  text.setPosition(WORDS_PAD, WORDS_PAD - 2);
+  c.add([bg, text]);
+  c.words = text;
+  if (text.marked) {
+    c.glow = scene.tweens.add({
+      targets: text.markers, alpha: { from: 0.35, to: 1 }, duration: 650, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+    });
+  }
+  return c;
+}
+
 /**
- * addOrderReminder(scene, order, step: 'pate'|'moule'|'cuisson'|'couleur'|'toppings') -> Container
- * The card sits at the top-left, depth 400. Its pulse is a tween owned by the scene.
+ * addOrderReminder(scene, order, step: 'pate'|'moule'|'cuisson'|'couleur'|'toppings', level = 1)
+ *   -> Container
+ * The card sits at the top-left, depth 400. Its pulse is a tween owned by the scene. `level` is
+ * the round's Commande level: 1 shows the cake, 2 the words, 3 the sentence.
  */
-export function addOrderReminder(scene, order, step) {
+export function addOrderReminder(scene, order, step, level = 1) {
+  if (level >= 2) return addWordReminder(scene, order, step, level);
   const c = scene.add.container(X, Y).setDepth(400);
   const bg = scene.add.graphics();
   bg.fillStyle(0x000000, 0.15).fillRoundedRect(3, 5, CARD_W, CARD_H, 22);

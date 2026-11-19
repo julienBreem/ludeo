@@ -2,7 +2,7 @@
 // The State is always re-read from storage (logic/save.js currentState): the copy kept here is
 // only a fallback for a browser that refuses storage, never written over the stored one.
 import { currentState, updateStored } from './logic/save.js';
-import { generateOrder } from './logic/order.js';
+import { generateOrder, parseOrderParam } from './logic/order.js';
 import { createRound } from './logic/round.js';
 import { generateClient } from '../../../shared/client.js';
 import { phaseLevels } from '../../../shared/runtime.js';
@@ -39,10 +39,21 @@ export function updateState(fn) {
 export function newRound() {
   const previous = round?.client ?? null;
   const levels = phaseLevels(ID);
-  round = createRound(generateOrder(getState().owned));
+  round = createRound(debugOrder() ?? generateOrder(getState().owned));
   round.client = generateClient(Math.random, previous);
   round.levels = levels;
   return round;
+}
+
+// Debug only: ?debug&order=<shape>/<colours>/<toppings>[/<dessert>] (logic/order.js parseOrderParam)
+// gives every new client that order.
+function debugOrder() {
+  try {
+    const q = new URLSearchParams(window.location.search);
+    return q.has('debug') ? parseOrderParam(q.get('order')) : null;
+  } catch {
+    return null;
+  }
 }
 
 export function getRound() {

@@ -105,12 +105,14 @@ export const PRECACHE = [
   'src/logic/catalog.js',
   'src/logic/economy.js',
   'src/logic/order.js',
+  'src/logic/orderText.js',
   'src/logic/paint.js',
   'src/logic/rng.js',
   'src/logic/round.js',
   'src/logic/save.js',
   'src/logic/scoring.js',
   'src/logic/stir.js',
+  'src/logic/tagLayout.js',
   'src/logic/zones.js',
   'src/scenes/BakeScene.js',
   'src/scenes/BootScene.js',
@@ -130,6 +132,7 @@ export const PRECACHE = [
   'src/ui/orderReminder.js',
   'src/ui/pace.js',
   'src/ui/stepBar.js',
+  'src/ui/words.js',
   // the shared client layers are in the home's precache
   ...ASSETS.map(a => a.file).filter(f => !f.startsWith('../')),
 ];

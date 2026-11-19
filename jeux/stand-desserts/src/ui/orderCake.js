@@ -3,7 +3,7 @@
 import { TOP_SQUASH } from '../config.js';
 import { GRID } from '../logic/paint.js';
 import { zoneMap, layoutToppings } from '../logic/zones.js';
-import { shapeMask, cakeTexture, FRAME } from './cakeView.js';
+import { shapeMask, cakeTexture, FRAME, TOPPING_SIZE } from './cakeView.js';
 
 const CELL = FRAME / GRID; // frame units per grid cell
 // Wanted gap between topping anchors, in cells of the 3/4 view (a standing topping is about
@@ -11,6 +11,7 @@ const CELL = FRAME / GRID; // frame units per grid cell
 const SPREAD = 12;
 const GOOD = 10.5; // a gap this wide (about one topping's visible width) is enough
 const ERODE = [6, 5, 4, 3, 2, 1, 0]; // keep topping centres this many cells inside the silhouette
+const STAND_ORIGIN_Y = 0.8; // as cakeView: a standing topping stands on this point of its image
 
 // Mask cells with every cell within r (Chebyshev) also inside.
 function erode(mask, r) {
@@ -217,4 +218,70 @@ export function orderCakeKey(scene, order) {
   lastSig = sig;
   if (!scene.textures.exists(key)) cakeTexture(scene, key, idealCake(scene, order), { size: ORDER_PX });
   return key;
+}
+
+// ---- geometry of the order picture (Commande N1 labels) ---------------------------------------
+const SIDE_DEPTH = 64; // the 3/4 side band continues this far below the squashed top face
+const STAND_UP = TOPPING_SIZE * STAND_ORIGIN_Y; // a standing topping rises this far above its spot
+const STAND_DOWN = TOPPING_SIZE * (1 - STAND_ORIGIN_Y);
+
+/**
+ * orderGeometry(scene, order) -> {bbox: {left, right, top, bottom}, shape: {x, y},
+ *   zones: Array<{x, y, cells: number[]}>, toppings: Array<{x, y, spots: Array<{x, y}>}>}
+ * In frame units around the cake centre, as the cake shows in 3/4 (orderCakeKey's picture):
+ * bbox holds the whole cake (side band and standing toppings included); shape is a point on the
+ * outline's right edge; zones[i] a point on the top face just behind its front edge (and the
+ * zone's grid cells); toppings[i] (per order.toppings entry) the middle of the back-most topping
+ * of that kind, with every spot of that kind (standing points).
+ */
+export function orderGeometry(scene, order) {
+  const mask = shapeMask(scene, order.shape);
+  const n = Math.max(1, order.glaze.length);
+  const zones = zoneMap(mask, GRID, n);
+  const fx = u => u * CELL - FRAME / 2;
+  const fy = v => (v * CELL - FRAME / 2) * TOP_SQUASH;
+  let minX = GRID; let maxX = -1; let minY = GRID; let maxY = -1;
+  for (let i = 0; i < mask.length; i++) {
+    if (!mask[i]) continue;
+    const x = i % GRID; const y = Math.floor(i / GRID);
+    minX = Math.min(minX, x); maxX = Math.max(maxX, x); minY = Math.min(minY, y); maxY = Math.max(maxY, y);
+  }
+  const bbox = { left: fx(minX), right: fx(maxX + 1), top: fy(minY), bottom: fy(maxY + 1) + SIDE_DEPTH };
+  // right edge of the outline: the middle of the rightmost column
+  const rows = [];
+  for (let y = 0; y < GRID; y++) if (mask[y * GRID + maxX]) rows.push(y);
+  const midRow = rows.length ? rows[Math.floor(rows.length / 2)] : GRID / 2;
+  const shape = { x: fx(maxX + 1) - CELL * 0.5, y: fy(midRow + 0.5) };
+  const zoneOut = [];
+  for (let z = 0; z < order.glaze.length; z++) {
+    const cells = [];
+    let sx = 0;
+    for (let i = 0; i < zones.length; i++) if (zones[i] === z) { cells.push(i); sx += i % GRID; }
+    const col = cells.length ? Math.round(sx / cells.length) : GRID / 2;
+    let row = -1; let top = GRID;
+    for (const i of cells) {
+      if (i % GRID !== col) continue;
+      const y = Math.floor(i / GRID);
+      row = Math.max(row, y); top = Math.min(top, y);
+    }
+    if (row < 0) { row = GRID / 2; top = row; }
+    // a little behind the front edge, never past the zone's middle
+    const v = Math.max((top + row + 1) / 2, row + 1 - 4);
+    zoneOut.push({ x: fx(col + 0.5), y: fy(v), cells });
+  }
+  const cake = idealCake(scene, order);
+  const toppings = order.toppings.map(t => {
+    const spots = cake.toppings.filter(p => p.key === t.key).map(p => ({ x: p.x, y: p.y * TOP_SQUASH }));
+    let best = spots[0] ?? { x: 0, y: 0 };
+    for (const p of spots) if (p.y < best.y) best = p;
+    return { x: best.x, y: best.y - TOPPING_SIZE * 0.42, spots };
+  });
+  for (const p of cake.toppings) {
+    const y = p.y * TOP_SQUASH;
+    bbox.left = Math.min(bbox.left, p.x - TOPPING_SIZE / 2);
+    bbox.right = Math.max(bbox.right, p.x + TOPPING_SIZE / 2);
+    bbox.top = Math.min(bbox.top, y - STAND_UP);
+    bbox.bottom = Math.max(bbox.bottom, y + STAND_DOWN);
+  }
+  return { bbox, shape, zones: zoneOut, toppings };
 }

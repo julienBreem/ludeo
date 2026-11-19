@@ -77,7 +77,7 @@ export class PaintScene extends Phaser.Scene {
     this.painted = false;
 
     this.cameras.main.setBackgroundColor(0xf3e5f5);
-    addOrderReminder(this, round.order, 'couleur');
+    addOrderReminder(this, round.order, 'couleur', round.levels?.commande);
 
     this.cake = drawCake(this, CAKE_X, CAKE_Y, { ...round.cake, shape, glaze: null, toppings: [] },
       { size: CAKE_SIZE, view: 'top' });

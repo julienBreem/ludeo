@@ -52,7 +52,7 @@ export class DoughScene extends Phaser.Scene {
     this.lastAngle = null;
 
     this.cameras.main.setBackgroundColor(0xfff3e0);
-    addOrderReminder(this, round.order, 'pate');
+    addOrderReminder(this, round.order, 'pate', round.levels?.commande);
     this.drawShelf();
     this.drawRecipeCard();
 

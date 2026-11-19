@@ -1,4 +1,4 @@
-import { DESSERTS, ownedKeys } from './catalog.js';
+import { DESSERTS, ITEMS, ownedKeys } from './catalog.js';
 
 export const ZONE_WEIGHTS = [0.5, 0.35, 0.15];
 export const KIND_WEIGHTS = [0.5, 0.35, 0.15];
@@ -41,4 +41,28 @@ export function generateOrder(owned, rng = Math.random) {
     glaze,
     toppings: keys.map((key, i) => ({ key, count: counts[i] })),
   };
+}
+
+/**
+ * parseOrderParam(value) -> Order | null (debug: ?debug&order=<value>)
+ * `<shape>/<colour>-<colour>/<topping>:<n>-<topping>:<n>[/<dessert>]`, e.g.
+ * `licorne/rose-violet-jaune/fraise:2-bougie:1-chantilly:3`. Any catalog key is accepted, owned
+ * or not; anything unknown or malformed gives null. The dessert defaults to gateau.
+ */
+export function parseOrderParam(value) {
+  if (typeof value !== 'string') return null;
+  const [shape, glazeStr, toppingStr, dessert = 'gateau', ...rest] = value.split('/');
+  if (rest.length || !glazeStr || !toppingStr) return null;
+  const known = (kind, key) => ITEMS.some(i => i.kind === kind && i.key === key);
+  if (!known('shape', shape) || !(dessert in DESSERTS)) return null;
+  const glaze = glazeStr.split('-');
+  if (glaze.length > 3 || new Set(glaze).size !== glaze.length || !glaze.every(c => known('color', c))) return null;
+  const toppings = [];
+  for (const t of toppingStr.split('-')) {
+    const m = /^([a-z]+):([1-6])$/.exec(t);
+    if (!m || !known('topping', m[1]) || toppings.some(x => x.key === m[1])) return null;
+    toppings.push({ key: m[1], count: Number(m[2]) });
+  }
+  if (toppings.length > 3) return null;
+  return { dessert, shape, glaze, toppings };
 }

@@ -3,7 +3,8 @@
 // animation and crumbs. Then the 5 steps are revealed one by one (icon, ok/ko, small "what went
 // wrong" picture), the face changes, coins fly into the counter and are saved once (round.paid),
 // then icon-next leads to a new client. Each scored phase's result is saved once (round.recorded)
-// for the parent's level proposals.
+// for the parent's level proposals. At Commande N2 / N3 a card at the bottom repeats the order's
+// words / sentence, with the words of the failed points marked.
 import { W, H, TOUCH, COLOR_HEX, OUTLINE, BATTER, TOP_SQUASH } from '../config.js';
 import { getRound, getState, updateState } from '../game-state.js';
 import { addIconButton } from '../ui/button.js';
@@ -17,6 +18,8 @@ import { zoneEdges } from '../logic/zones.js';
 import { DESSERTS } from '../logic/catalog.js';
 import { addCoins } from '../logic/economy.js';
 import { dur } from '../ui/pace.js';
+import { orderSentenceParts, orderWordParts, failedElements } from '../logic/orderText.js';
+import { ensureWordTextures, flowParts } from '../ui/words.js';
 import { recordPhaseResult } from '../../../../shared/runtime.js';
 import { ID } from '../../collection.js';
 
@@ -49,6 +52,10 @@ const CX = CARD_X + CARD_W / 2; // rows pop in around the card's centre line
 const ICON_X = 720;
 const STATUS_X = 850;
 const REASON_X = 1000;
+// Commande N2 / N3 word recap: a card along the bottom, clear of icon-next
+const RECAP_LEFT = 30;
+const RECAP_RIGHT = W - 24 - TOUCH - 24;
+const RECAP_PAD = 14;
 const TEXT_STYLE = { fontFamily: 'Arial Black, Arial, sans-serif', color: '#222222' };
 
 export class ServiceScene extends Phaser.Scene {
@@ -80,6 +87,8 @@ export class ServiceScene extends Phaser.Scene {
     this.card.fillStyle(0xffffff, 1).fillRoundedRect(CARD_X, CARD_Y, CARD_W, CARD_H, 36);
     this.card.lineStyle(6, OUTLINE, 1).strokeRoundedRect(CARD_X, CARD_Y, CARD_W, CARD_H, 36);
 
+    this.drawWordRecap();
+
     this.next = addIconButton(this, W - 24 - TOUCH / 2, H - 24 - TOUCH / 2, 'icon-next', () => this.leave());
     this.next.setDepth(500).setVisible(false).disableInteractive();
 
@@ -107,6 +116,41 @@ export class ServiceScene extends Phaser.Scene {
       const res = this.round.results[step];
       if (res) recordPhaseResult(ID, step, res.ok === true); // no result: not played (debug entry)
     }
+  }
+
+  // Commande N2 / N3: the order as she read it, the words (N2) or the sentence (N3), on a card
+  // under the result card. The words tied to a failed point (shape, the failing zone's colour,
+  // the topping kind) get a marker once every row is revealed (markWords).
+  drawWordRecap() {
+    const level = this.round.levels?.commande ?? 1;
+    if (level < 2) return;
+    ensureWordTextures(this);
+    const o = this.round.order;
+    const failed = failedElements(o, this.round.results);
+    const isFailed = p => failed.some(f => f.kind === p.kind && f.index === p.index);
+    const parts = level >= 3 ? orderSentenceParts(o) : orderWordParts(o).map(p => (p.br ? { text: ' ' } : p));
+    const width = RECAP_RIGHT - RECAP_LEFT - 2 * RECAP_PAD;
+    const text = flowParts(this, parts, { width, fontSize: 28, mark: isFailed });
+    const h = text.h + 2 * RECAP_PAD - 4;
+    const top = H - 14 - h;
+    const bg = this.add.graphics().setDepth(34);
+    bg.fillStyle(0x000000, 0.15).fillRoundedRect(RECAP_LEFT + 3, top + 5, RECAP_RIGHT - RECAP_LEFT, h, 24);
+    bg.fillStyle(0xffffff, 1).fillRoundedRect(RECAP_LEFT, top, RECAP_RIGHT - RECAP_LEFT, h, 24);
+    bg.lineStyle(4, OUTLINE, 1).strokeRoundedRect(RECAP_LEFT, top, RECAP_RIGHT - RECAP_LEFT, h, 24);
+    text.setPosition(RECAP_LEFT + RECAP_PAD, top + RECAP_PAD - 2).setDepth(35);
+    text.markers.setAlpha(0);
+    this.recap = text;
+  }
+
+  markWords() {
+    const text = this.recap;
+    if (!text?.marked) return;
+    this.tweens.add({
+      targets: text.markers, alpha: 1, duration: dur(300),
+      onComplete: () => this.tweens.add({
+        targets: text.markers, alpha: { from: 1, to: 0.55 }, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+      }),
+    });
   }
 
   // Eats this.bites bites one after the other (chewing mouth each time), or nibbles and pushes
@@ -177,6 +221,7 @@ export class ServiceScene extends Phaser.Scene {
   reveal(i, mood) {
     if (i >= STEPS.length) {
       this.client.setMood(mood);
+      this.markWords();
       if (this.coinsEarned === 5) confetti(this);
       this.time.delayedCall(dur(500), () => this.payout());
       return;

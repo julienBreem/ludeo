@@ -4,6 +4,8 @@
 // (&alt=1 picks the other colour/topping failure reasons), e.g. ?scene=Service&score=3.
 // Levels: ?debug&level=<phase>:<n>,... (e.g. ?debug&level=pate:3) forces phase levels for this page
 // (shared/runtime.js phaseLevels), for the sample round and every new client.
+// Order: ?debug&order=<shape>/<colours>/<toppings>[/<dessert>] (e.g. licorne/rose-violet-jaune/
+// fraise:2-bougie:1-chantilly:3) gives every new client that order (game-state.js newRound).
 import { createRound } from './logic/round.js';
 import { STEPS } from './logic/scoring.js';
 import { generateClient } from '../../../shared/client.js';

@@ -56,7 +56,7 @@ export class BakeScene extends Phaser.Scene {
     this.heatEvent = null;
 
     this.cameras.main.setBackgroundColor(0xffebee);
-    addOrderReminder(this, round.order, 'cuisson');
+    addOrderReminder(this, round.order, 'cuisson', round.levels?.commande);
     this.drawTargetFlames();
 
     this.add.image(OVEN_X, OVEN_Y, 'oven');
