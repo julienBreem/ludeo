@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 300 300" width="300" height="300">
+<!-- client body: white and grey only (tinted in code), open at the bottom to sink behind the counter; same 300x300 frame as the other client parts -->
+<defs><linearGradient id="b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#cfcfcf"/></linearGradient><filter id="f" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="6"/></filter></defs>
+<path d="M40 302 V252 C40 218 66 196 100 196 H200 C234 196 260 218 260 252 V302" fill="url(#b)" stroke="#8a8a8a" stroke-width="3"/>
+<path d="M112 198 C122 226 178 226 188 198" fill="none" stroke="#8a8a8a" stroke-width="3" stroke-linecap="round"/>
+<ellipse cx="150" cy="212" rx="60" ry="15" fill="#000" opacity=".22" filter="url(#f)"/>
+<path d="M58 250 C58 226 74 212 96 210" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round" opacity="0.75"/><path d="M78 268 V300 M222 268 V300" stroke="#8a8a8a" stroke-width="3" stroke-linecap="round" opacity=".7"/>
+</svg>

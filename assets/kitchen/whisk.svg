@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 160 400" width="160" height="400">
+<!-- whisk, handle up; wires reach y 384 -->
+<defs><linearGradient id="h" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#ff6b93"/><stop offset="1" stop-color="#e0124f"/></linearGradient><linearGradient id="m" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#f2f5f8"/><stop offset="1" stop-color="#aab6c2"/></linearGradient></defs>
+<path d="M56 166 C-1.5999999999999943 230 3.1999999999999886 330 80 384 C156.8 330 161.6 230 104 166" fill="none" stroke="#7f8c9b" stroke-width="8" stroke-linecap="round"/><path d="M68 166 C39.2 230 41.599999999999994 330 80 384 C118.4 330 120.8 230 92 166" fill="none" stroke="#7f8c9b" stroke-width="8" stroke-linecap="round"/><path d="M56 166 C-1.5999999999999943 230 3.1999999999999886 330 80 384 C156.8 330 161.6 230 104 166" fill="none" stroke="#dfe7ef" stroke-width="4" stroke-linecap="round"/><path d="M68 166 C39.2 230 41.599999999999994 330 80 384 C118.4 330 120.8 230 92 166" fill="none" stroke="#dfe7ef" stroke-width="4" stroke-linecap="round"/><path d="M80 166 V384" stroke="#7f8c9b" stroke-width="8" stroke-linecap="round"/><path d="M80 166 V384" stroke="#dfe7ef" stroke-width="4" stroke-linecap="round"/>
+<rect x="56" y="140" width="48" height="30" rx="8" fill="url(#m)" stroke="#6b7785" stroke-width="3"/>
+<rect x="60" y="8" width="40" height="140" rx="20" fill="url(#h)" stroke="#b0003a" stroke-width="3"/>
+<path d="M70 28 V116" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" opacity="0.6"/><circle cx="80" cy="24" r="6" fill="#b0003a" opacity=".5"/>
+</svg>

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 160 160" width="160" height="160">
+<!-- oeuf -->
+<defs><radialGradient id="g" cx="0.35" cy="0.3" r="0.8"><stop offset="0" stop-color="#fffdf6"/><stop offset="0.6" stop-color="#ffeccb"/><stop offset="1" stop-color="#eebf86"/></radialGradient></defs>
+<ellipse cx="84" cy="146" rx="46" ry="8" fill="#0b4a70" opacity=".22"/>
+<g transform="rotate(12 80 84)"><path d="M80 12 C112 12 132 62 132 96 C132 128 110 148 80 148 C50 148 28 128 28 96 C28 62 48 12 80 12 Z" fill="url(#g)" stroke="#c98d4e" stroke-width="3"/>
+<path d="M50 80 C52 58 60 42 70 34" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round" opacity="0.85"/><ellipse cx="96" cy="126" rx="18" ry="6" fill="#fff" opacity=".35"/></g>
+</svg>

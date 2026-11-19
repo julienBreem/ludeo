@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 300 300" width="300" height="300">
+<!-- hair 2: short dark spiky hair -->
+<defs><linearGradient id="h" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4a4f7a"/><stop offset="1" stop-color="#22233f"/></linearGradient></defs>
+<path d="M60 126 C50 82 70 52 96 42 L88 12 L122 30 L138 2 L162 28 L192 8 L198 38 C232 48 252 82 240 126 C232 106 222 92 208 84 C170 92 120 92 92 84 C78 92 68 106 60 126 Z" fill="url(#h)" stroke="#15152a" stroke-width="3" stroke-linejoin="round"/>
+<path d="M92 68 C108 52 130 46 152 46" fill="none" stroke="#8f96c9" stroke-width="8" stroke-linecap="round" opacity=".7"/>
+</svg>

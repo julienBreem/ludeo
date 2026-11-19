@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 300 300" width="300" height="300">
+<!-- pancarte: hanging sign with a cupcake -->
+<defs><linearGradient id="w" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d89a5a"/><stop offset="1" stop-color="#a8672c"/></linearGradient><linearGradient id="i" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fffde7"/><stop offset="1" stop-color="#ffe9a6"/></linearGradient><linearGradient id="c" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7fb6ff"/><stop offset="1" stop-color="#2979ff"/></linearGradient><linearGradient id="p" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffc1dc"/><stop offset="1" stop-color="#ff5c9a"/></linearGradient></defs>
+<path d="M70 86 L104 14 M230 86 L196 14" stroke="#7a4a1e" stroke-width="6" stroke-linecap="round"/><circle cx="104" cy="14" r="8" fill="#ffc107" stroke="#c98a00" stroke-width="2.5"/><circle cx="196" cy="14" r="8" fill="#ffc107" stroke="#c98a00" stroke-width="2.5"/>
+<rect x="24" y="84" width="252" height="196" rx="30" fill="url(#w)" stroke="#8a4f1c" stroke-width="3"/>
+<rect x="42" y="102" width="216" height="160" rx="20" fill="url(#i)" stroke="#c98a00" stroke-width="3"/>
+<path d="M112 196 H188 L178 244 Q177 250 170 250 H130 Q123 250 122 244 Z" fill="url(#c)" stroke="#0d47c9" stroke-width="3" stroke-linejoin="round"/>
+<path d="M130 198 L136 248 M150 198 V250 M170 198 L164 248" stroke="#0d47c9" stroke-width="2.5" opacity=".6"/>
+<path d="M104 196 C96 176 110 162 124 164 C122 142 142 126 150 116 C158 126 178 142 176 164 C190 162 204 176 196 196 Z" fill="url(#p)" stroke="#b0003a" stroke-width="3" stroke-linejoin="round"/>
+<circle cx="150" cy="116" r="11" fill="#ff1f5a" stroke="#b0003a" stroke-width="2.5"/>
+<path d="M118 186 C116 178 122 172 130 172" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" opacity="0.8"/><path d="M44 130 V116 Q44 104 58 104 H120" fill="none" stroke="#fff" stroke-width="0" stroke-linecap="round" opacity="0.0"/><path d="M40 110 Q40 98 54 98 H150" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" opacity="0.5"/>
+</svg>

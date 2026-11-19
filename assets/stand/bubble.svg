@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 440 340" width="440" height="340">
+<!-- speech bubble, tail at the lower left pointing to the client; content area about x 60..400, y 36..288 -->
+<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#e3f1fb"/></linearGradient><filter id="f" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="7"/></filter></defs>
+<path d="M88 20 H372 A46 46 0 0 1 418 66 V258 A46 46 0 0 1 372 304 H88 A46 46 0 0 1 42 258 V252 L8 276 L42 204 V66 A46 46 0 0 1 88 20 Z" transform="translate(4 10)" fill="#0b4a70" opacity=".25" filter="url(#f)"/>
+<path d="M88 20 H372 A46 46 0 0 1 418 66 V258 A46 46 0 0 1 372 304 H88 A46 46 0 0 1 42 258 V252 L8 276 L42 204 V66 A46 46 0 0 1 88 20 Z" fill="url(#g)" stroke="#6fa6d6" stroke-width="3" stroke-linejoin="round"/>
+<path d="M64 70 C64 50 76 40 96 40 H200" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round" opacity="0.9"/>
+</svg>

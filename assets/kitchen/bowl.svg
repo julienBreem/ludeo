@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 520 360" width="520" height="360">
+<!-- mixing bowl, 3/4 view; inside opening is the ellipse cx 260 cy 116 rx 214 ry 60 (batter is drawn there in code) -->
+<defs><linearGradient id="b" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#a98bff"/><stop offset="0.5" stop-color="#8a63ff"/><stop offset="1" stop-color="#6a3fd6"/></linearGradient><linearGradient id="f" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7a50e8"/><stop offset="1" stop-color="#5a2fc2"/></linearGradient><linearGradient id="r" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c9b6ff"/><stop offset="1" stop-color="#9c7dff"/></linearGradient><linearGradient id="i" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5a37b8"/><stop offset="1" stop-color="#8f6cf5"/></linearGradient></defs>
+<ellipse cx="260" cy="338" rx="170" ry="18" fill="#0b4a70" opacity=".25"/>
+<path d="M150 318 H370 L384 344 Q386 352 376 352 H144 Q134 352 136 344 Z" fill="url(#f)" stroke="#5a2fc2" stroke-width="3" stroke-linejoin="round"/>
+<path d="M26 112 C26 240 120 336 260 336 C400 336 494 240 494 112 Z" fill="url(#b)" stroke="#5a2fc2" stroke-width="3" stroke-linejoin="round"/>
+<path d="M60 190 C80 262 150 316 250 322" fill="none" stroke="#fff" stroke-width="16" stroke-linecap="round" opacity=".35"/>
+<path d="M36 196 H484" stroke="#ffeb3b" stroke-width="18" opacity=".0"/>
+<ellipse cx="260" cy="112" rx="236" ry="76" fill="url(#r)" stroke="#5a2fc2" stroke-width="3"/>
+<ellipse cx="260" cy="116" rx="214" ry="60" fill="url(#i)" stroke="#6a3fd6" stroke-width="2.5"/>
+<path d="M58 100 C90 60 180 44 250 44" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round" opacity=".7"/>
+</svg>

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 300 300" width="300" height="300">
+<!-- hair 3: long blonde hair with a pink bow -->
+<defs><linearGradient id="h" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd54f"/><stop offset="1" stop-color="#ff9800"/></linearGradient><linearGradient id="w" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff8fb7"/><stop offset="1" stop-color="#ff2f76"/></linearGradient></defs>
+<path d="M48 214 C34 160 40 92 60 62 C82 28 118 18 150 18 C182 18 218 28 240 62 C260 92 266 160 252 214 C238 208 228 196 224 178 C228 146 228 122 222 102 C200 98 176 88 160 70 C140 90 106 100 78 102 C72 122 72 146 76 178 C72 196 62 208 48 214 Z" fill="url(#h)" stroke="#c96a00" stroke-width="3" stroke-linejoin="round"/>
+<path d="M84 60 C102 40 128 32 152 32" fill="none" stroke="#fff3b0" stroke-width="9" stroke-linecap="round" opacity=".8"/>
+<path d="M56 190 C50 160 52 130 58 108 M244 190 C250 160 248 130 242 108" fill="none" stroke="#c96a00" stroke-width="3" stroke-linecap="round" opacity=".6"/>
+<g stroke="#b0003a" stroke-width="3" stroke-linejoin="round"><path d="M206 44 L176 26 Q170 44 180 62 Z" fill="url(#w)"/><path d="M206 44 L238 30 Q244 50 232 66 Z" fill="url(#w)"/><circle cx="206" cy="44" r="10" fill="#ff8fb7"/></g>
+</svg>
