@@ -44,7 +44,11 @@ Un mini-jeu pour une fille de 6 ans, sur sa tablette Android, **sans aucune publ
 
 ### Style graphique
 
-**Vif et contrasté** : couleurs franches, gros contours noirs, rendu « dessin animé ». (Maquette « B » retenue.)
+**Cartoon 3D brillant** (style « S2 », choisi le 2026-11-19 parmi 4 variantes dessinées) : couleurs vives, dégradés doux, reflets, ombres légères, contours fins colorés plutôt que gros traits noirs — le rendu des jeux mobiles récents.
+
+**Vues du gâteau** (décision de l'auteur) : pendant la **peinture** et les **toppings**, le gâteau est montré **vu de dessus** (peinture au doigt simple et précise). Partout ailleurs (moule, four, service, bulle de commande), il est montré **en 3/4 avec son épaisseur** (génoise, crème, glaçage). La vue 3/4 réutilise le dessus (écrasé verticalement) posé sur un flanc dessiné par forme.
+
+Écarté : l'isométrique (forme moins lisible, peinture sur face inclinée, 1,5–2× plus de dessin).
 
 ### Images
 

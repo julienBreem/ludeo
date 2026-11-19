@@ -16,7 +16,8 @@
 - **No text needed to play**: every in-game cue is an icon, number, gauge or face. Text is allowed only inside the hidden parent zone.
 - **No sound** in this version. All sprite/animation code must not assume audio.
 - **No npm dependencies.** `package.json` exists only for `"type": "module"` and the `test` script. Phaser is the only third-party code, vendored and pinned at 3.90.0.
-- Art: style "B" — saturated colours, **5px black (#222222) outlines**, cartoon. Only CC0 third-party art; every file listed in `ASSETS-LICENSES.md`.
+- Art: style **"S2 — glossy 3D cartoon"** (approved): bright colours, soft gradients, highlights, light shadows, thin coloured outlines (no thick black). Reference renders: `.superpowers/sdd/2026-11-19-stand-desserts/style-ref/` (cake-S2, client-S2). Only CC0 third-party art; every file listed in `ASSETS-LICENSES.md`.
+- Cake views: **top-down** in Paint and Toppings; **3/4** everywhere else (Mold, Bake, Service, order bubble). The 3/4 view = the top-down cake squashed to `TOP_SQUASH = 0.55` vertically, sitting on a per-shape side band `shape-<key>-side`.
 - Reference resolution **1280×800, landscape**, `Phaser.Scale.FIT`, centred. Every tappable target ≥ **96×96 px** in reference coordinates.
 - Must stay smooth on an older Samsung Galaxy Tab S: paint coverage on a **64×64** grid, at most **60** live particles at once.
 - Save locally only (`localStorage`, key `standDesserts.v1`). No accounts, no server code.
@@ -352,7 +353,7 @@ test('clear resets', () => { /* paint, clear → coverage 0 */ });
   - Texture keys (exact):
     - `ing-<ingredient>` for each of `INGREDIENTS`
     - `dessert-<gateau|tarte|cupcake>` — square fill texture of the dessert's body (sponge / crust / cupcake), drawn in its **raw** colour; bake states are tints applied in code
-    - `shape-<key>-fill` (white silhouette, transparent outside — used as mask, glaze area and paint-coverage source) and `shape-<key>-line` (black 5px outline only) for every shape item
+    - `shape-<key>-fill` (white silhouette, transparent outside — used as mask, glaze area and paint-coverage source), `shape-<key>-line` (outline + top-face rim highlight only) and `shape-<key>-side` (the 3/4 side band: sponge/cream layers, drawn for a top face squashed to 0.55, light so it tints for baking) for every shape item
     - `topping-<key>` for every topping item
     - `deco-<key>` for every deco item
     - `pot` (glaze pot drawn white, tinted in code), `bowl`, `whisk`, `oven`, `flame`, `lumps` (overlay for failed dough)
@@ -376,7 +377,7 @@ test('keys are unique', () => {});
 ```
 
 - [ ] **Step 2: Run** `npm test` — Expected: FAIL.
-- [ ] **Step 3: Draw the SVGs** in style B (5px `#222` outlines, palette in `src/config.js` from Task 7 — use bg `#4fc3f7`, counter `#ff9800`, accents `#ff1f5a`, `#ffeb3b`, `#00e676`). CC0 sources (e.g. OpenGameArt "SVG dessert ingredients", Kenney) may be used only if restyled to match; otherwise draw originals.
+- [ ] **Step 3: Draw the SVGs** in style S2 (see Global Constraints and the reference renders; bg `#4fc3f7`, counter `#ff9800`). Pieces tinted in code (`dessert-*`, `shape-*-side`, `pot`, `client-body`) use light values with shading in alpha/lightness so tints stay clean. CC0 sources (e.g. OpenGameArt "SVG dessert ingredients", Kenney) may be used only if restyled to match; otherwise draw originals.
 - [ ] **Step 4: Write `src/assets.js`** and fill `ASSETS-LICENSES.md` (one row per file: source URL or "original", licence).
 - [ ] **Step 5: Run** `npm test` — Expected: PASS.
 - [ ] **Step 6: Commit** — `git commit -m "feat: game art and asset manifest"`
@@ -396,7 +397,7 @@ test('keys are unique', () => {});
   - `button.js`: `addIconButton(scene, x, y, textureKey, onTap, {size = TOUCH, tint} = {}): Phaser.GameObjects.Image` — white circle with 5px outline behind the icon, squash tween on press, fires on pointerup inside
   - `stepBar.js`: `addStepBar(scene, {onRestart, onValidate}): {setValidateEnabled(on: boolean): void}` — ↺ bottom-left, ✓ bottom-right; ✓ greyed and inert until enabled
   - `orderReminder.js`: `addOrderReminder(scene, order): Phaser.GameObjects.Container` — top-left white rounded strip: dessert icon, shape outline, colour dot, topping icon ×N (N copies, and the digit)
-  - `cakeView.js`: `drawCake(scene, x, y, cake: Cake, {size = 400, bakeGauge}: {size?: number, bakeGauge?: number} = {}): Phaser.GameObjects.Container` — layers bottom→top: `dessert-<d>` masked by `shape-<shape>-fill` (BitmapMask) and tinted by bake (`bakeGauge` lerps raw→pale→dore→brule; else `cake.bake`), `lumps` if `doughOk === false`, glaze drawn from `cake.glaze.cells` (one rect per painted cell in `COLOR_HEX`) under the same mask, toppings at their `x, y` (relative to centre, at `size` scale), then `shape-<shape>-line`. When `shape` is null, draw the batter in the bowl colour instead (used by the Dough scene).
+  - `cakeView.js`: `drawCake(scene, x, y, cake: Cake, {size = 400, bakeGauge, view = '3q'}: {size?: number, bakeGauge?: number, view?: 'top'|'3q'} = {}): Phaser.GameObjects.Container` — `view: 'top'` draws the layers below as-is; `view: '3q'` draws `shape-<shape>-side` (bake-tinted) first, then the same top layers in a child container with `scaleY = TOP_SQUASH` (0.55), toppings positioned on the squashed face but drawn unsquashed (standing). Paint and Toppings scenes use `'top'`; everything else `'3q'`. Top layers bottom→top: `dessert-<d>` masked by `shape-<shape>-fill` (BitmapMask) and tinted by bake (`bakeGauge` lerps raw→pale→dore→brule; else `cake.bake`), `lumps` if `doughOk === false`, glaze drawn from `cake.glaze.cells` (one rect per painted cell in `COLOR_HEX`) under the same mask, toppings at their `x, y` (relative to centre, at `size` scale), then `shape-<shape>-line`. When `shape` is null, draw the batter in the bowl colour instead (used by the Dough scene).
   - `client.js`: `drawClient(scene, x, y, variant: number, mood?: 'content'|'bof'|'fache'): Phaser.GameObjects.Container` — 4 variants (hair texture + skin/body tints); idle bob tween
   - `flow.js`: `ORDER = ['Stand','Dough','Mold','Bake','Paint','Toppings','Service']`; `goNext(scene)` (Service → Stand), `goTo(scene, key)`; both do a 250 ms fade
   - `main.js`: Phaser game `{type: AUTO, width: W, height: H, backgroundColor: BG, scale: {mode: FIT, autoCenter: CENTER_BOTH}, input: {activePointers: 1}, scene: [...] }`
