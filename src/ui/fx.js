@@ -139,3 +139,11 @@ export function blink(scene, faceImage) {
   schedule();
   return () => { stopped = true; timer?.remove(); };
 }
+
+// A few warm dots drifting up (oven heat). Call repeatedly while baking.
+export function heatRise(scene, x, y) {
+  return emit(scene, x, y, 'fx-dot', {
+    x: { min: -150, max: 150 }, speedY: { min: -110, max: -60 }, speedX: { min: -10, max: 10 },
+    scale: { start: 0.5, end: 0 }, alpha: { start: 0.9, end: 0 }, lifespan: 1000, tint: [0xffb74d, 0xff7043, 0xffee58],
+  }, 4, { burst: false, spread: 500 });
+}
