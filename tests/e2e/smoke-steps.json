@@ -1,0 +1,20 @@
+[
+  {"do": "start"},
+  {"do": "stand", "shot": "r1-stand"},
+  {"do": "dough", "shot": "r1-dough"},
+  {"do": "mold", "shot": "r1-mold"},
+  {"do": "bake", "shot": "r1-bake"},
+  {"do": "paint", "color": "order", "shot": "r1-paint"},
+  {"do": "toppings", "shot": "r1-toppings"},
+  {"do": "service", "expectCoins": 5, "shot": "r1-service"},
+  {"do": "shopVisit", "shot": "r2-shop"},
+  {"do": "stand", "shot": "r2-stand"},
+  {"do": "dough"},
+  {"do": "mold"},
+  {"do": "bake", "doubleTap": true, "shot": "r2-bake"},
+  {"do": "paint", "color": "wrong", "shot": "r2-paint"},
+  {"do": "toppings", "race": true},
+  {"do": "service", "expectCoins": 4, "shot": "r2-service"},
+  {"do": "shopBuy", "shot": "r3-shop-bought"},
+  {"do": "stand", "shot": "r3-stand"}
+]
