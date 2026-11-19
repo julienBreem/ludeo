@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" width="160" height="160">
-  <!-- OK / validate button -->
-  <circle cx="80" cy="80" r="74" fill="#00e676" stroke="#222" stroke-width="5"/>
-  <path d="M30 60 C36 36 58 20 84 18" fill="none" stroke="#9dffc9" stroke-width="8" stroke-linecap="round"/>
-  <path d="M44 84 L70 110 L118 54" fill="none" stroke="#222" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 160 160" width="160" height="160">
+<!-- validate -->
+<defs><radialGradient id="g" cx="0.4" cy="0.3" r="0.85"><stop offset="0" stop-color="#5dffac"/><stop offset="1" stop-color="#00c764"/></radialGradient></defs>
+<circle cx="80" cy="84" r="70" fill="#0a8f43"/><circle cx="80" cy="78" r="70" fill="url(#g)" stroke="#0a8f43" stroke-width="3"/>
+<ellipse cx="80" cy="118" rx="52" ry="24" fill="#fff" opacity=".12"/><path d="M46 82 L70 106 L116 52" fill="none" stroke="#0a8f43" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/><path d="M46 82 L70 106 L116 52" fill="none" stroke="#fff" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/><path d="M24 64 C30 40 52 22 78 18" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round" opacity="0.7"/>
 </svg>

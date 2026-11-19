@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 160 160" width="160" height="160">
+<!-- etoile: sugar star -->
+<defs><radialGradient id="g" cx="0.35" cy="0.3" r="0.8"><stop offset="0" stop-color="#fff59d"/><stop offset="0.6" stop-color="#ffd82e"/><stop offset="1" stop-color="#ffab00"/></radialGradient></defs>
+<path d="M74.5 24.7 Q80.0 14.0 85.5 24.7 L98.4 49.5 Q101.2 54.9 107.1 55.9 L134.7 60.4 Q146.6 62.4 138.1 70.9 L118.5 90.9 Q114.2 95.1 115.1 101.1 L119.3 128.8 Q121.1 140.6 110.4 135.3 L85.4 122.7 Q80.0 120.0 74.6 122.7 L49.6 135.3 Q38.9 140.6 40.7 128.8 L44.9 101.1 Q45.8 95.1 41.5 90.9 L21.9 70.9 Q13.4 62.4 25.3 60.4 L52.9 55.9 Q58.8 54.9 61.6 49.5 Z" fill="url(#g)" stroke="#d18f00" stroke-width="3" stroke-linejoin="round"/>
+<path d="M48 76 C54 70 62 66 70 64 L76 44" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" opacity="0.75"/><circle cx="60" cy="100" r="4" fill="#fff" opacity=".6"/>
+</svg>
