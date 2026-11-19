@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" width="300" height="300">
+  <!-- happy face: overlay on client-head -->
+  <g fill="#222">
+    <circle cx="116" cy="128" r="12"/>
+    <circle cx="184" cy="128" r="12"/>
+  </g>
+  <g fill="#fff">
+    <circle cx="120" cy="123" r="4"/>
+    <circle cx="188" cy="123" r="4"/>
+  </g>
+  <path d="M112 156 C124 190 176 190 188 156 Z" fill="#ff1f5a" stroke="#222" stroke-width="5" stroke-linejoin="round"/>
+</svg>

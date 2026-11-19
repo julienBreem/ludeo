@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" width="300" height="300">
+  <!-- hair 1: fringe with two buns -->
+  <g fill="#8d4a2b" stroke="#222" stroke-width="5" stroke-linejoin="round">
+    <circle cx="62" cy="52" r="30"/>
+    <circle cx="238" cy="52" r="30"/>
+    <path d="M60 124 C52 66 96 28 150 28 C204 28 248 66 240 124 C226 104 210 90 188 84 C160 100 110 104 78 96 C70 104 64 114 60 124 Z"/>
+  </g>
+  <path d="M96 62 C110 48 128 42 146 42" fill="none" stroke="#c9713f" stroke-width="7" stroke-linecap="round"/>
+  <path d="M46 42 C50 34 58 30 66 30 M222 42 C226 34 234 30 242 30" fill="none" stroke="#c9713f" stroke-width="6" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160" width="160" height="160">
+  <!-- oeuf -->
+  <g transform="rotate(12 80 84)">
+    <path d="M80 12 C112 12 132 62 132 96 C132 128 110 148 80 148 C50 148 28 128 28 96 C28 62 48 12 80 12 Z" fill="#fff3d6" stroke="#222" stroke-width="5"/>
+    <path d="M118 84 C122 112 106 134 80 136 C100 126 110 108 110 84 Z" fill="#f5c98a"/>
+    <path d="M50 78 C52 56 60 40 70 32" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round"/>
+  </g>
+</svg>

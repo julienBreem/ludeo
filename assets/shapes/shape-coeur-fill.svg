@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <!-- coeur: solid white silhouette (mask, glaze area, paint-coverage source) -->
+  <path d="M200 352 C150 312 34 236 34 142 C34 86 76 48 124 48 C158 48 186 66 200 96 C214 66 242 48 276 48 C324 48 366 86 366 142 C366 236 250 312 200 352 Z" fill="#fff"/>
+</svg>

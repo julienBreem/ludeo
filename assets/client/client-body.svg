@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" width="300" height="300">
+  <!-- client body: white (tinted in code), open at the bottom so it sinks behind the counter -->
+  <path d="M40 302.5 V252 C40 218 66 196 100 196 H200 C234 196 260 218 260 252 V302.5" fill="#fff" stroke="#222" stroke-width="5" stroke-linejoin="round"/>
+  <path d="M112 198 C120 226 180 226 188 198" fill="none" stroke="#222" stroke-width="5" stroke-linecap="round"/>
+  <path d="M78 262 V300 M222 262 V300" fill="none" stroke="#222" stroke-width="5" stroke-linecap="round"/>
+</svg>
