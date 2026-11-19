@@ -33,8 +33,8 @@ Après la première vraie partie, le parent veut un jeu où **l'enfant observe e
 
 - Nouvelle forme : `{ dessert, shape, glaze: string[], toppings: Array<{ key, count }> }`.
   - `glaze` : 1 à 3 couleurs **distinctes**, dans l'ordre des zones de gauche à droite.
-  - `toppings` : 1 à 3 sortes **distinctes**, chaque `count` ≥ 1, **total ≤ 8**.
-- Tirage (proposition de l'auteur) : nombre de zones 1 / 2 / 3 avec probabilités 50 / 35 / 15 % ; nombre de sortes de toppings 1 / 2 / 3 avec 50 / 35 / 15 % ; chaque `count` tiré entre 1 et 4, tirage recommencé tant que le total dépasse 8. Toujours parmi les éléments possédés (le jeu de départ en a assez : 4 couleurs, 4 toppings).
+  - `toppings` : 1 à 3 sortes **distinctes**, chaque `count` ≥ 1, **total ≤ 6**.
+- Tirage (proposition de l'auteur) : nombre de zones 1 / 2 / 3 avec probabilités 50 / 35 / 15 % ; nombre de sortes de toppings 1 / 2 / 3 avec 50 / 35 / 15 % ; chaque `count` tiré entre 1 et 4, tirage recommencé tant que le total dépasse 6. Toujours parmi les éléments possédés (le jeu de départ en a assez : 4 couleurs, 4 toppings).
 - Rien de la commande n'est sauvegardé (seuls pièces et achats le sont) : aucune migration de sauvegarde.
 
 ### Zones de glaçage
@@ -50,6 +50,7 @@ Après la première vraie partie, le parent veut un jeu où **l'enfant observe e
 
 - Notation : pour chaque sorte demandée, le nombre posé doit être **exact**, et aucune sorte non demandée ne doit être posée. Raisons : `mauvais-topping`, `pas-assez`, `trop` (avec la sorte concernée pour l'image du service).
 - Placement libre ; la limite de 12 toppings posés est conservée.
+- Dans l'image de commande et le bandeau, les toppings sont disposés **à peu près symétriquement** (paires en miroir de part et d'autre de l'axe vertical du gâteau, les mêmes sortes en miroir ; un topping impair sur l'axe), pour un visuel plus joli. (Demande du parent.)
 - L'étincelle de la v1 (« le compte est juste ») ne se déclenche que quand **toutes** les sortes sont exactes.
 
 ### Image de commande (écran du stand)
