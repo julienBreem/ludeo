@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500" width="800" height="1000">
+  <!-- Layered monkey for animation. Each <g id> is a part; pivots are noted for the game. -->
+  <defs>
+    <style>
+      .o{stroke:#1e120a;stroke-width:6;stroke-linejoin:round;stroke-linecap:round}
+      .t{stroke:#1e120a;stroke-width:4;stroke-linejoin:round;stroke-linecap:round;fill:none}
+      .fur{fill:#8b5a2b}.shade{fill:#6a411d}.skin{fill:#f0c6a0}.skinshade{fill:#dca57c}
+    </style>
+  </defs>
+  <ellipse cx="200" cy="478" rx="110" ry="12" fill="#e6ddd2"/>
+
+  <!-- tail (pivot: 248,372) -->
+  <g id="tail">
+    <path class="o" d="M240 380 C 300 390, 330 340, 322 280 C 316 236, 340 206, 368 214 C 388 220, 386 246, 368 246"
+          fill="none" style="stroke-width:22"/>
+    <path d="M240 380 C 300 390, 330 340, 322 280 C 316 236, 340 206, 368 214 C 388 220, 386 246, 368 246"
+          fill="none" stroke="#8b5a2b" style="stroke-width:11" stroke-linecap="round"/>
+  </g>
+
+  <!-- legs -->
+  <g id="leg-left">
+    <path class="o fur" d="M160 350 Q140 400 150 450 L182 452 Q186 404 196 368 Z"/>
+    <path class="shade" d="M150 446 Q144 410 152 380 Q158 410 166 448 Z" opacity=".8"/>
+    <path class="o skin" d="M140 446 Q132 462 142 470 L190 470 Q196 458 184 448 Z"/>
+    <path class="t" d="M156 458 v8 M168 456 v10" style="stroke-width:3"/>
+  </g>
+  <g id="leg-right">
+    <path class="o fur" d="M240 350 Q260 400 250 450 L218 452 Q214 404 204 368 Z"/>
+    <path class="o skin" d="M260 446 Q268 462 258 470 L210 470 Q204 458 216 448 Z"/>
+    <path class="t" d="M244 458 v8 M232 456 v10" style="stroke-width:3"/>
+  </g>
+
+  <!-- torso -->
+  <g id="body">
+    <path class="o fur" d="M200 228 C 150 228, 130 280, 136 330 C 142 372, 170 388, 200 388 C 230 388, 258 372, 264 330 C 270 280, 250 228, 200 228 Z"/>
+    <path class="shade" d="M240 246 C 262 276, 266 330, 250 368 C 240 380, 226 386, 214 387 C 244 360, 252 300, 240 246 Z"/>
+    <path class="t" d="M168 300 l-6 8 M176 330 l-5 7 M228 318 l6 7" style="stroke-width:3"/>
+  </g>
+
+  <!-- left arm (pivot: shoulder 158,250) -->
+  <g id="arm-left">
+    <path class="o fur" d="M160 244 Q118 270 116 340 L144 344 Q146 296 176 266 Z"/>
+    <path class="o skin" d="M112 336 Q100 350 108 364 Q122 372 140 364 Q150 352 144 338 Z"/>
+    <path class="t" d="M116 352 l6 6 M126 348 l6 8" style="stroke-width:3"/>
+  </g>
+  <!-- right arm (pivot: shoulder 242,250) -->
+  <g id="arm-right">
+    <path class="o fur" d="M240 244 Q282 270 284 340 L256 344 Q254 296 224 266 Z"/>
+    <path class="shade" d="M272 290 Q282 312 280 338 L268 340 Q270 312 262 292 Z"/>
+    <path class="o skin" d="M288 336 Q300 350 292 364 Q278 372 260 364 Q250 352 256 338 Z"/>
+    <path class="t" d="M284 352 l-6 6 M274 348 l-6 8" style="stroke-width:3"/>
+  </g>
+
+  <!-- head (pivot: neck 200,232) -->
+  <g id="head">
+    <!-- ears -->
+    <g id="ear-left"><circle class="o fur" cx="116" cy="150" r="30"/><circle class="skin" cx="118" cy="152" r="17"/><path class="skinshade" d="M108 146 q10 -8 18 2 q-6 2 -8 12 z"/></g>
+    <g id="ear-right"><circle class="o fur" cx="284" cy="150" r="30"/><circle class="skin" cx="282" cy="152" r="17"/><path class="skinshade" d="M292 146 q-10 -8 -18 2 q6 2 8 12 z"/></g>
+    <!-- skull with fur tufts -->
+    <path class="o fur" d="M200 62 L210 46 L216 66 L230 54 L230 74
+             C 272 84, 288 120, 286 160 C 284 214, 248 240, 200 240
+             C 152 240, 116 214, 114 160 C 112 112, 140 76, 184 68 L178 50 Z"/>
+    <path class="shade" d="M262 100 C 286 128, 288 182, 262 216 C 250 228, 236 234, 222 237 C 262 210, 276 150, 262 100 Z"/>
+    <!-- side tufts -->
+    <path class="o fur" d="M118 186 l-14 6 l12 4 l-8 10 l16 -4" style="stroke-width:5"/>
+    <path class="o fur" d="M282 186 l14 6 l-12 4 l8 10 l-16 -4" style="stroke-width:5"/>
+    <!-- face mask: two eye lobes and a muzzle -->
+    <path class="o skin" d="M200 118 C 186 94, 138 96, 140 140 C 141 160, 148 172, 150 186
+             C 154 222, 178 236, 200 236 C 222 236, 246 222, 250 186
+             C 252 172, 259 160, 260 140 C 262 96, 214 94, 200 118 Z" style="stroke-width:5"/>
+    <path class="skinshade" d="M238 190 C 244 214, 228 230, 210 234 C 232 222, 240 206, 238 190 Z"/>
+    <!-- brow ridge -->
+    <path class="t" d="M154 120 Q174 106 194 118 M206 118 Q226 106 246 120" style="stroke-width:5"/>
+    <!-- eyes: white with black pupil looking to the side, no shine -->
+    <g id="eyes">
+      <ellipse class="o" cx="176" cy="148" rx="15" ry="19" fill="#fff" style="stroke-width:4"/>
+      <ellipse class="o" cx="224" cy="148" rx="15" ry="19" fill="#fff" style="stroke-width:4"/>
+      <ellipse id="pupil-left" cx="182" cy="151" rx="7" ry="9" fill="#120a05"/>
+      <ellipse id="pupil-right" cx="230" cy="151" rx="7" ry="9" fill="#120a05"/>
+    </g>
+    <!-- eyelids for blinking (hidden: scaleY 0, pivot at top of each eye) -->
+    <g id="eyelids" style="transform:scaleY(0);transform-origin:200px 129px">
+      <ellipse class="o skinshade" cx="176" cy="148" rx="15" ry="19" style="stroke-width:4"/>
+      <ellipse class="o skinshade" cx="224" cy="148" rx="15" ry="19" style="stroke-width:4"/>
+    </g>
+    <!-- nose -->
+    <path class="o skinshade" d="M190 178 Q200 170 210 178 Q212 188 200 190 Q188 188 190 178 Z" style="stroke-width:3.5"/>
+    <circle cx="195" cy="183" r="2.2" fill="#1e120a"/><circle cx="205" cy="183" r="2.2" fill="#1e120a"/>
+    <!-- mouth: closed (default) and open (for speaking) -->
+    <g id="mouth-closed">
+      <path class="t" d="M168 204 Q200 224 232 204"/>
+      <path class="t" d="M166 200 l4 8 M234 200 l-4 8" style="stroke-width:3"/>
+    </g>
+    <g id="mouth-open" style="display:none">
+      <path class="o" d="M172 202 Q200 206 228 202 Q224 232 200 232 Q176 232 172 202 Z" fill="#5a1f1a" style="stroke-width:4"/>
+      <path d="M184 222 Q200 214 216 222 Q210 230 200 230 Q190 230 184 222 Z" fill="#d9666a"/>
+    </g>
+  </g>
+</svg>

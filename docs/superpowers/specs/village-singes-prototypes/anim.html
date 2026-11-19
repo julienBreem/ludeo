@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Animation par pièces</title>
+<style>
+body{font-family:system-ui,sans-serif;margin:16px;background:#fdf8ef;color:#333}
+.row{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end}
+.card{background:#fff;border-radius:14px;padding:10px;text-align:center}
+.card svg{width:340px;height:auto;display:block}
+button{font-size:18px;min-height:48px;padding:0 16px;margin:4px;border-radius:10px;border:2px solid #c9a96b;background:#fff}
+#monkey svg *{transform-box:fill-box}
+#arm-right{transform-origin:top left;transition:transform .35s ease-in-out}
+#tail{transform-origin:0% 100%;animation:sway 3s ease-in-out infinite}
+@keyframes sway{50%{transform:rotate(-5deg)}}
+#head{transform-origin:50% 100%;transition:transform .3s}
+#door{transform-origin:left center;transition:transform .6s ease-in-out}
+#shutter-left{transform-origin:left center;transition:transform .5s}
+#shutter-right{transform-origin:right center;transition:transform .5s}
+#sign-board{transform-origin:50% 0%}
+.swing{animation:swing 1.2s ease-out}
+@keyframes swing{20%{transform:rotate(9deg)}45%{transform:rotate(-6deg)}70%{transform:rotate(3deg)}100%{transform:rotate(0)}}
+.hop{animation:hop .5s ease-out}
+@keyframes hop{40%{transform:translateY(-10px)}}
+p.n{font-size:13px;color:#777;max-width:60em}
+</style></head><body>
+<h1>Les pièces séparées s'animent</h1>
+<p class="n">Le singe et la cabane sont des SVG dessinés à la main en pièces séparées. Touchez les boutons, ou directement la porte, les volets et le panneau de la cabane.</p>
+<div class="row">
+  <div class="card"><div id="monkey"></div>
+    <button id="talk">🗣 « mo – to »</button><button id="wave">👋 coucou</button><button id="look">👀 regarder</button></div>
+  <div class="card"><div id="hut"></div>
+    <button id="openDoor">🚪 porte</button><button id="shut">🪟 volets</button><button id="sign">🪧 panneau</button></div>
+</div>
+<script>
+const $=s=>document.querySelector(s);
+async function load(url,el){el.innerHTML=await (await fetch(url)).text()}
+(async()=>{
+  await load('v2/singe.svg',$('#monkey')); await load('v2/cabane.svg',$('#hut'));
+  // blink every few seconds
+  const lids=$('#eyelids');
+  setInterval(()=>{lids.style.transition='transform .08s';lids.style.transform='scaleY(1)';setTimeout(()=>lids.style.transform='scaleY(0)',140)},3200);
+  // talk: open/close mouth for each syllable, with a small head nod
+  const open=$('#mouth-open'),closed=$('#mouth-closed'),head=$('#head');
+  const mouth=o=>{open.style.display=o?'':'none';closed.style.display=o?'none':''};
+  $('#talk').onclick=()=>{
+    const a=new Audio('audio/singe-moto.m4a');a.play().catch(()=>{});
+    let t=0;[[0,1],[160,0],[260,1],[420,0]].forEach(([d,o])=>setTimeout(()=>{mouth(o);head.style.transform=o?'rotate(-3deg)':'rotate(0)'},d));
+  };
+  const arm=$('#arm-right');let waving=false;
+  $('#wave').onclick=()=>{if(waving)return;waving=true;let n=0;const step=()=>{arm.style.transform=n%2?'rotate(-150deg)':'rotate(-125deg)';if(++n<6)setTimeout(step,350);else setTimeout(()=>{arm.style.transform='';waving=false},350)};step()};
+  let side=1;$('#look').onclick=()=>{side=-side;['#pupil-left','#pupil-right'].forEach(p=>{$(p).style.transition='transform .25s';$(p).style.transform=`translateX(${side<0?-11:0}px)`})};
+  // hut
+  const door=$('#door');let dOpen=false;const toggleDoor=()=>{dOpen=!dOpen;door.style.transform=dOpen?'perspective(400px) rotateY(-70deg)':''};
+  const sl=$('#shutter-left'),sr=$('#shutter-right');let sOpen=true;const toggleSh=()=>{sOpen=!sOpen;sl.style.transform=sOpen?'':'translateX(24px) scaleX(1.6)';sr.style.transform=sOpen?'':'translateX(-24px) scaleX(1.6)'};
+  const board=$('#sign-board');const swing=()=>{board.classList.remove('swing');void board.getBBox();board.classList.add('swing')};
+  $('#openDoor').onclick=toggleDoor;door.onclick=toggleDoor;
+  $('#shut').onclick=toggleSh;sl.onclick=toggleSh;sr.onclick=toggleSh;
+  $('#sign').onclick=swing;board.onclick=swing;
+})();
+</script></body></html>

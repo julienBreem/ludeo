@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 420" width="800" height="840">
+  <!-- Layered monkey hut: every interactive part is its own group with its own outline and a
+       visible gap/shadow so it reads as separate (door, shutters, sign, roof). -->
+  <defs>
+    <style>
+      .o{stroke:#1e120a;stroke-width:6;stroke-linejoin:round;stroke-linecap:round}
+      .t{stroke:#1e120a;stroke-width:3.5;fill:none;stroke-linecap:round}
+    </style>
+  </defs>
+  <ellipse cx="200" cy="404" rx="150" ry="12" fill="#e6ddd2"/>
+
+  <g id="stilts">
+    <rect class="o" x="104" y="318" width="22" height="80" rx="5" fill="#8b5a2b"/>
+    <rect class="o" x="274" y="318" width="22" height="80" rx="5" fill="#8b5a2b"/>
+    <path class="t" d="M126 340 L274 380 M126 380 L274 340" style="stroke-width:5"/>
+  </g>
+  <g id="deck">
+    <rect class="o" x="76" y="304" width="248" height="26" rx="8" fill="#b07a45"/>
+    <path class="t" d="M120 306 v22 M170 306 v22 M230 306 v22 M280 306 v22"/>
+  </g>
+  <g id="ladder">
+    <path class="o" d="M176 330 L168 398 M224 330 L232 398" fill="none" style="stroke-width:7"/>
+    <path class="o" d="M174 352 H226 M171 376 H229" fill="none" style="stroke-width:6"/>
+  </g>
+
+  <!-- walls (round log hut) -->
+  <g id="walls">
+    <path class="o" d="M96 178 Q92 250 100 306 H300 Q308 250 304 178 Z" fill="#d9a86c"/>
+    <g class="t" stroke="#9c6b3a">
+      <path d="M98 210 H302"/><path d="M98 244 H303"/><path d="M99 276 H302"/>
+    </g>
+    <!-- shadow cast by the roof on the wall: separates roof and wall -->
+    <path d="M98 180 H302 Q300 200 302 204 Q200 214 98 204 Q100 196 98 180 Z" fill="#1e120a" opacity=".22"/>
+  </g>
+
+  <!-- dark doorway behind the door (shown when the door opens) -->
+  <path class="o" d="M164 306 V246 Q164 212 200 212 Q236 212 236 246 V306 Z" fill="#2b1a10"/>
+  <!-- door (pivot: hinge on the left edge, x=164) -->
+  <g id="door">
+    <path class="o" d="M164 306 V246 Q164 212 200 212 Q236 212 236 246 V306 Z" fill="#7a4a24"/>
+    <path d="M182 218 V304 M200 212 V304 M218 218 V304" stroke="#5c3518" style="stroke-width:3"/>
+    <path class="t" d="M168 238 H232 M166 284 H234" stroke="#3d240f" style="stroke-width:5"/>
+    <circle class="o" cx="226" cy="262" r="6" fill="#f2c14e" style="stroke-width:3"/>
+  </g>
+  <!-- door frame drawn over the door edge for depth -->
+  <path class="o" d="M156 306 V246 Q156 204 200 204 Q244 204 244 246 V306" fill="none" stroke="#5c3518" style="stroke-width:7"/>
+  <path class="t" d="M152 306 V246 Q152 200 200 200 Q248 200 248 246 V306" style="stroke-width:3"/>
+
+  <!-- windows with shutters (pivot: outer hinges) -->
+  <g id="window-left">
+    <rect class="o" x="112" y="226" width="34" height="38" rx="6" fill="#bfe3f0"/>
+    <path class="t" d="M129 226 V264 M112 245 H146"/>
+  </g>
+  <g id="shutter-left"><rect class="o" x="92" y="222" width="20" height="46" rx="4" fill="#6fa64a"/><path class="t" d="M96 236 H108 M96 254 H108"/></g>
+  <g id="window-right">
+    <rect class="o" x="254" y="226" width="34" height="38" rx="6" fill="#bfe3f0"/>
+    <path class="t" d="M271 226 V264 M254 245 H288"/>
+  </g>
+  <g id="shutter-right"><rect class="o" x="288" y="222" width="20" height="46" rx="4" fill="#6fa64a"/><path class="t" d="M292 236 H304 M292 254 H304"/></g>
+
+  <!-- roof: thick leafy dome, its own part, overhanging the walls -->
+  <g id="roof">
+    <path class="o" d="M64 184 Q64 66 200 58 Q336 66 336 184
+             Q320 204 302 186 Q286 206 268 188 Q252 208 234 190 Q218 210 200 192
+             Q182 210 166 190 Q148 208 132 188 Q114 206 98 186 Q80 204 64 184 Z" fill="#5e9a3d"/>
+    <g stroke="#3f7426" style="stroke-width:5" fill="none" stroke-linecap="round">
+      <path d="M100 160 Q122 112 168 88"/><path d="M300 160 Q278 112 232 88"/>
+      <path d="M86 180 Q108 146 140 132"/><path d="M314 180 Q292 146 260 132"/>
+      <path d="M200 62 V120"/>
+    </g>
+    <path d="M110 108 Q140 76 186 68" stroke="#8cc560" style="stroke-width:9" fill="none" opacity=".8" stroke-linecap="round"/>
+    <circle class="o" cx="200" cy="56" r="11" fill="#8b5a2b"/>
+  </g>
+
+  <!-- letter sign hanging from the roof edge on two ropes (pivot: 200,196) -->
+  <g id="sign">
+    <path class="t" d="M178 196 L182 160 M222 196 L218 160" style="stroke-width:4"/>
+    <rect class="o" x="160" y="132" width="80" height="34" rx="9" fill="#f7e7c1"/>
+    <circle class="o" cx="200" cy="149" r="0" fill="none"/>
+  </g>
+  <g id="sign-board">
+    <circle class="o" cx="200" cy="150" r="34" fill="#fff4d6"/>
+    <circle cx="200" cy="150" r="27" fill="none" stroke="#e7cf9c" style="stroke-width:4"/>
+    <text x="200" y="166" text-anchor="middle" font-family="Arial Rounded MT Bold, Arial, sans-serif"
+          font-weight="bold" font-size="44" fill="#d93a2b" stroke="#1e120a" style="stroke-width:1.5">M</text>
+  </g>
+</svg>
