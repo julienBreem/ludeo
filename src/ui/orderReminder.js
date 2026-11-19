@@ -1,82 +1,93 @@
-// Order reminder strip, top-left: dessert, shape outline, colour dot, topping ×N (copies + digit).
-import { COLOR_HEX, OUTLINE } from '../config.js';
-import { drawCake } from './cakeView.js';
+// Order strip, top-left: the ordered cake in 3/4 (one cached texture per order), with the layer
+// of the current step pulsing: dough -> side band, mould -> outline, bake -> the whole cake,
+// paint -> the glazed top, toppings -> the toppings. No digits, no icon list.
+import { TOP_SQUASH } from '../config.js';
+import { FRAME, TOPPING_SIZE } from './cakeView.js';
+import { idealCake, orderCakeKey, orderSig, ORDER_PX } from './orderCake.js';
 
 const X = 16;
 const Y = 16;
-const HEIGHT = 96;
-const CELL = 84; // width given to one icon
-const ICON = 72;
-const PAD = 12;
-const MINI = 92; // display size of the mini dessert cake
-const MINI_RES = 2; // its cached texture is drawn at 2x for sharpness
+const CARD_W = 204;
+const CARD_H = 184;
+const UNIT = 0.54; // strip px per frame unit: the cake itself (about 0.7 of the frame) is ~150 px wide
+const K = ORDER_PX / FRAME; // texture px per frame unit
+const GLOW = 0xffc400;
+const HALO_R = 14; // frame units the halo spreads around a layer
+const STAND_ORIGIN_Y = 0.8;
 
-// The mini cake is a full drawCake with a BitmapMask (extra full-screen passes every frame).
-// It is drawn once per dessert into a texture, cached for the whole game, and shown as an image.
-function miniCakeKey(scene, dessert) {
-  const key = `reminder-cake-${dessert}`;
+// A highlight texture: the step's layer drawn in `tint`, at the same scale and centre as the
+// cake texture. `halo` spreads it around (copies on two rings) so it shows beyond the cake.
+function highlightKey(scene, order, step, halo) {
+  const key = `order-hl-${orderSig(order)}-${step}-${halo ? 'halo' : 'fill'}`;
   if (scene.textures.exists(key)) return key;
-  const s = MINI * MINI_RES;
-  const cake = drawCake(scene, s / 2, s / 2, { dessert, shape: 'rond', bake: 'dore', toppings: [] }, { size: s });
-  const tex = scene.textures.addDynamicTexture(key, s, s);
-  tex.draw(cake);
-  cake.destroy();
+  const cake = idealCake(scene, order);
+  const shape = order.shape;
+  const px = Math.ceil(440 * K);
+  const img = (k2, x = 0, y = 0) => scene.make.image({ x, y, key: k2, add: false });
+  const layer = () => {
+    const parts = [];
+    const top = (k2) => {
+      const holder = scene.make.container({ x: 0, y: 0, add: false });
+      holder.scaleY = TOP_SQUASH;
+      holder.add(img(k2));
+      parts.push(holder);
+    };
+    if (step === 'pate' || step === 'cuisson') parts.push(img(`shape-${shape}-side`));
+    if (step === 'cuisson' || step === 'couleur') top(`shape-${shape}-fill`);
+    if (step === 'moule') top(`shape-${shape}-line`);
+    if (step === 'toppings') {
+      for (const t of cake.toppings) {
+        const ti = img(`topping-${t.key}`, t.x, t.y * TOP_SQUASH).setOrigin(0.5, STAND_ORIGIN_Y);
+        ti.setScale(TOPPING_SIZE / Math.max(ti.width, ti.height));
+        parts.push(ti);
+      }
+    }
+    return parts;
+  };
+  const all = scene.make.container({ x: px / 2, y: px / 2, add: false }).setScale(K);
+  const offsets = [[0, 0]];
+  if (halo) {
+    for (const r of [HALO_R, HALO_R / 2]) {
+      for (let a = 0; a < 12; a++) offsets.push([Math.cos((a * Math.PI) / 6) * r, Math.sin((a * Math.PI) / 6) * r]);
+    }
+  }
+  for (const [dx, dy] of offsets) {
+    const holder = scene.make.container({ x: dx, y: dy, add: false });
+    for (const p of layer()) {
+      p.setTint?.(GLOW);
+      holder.add(p);
+    }
+    all.add(holder);
+  }
+  const tex = scene.textures.addDynamicTexture(key, px, px);
+  tex.draw(all);
+  all.destroy();
   return key;
 }
 
-// The returned container has .stripWidth and .append(gameObject, width = CELL), which adds an
-// item at the right end of the strip and widens it (Bake uses it for the target flames).
-export function addOrderReminder(scene, order) {
+/**
+ * addOrderReminder(scene, order, step: 'pate'|'moule'|'cuisson'|'couleur'|'toppings') -> Container
+ * The card sits at the top-left, depth 400. Its pulse is a tween owned by the scene.
+ */
+export function addOrderReminder(scene, order, step) {
   const c = scene.add.container(X, Y).setDepth(400);
   const bg = scene.add.graphics();
+  bg.fillStyle(0x000000, 0.15).fillRoundedRect(3, 5, CARD_W, CARD_H, 22);
+  bg.fillStyle(0xffffff, 1).fillRoundedRect(0, 0, CARD_W, CARD_H, 22);
   c.add(bg);
-  let cursor = PAD;
-  const redraw = () => {
-    bg.clear();
-    bg.fillStyle(0x000000, 0.15).fillRoundedRect(3, 5, cursor + PAD, HEIGHT, 22);
-    bg.fillStyle(0xffffff, 1).fillRoundedRect(0, 0, cursor + PAD, HEIGHT, 22);
-    c.stripWidth = cursor + PAD;
-  };
-  c.append = (obj, width = CELL) => {
-    obj.setPosition(cursor + width / 2, HEIGHT / 2);
-    c.add(obj);
-    cursor += width;
-    redraw();
-    return obj;
-  };
-  const icon = (key, size = ICON) => {
-    const img = scene.add.image(0, 0, key);
-    img.setScale(size / Math.max(img.width, img.height));
-    return img;
-  };
-
-  // dessert: a small round 3/4 cake of that dessert (the shape is shown next to it)
-  const mini = scene.add.image(0, -6, miniCakeKey(scene, order.dessert)).setScale(1 / MINI_RES);
-  const holder = scene.add.container(0, 0, [mini]);
-  c.append(holder);
-  const silhouette = scene.add.container(0, 0, [
-    icon(`shape-${order.shape}-fill`, 80).setTint(0xe6e6e6),
-    icon(`shape-${order.shape}-line`, 80),
-  ]);
-  c.append(silhouette);
-  const dot = scene.add.graphics();
-  dot.fillStyle(COLOR_HEX[order.color], 1).fillCircle(0, 0, 28);
-  dot.lineStyle(3, OUTLINE, 0.6).strokeCircle(0, 0, 28);
-  c.append(dot);
-
-  const n = order.toppingCount;
-  const spacing = 34;
-  const group = scene.add.container(0, 0);
-  for (let i = 0; i < n; i++) {
-    const t = icon(`topping-${order.topping}`, 60);
-    t.x = (i - (n - 1) / 2) * spacing;
-    group.add(t);
-  }
-  c.append(group, (n - 1) * spacing + 66);
-  const digit = scene.add.text(0, 0, String(n), {
-    fontFamily: 'Arial Black, Arial, sans-serif', fontSize: '52px', color: '#222222',
-    stroke: '#ffffff', strokeThickness: 6,
-  }).setOrigin(0.5);
-  c.append(digit, 56);
+  const scale = UNIT / K;
+  const cx = CARD_W / 2;
+  const cy = CARD_H / 2 + 4;
+  const cake = scene.add.image(cx, cy, orderCakeKey(scene, order)).setScale(scale);
+  const halo = scene.add.image(cx, cy, highlightKey(scene, order, step, true)).setScale(scale).setAlpha(0.4);
+  const fill = scene.add.image(cx, cy, highlightKey(scene, order, step, false)).setScale(scale)
+    .setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.15);
+  c.add([halo, cake, fill]);
+  c.glow = scene.tweens.add({
+    targets: halo, alpha: { from: 0.35, to: 1 }, duration: 650, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+  });
+  scene.tweens.add({
+    targets: fill, alpha: { from: 0.1, to: 0.55 }, duration: 650, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+  });
   return c;
 }

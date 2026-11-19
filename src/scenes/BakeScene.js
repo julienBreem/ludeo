@@ -27,6 +27,7 @@ const GAUGE_W = 56;
 const HEAT_X = [900, 1030, 1160];
 const HEAT_Y = 290;
 const HEAT_BOX = 120;
+const TARGET_Y = 175;
 const GO_X = 1030;
 const GO_Y = 520;
 const RISE_END = GREEN_MIN;
@@ -54,16 +55,8 @@ export class BakeScene extends Phaser.Scene {
     this.heatEvent = null;
 
     this.cameras.main.setBackgroundColor(0xffebee);
-    const reminder = addOrderReminder(this, round.order);
-    // divider, so the topping digit does not seem to count the flames
-    const sep = this.add.graphics();
-    sep.fillStyle(OUTLINE, 0.25).fillRoundedRect(-3, -34, 6, 68, 3);
-    reminder.append(sep, 34);
-    for (let i = 0; i < this.target; i++) {
-      const f = this.add.image(0, 0, 'flame');
-      f.setScale(56 / f.height);
-      reminder.append(f, i === this.target - 1 ? 58 : 38);
-    }
+    addOrderReminder(this, round.order, 'cuisson');
+    this.drawTargetFlames();
 
     this.add.image(OVEN_X, OVEN_Y, 'oven');
     this.cake = drawCake(this, OVEN_X + CAKE_DX, OVEN_Y + CAKE_DY, { ...round.cake, bake: null, glaze: null, toppings: [] },
@@ -79,6 +72,27 @@ export class BakeScene extends Phaser.Scene {
     this.setGoEnabled(false);
 
     this.bar = addStepBar(this, { onRestart: () => restart(this), onValidate: () => this.validate() });
+  }
+
+  // The heat to aim for, as flames on a card above the oven (an instruction, not a guess).
+  drawTargetFlames() {
+    const n = this.target;
+    const w = 40 + n * 64;
+    const h = 112;
+    const x = OVEN_X;
+    const y = TARGET_Y;
+    const card = this.add.container(x, y).setDepth(20);
+    const bg = this.add.graphics();
+    bg.fillStyle(0x000000, 0.15).fillRoundedRect(-w / 2 + 3, -h / 2 + 5, w, h, 26);
+    bg.fillStyle(0xffffff, 1).fillRoundedRect(-w / 2, -h / 2, w, h, 26);
+    bg.lineStyle(5, 0x66bb6a, 1).strokeRoundedRect(-w / 2, -h / 2, w, h, 26);
+    card.add(bg);
+    for (let i = 0; i < n; i++) {
+      const f = this.add.image((i - (n - 1) / 2) * 64, 0, 'flame');
+      f.setScale(84 / f.height);
+      card.add(f);
+    }
+    this.targetCard = card;
   }
 
   setRise(g) {

@@ -37,7 +37,7 @@ export class ToppingsScene extends Phaser.Scene {
     this.sparkled = false;
 
     this.cameras.main.setBackgroundColor(0xe8f5e9);
-    addOrderReminder(this, round.order);
+    addOrderReminder(this, round.order, 'toppings');
     this.cake = drawCake(this, CAKE_X, CAKE_Y, { ...round.cake, shape: this.shape, toppings: [] },
       { size: CAKE_SIZE, view: 'top' });
     this.drawShelf();

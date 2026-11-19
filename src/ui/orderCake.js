@@ -3,7 +3,7 @@
 import { TOP_SQUASH } from '../config.js';
 import { GRID } from '../logic/paint.js';
 import { zoneMap, layoutToppings } from '../logic/zones.js';
-import { shapeMask, FRAME } from './cakeView.js';
+import { shapeMask, cakeTexture, FRAME } from './cakeView.js';
 
 const CELL = FRAME / GRID; // frame units per grid cell
 // Wanted gap between topping anchors, in cells of the 3/4 view (a standing topping is about
@@ -131,4 +131,27 @@ export function idealCake(scene, order) {
     glaze: { cells, size: GRID, colorKeys: [...order.glaze] },
     toppings: spots.map((p, i) => ({ key: keys[i], x: p.x, y: p.y })),
   };
+}
+
+// ---- cached picture of an order --------------------------------------------------------------
+export const ORDER_PX = 460; // the order texture's width (the Stand bubble shows it 1:1)
+let lastSig = null;
+
+export function orderSig(order) {
+  return [order.dessert, order.shape, order.glaze.join('+'), order.toppings.map(t => `${t.key}${t.count}`).join('+')].join('-');
+}
+
+// One mask-free texture per order, made on first use and shared by the bubble and the strip.
+// The previous order's textures (picture and highlights) are dropped when a new order shows up.
+export function orderCakeKey(scene, order) {
+  const sig = orderSig(order);
+  const key = `order-cake-${sig}`;
+  if (lastSig && lastSig !== sig) {
+    for (const k of scene.textures.getTextureKeys()) {
+      if (k.startsWith(`order-cake-${lastSig}`) || k.startsWith(`order-hl-${lastSig}`)) scene.textures.remove(k);
+    }
+  }
+  lastSig = sig;
+  if (!scene.textures.exists(key)) cakeTexture(scene, key, idealCake(scene, order), { size: ORDER_PX });
+  return key;
 }

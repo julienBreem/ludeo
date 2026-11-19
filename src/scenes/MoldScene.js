@@ -30,7 +30,7 @@ export class MoldScene extends Phaser.Scene {
     this.cards = {};
 
     this.cameras.main.setBackgroundColor(0xe1f5fe);
-    addOrderReminder(this, round.order);
+    addOrderReminder(this, round.order, 'moule');
 
     const keys = ownedKeys(getState().owned, 'shape');
     const x0 = W / 2 - ((keys.length - 1) * STEP) / 2;
