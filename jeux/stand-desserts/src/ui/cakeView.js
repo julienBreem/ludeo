@@ -5,6 +5,7 @@ import { COLOR_HEX, BAKE_TINT, TOP_SQUASH, BATTER } from '../config.js';
 import { GREEN_MIN, GREEN_MAX } from '../logic/bake.js';
 import { maskFromAlpha, GRID } from '../logic/paint.js';
 import { crumbs } from './fx.js';
+import { dur } from './pace.js';
 
 export const FRAME = 400;
 export const TOPPING_SIZE = 80; // display size of one topping, in frame units
@@ -417,7 +418,7 @@ function addEating(scene, c, state) {
     const sx = snap.img.scaleX;
     const sy = snap.img.scaleY;
     scene.tweens.addCounter({
-      from, to, duration: BITE_MS, ease: 'Quad.easeOut',
+      from, to, duration: dur(BITE_MS), ease: 'Quad.easeOut',
       onUpdate: tw => { if (snap.img.active) eraseFrom(tw.getValue(), r); },
       onComplete: () => {
         if (!snap.img.active) return;
@@ -427,7 +428,7 @@ function addEating(scene, c, state) {
           targets: snap.img, scaleX: sx * 1.04, scaleY: sy * 0.96, duration: 90, yoyo: true,
           onComplete: () => { if (snap.img.active) snap.img.setScale(sx, sy); },
         });
-        scene.time.delayedCall(BITE_GAP, done);
+        scene.time.delayedCall(dur(BITE_GAP), done);
       },
     });
   };
@@ -466,7 +467,7 @@ function addEating(scene, c, state) {
         if (!c.active) return;
         c.angle = a;
         crumbAt(dir > 0 ? ext.right - quarter * 0.3 : ext.left + quarter * 0.3, 10, 2);
-        scene.time.delayedCall(BITE_GAP, () => onDone?.());
+        scene.time.delayedCall(dur(BITE_GAP), () => onDone?.());
       },
     });
   };

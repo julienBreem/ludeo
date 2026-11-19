@@ -4,6 +4,7 @@ import { ASSETS } from '../assets.js';
 import { W, H, COUNTER, OUTLINE } from '../config.js';
 import { makeFxTextures } from '../ui/fx.js';
 import { goTo } from '../ui/flow.js';
+import { installSettings } from '../ui/pace.js';
 import { debugSceneKey, installSampleRound } from '../debug.js';
 
 const loadSvg = (load, a) => load.svg(a.key, a.file, { width: a.w, height: a.h });
@@ -18,6 +19,7 @@ export class BootScene extends Phaser.Scene {
   }
 
   create() {
+    installSettings(this.game.canvas); // evening filter + live settings
     const barW = 640;
     const barH = 44;
     const x0 = (W - barW) / 2;
@@ -36,6 +38,8 @@ export class BootScene extends Phaser.Scene {
     };
     show(0);
 
+    // The collection's shared home icon (the Stand's home button).
+    this.load.svg('icon-home', '../../shared/assets/icon-home.svg', { width: 160, height: 160 });
     for (const a of ASSETS) if (!this.textures.exists(a.key)) loadSvg(this.load, a);
     this.load.on('progress', show);
     this.load.once('complete', () => {

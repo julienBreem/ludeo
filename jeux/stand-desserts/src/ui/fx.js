@@ -2,6 +2,7 @@
 // generated in BootScene (makeFxTextures). A global budget keeps at most MAX_PARTICLES
 // alive at once: each emitter reserves its maximum up front and releases it when destroyed.
 import { W } from '../config.js';
+import { dur, factors, isEvening } from './pace.js';
 
 export const MAX_PARTICLES = 60;
 const FX_DEPTH = 1000;
@@ -36,7 +37,8 @@ export function makeFxTextures(scene) {
 // Creates an emitter that may keep at most `want` particles alive (less if the budget is short).
 // burst: emit everything at once; otherwise emit `want` particles over `spread` ms.
 function emit(scene, x, y, key, config, want, { burst = true, spread = 0 } = {}) {
-  const n = Math.min(want, MAX_PARTICLES - reserved);
+  const scaled = Math.max(1, Math.round(want * factors().particles));
+  const n = Math.min(scaled, MAX_PARTICLES - reserved);
   if (n <= 0) return null;
   reserved += n;
   const lifespan = typeof config.lifespan === 'number' ? config.lifespan : (config.lifespan?.max ?? 1000);
@@ -88,6 +90,7 @@ export function flourPuff(scene, x, y) {
 }
 
 export function sparkle(scene, x, y) {
+  if (isEvening()) return null; // evening mode: no sparkles
   return emit(scene, x, y, 'fx-star', {
     speed: { min: 80, max: 220 }, rotate: { min: 0, max: 360 },
     scale: { start: 1.1, end: 0 }, lifespan: 700, tint: [0xffeb3b, 0xffffff, 0xff8fb7],
@@ -109,6 +112,7 @@ export function smoke(scene, x, y) {
 }
 
 export function confetti(scene) {
+  if (isEvening()) return null; // evening mode: no confetti
   return emit(scene, W / 2, -20, 'fx-dot', {
     x: { min: -W / 2, max: W / 2 }, speedY: { min: 150, max: 380 }, speedX: { min: -80, max: 80 },
     gravityY: 200, rotate: { min: 0, max: 360 }, scaleX: 0.9, scaleY: 0.45, lifespan: 2600,
@@ -124,8 +128,8 @@ export function popIn(scene, target) {
   return scene.tweens.chain({
     targets: target,
     tweens: [
-      { scaleX: sx * 1.1, scaleY: sy * 1.1, duration: 180, ease: 'Quad.easeOut' },
-      { scaleX: sx, scaleY: sy, duration: 120, ease: 'Quad.easeIn' },
+      { scaleX: sx * 1.1, scaleY: sy * 1.1, duration: dur(180), ease: 'Quad.easeOut' },
+      { scaleX: sx, scaleY: sy, duration: dur(120), ease: 'Quad.easeIn' },
     ],
   });
 }

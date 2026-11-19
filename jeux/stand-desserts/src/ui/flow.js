@@ -1,7 +1,7 @@
 // Scene order of one client and fade transitions between scenes.
-export const ORDER = ['Stand', 'Dough', 'Mold', 'Bake', 'Paint', 'Toppings', 'Service'];
+import { commit, fade } from './pace.js';
 
-const FADE_MS = 250;
+export const ORDER = ['Stand', 'Dough', 'Mold', 'Bake', 'Paint', 'Toppings', 'Service'];
 
 // Phaser reuses scene instances: the "leaving" state must not survive a scene's run.
 // It is cleared when the scene shuts down (scene.start of another scene, or restart),
@@ -14,6 +14,7 @@ export function isLeaving(scene) {
 // Repeated calls while leaving are ignored (double taps).
 export function goTo(scene, key, data) {
   if (scene.__leaving) return;
+  commit();
   const token = {};
   scene.__leaving = token;
   scene.events.once('shutdown', () => {
@@ -24,15 +25,16 @@ export function goTo(scene, key, data) {
     // Stale callback (the scene was restarted or stopped while fading): do nothing.
     if (scene.__leaving !== token) return;
     const target = scene.scene.get(key);
-    target.events.once('create', () => target.cameras.main.fadeIn(FADE_MS));
+    target.events.once('create', () => target.cameras.main.fadeIn(fade()));
     scene.scene.start(key, data);
   });
-  cam.fadeOut(FADE_MS);
+  cam.fadeOut(fade());
 }
 
 // Restarts the scene (↺), unless it is already fading out to another scene.
 export function restart(scene) {
   if (scene.__leaving) return;
+  commit();
   scene.scene.restart();
 }
 

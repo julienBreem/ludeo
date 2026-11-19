@@ -144,6 +144,7 @@ export const PRECACHE = [
   'src/ui/fx.js',
   'src/ui/orderCake.js',
   'src/ui/orderReminder.js',
+  'src/ui/pace.js',
   'src/ui/stepBar.js',
   ...ASSETS.map(a => a.file),
 ];

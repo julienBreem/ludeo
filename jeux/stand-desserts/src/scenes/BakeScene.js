@@ -9,6 +9,7 @@ import { addOrderReminder } from '../ui/orderReminder.js';
 import { addIconButton } from '../ui/button.js';
 import { drawCake } from '../ui/cakeView.js';
 import { goNext, restart } from '../ui/flow.js';
+import { dur, factors } from '../ui/pace.js';
 import { steam, smoke, heatRise } from '../ui/fx.js';
 
 const OVEN_X = 420;
@@ -168,7 +169,7 @@ export class BakeScene extends Phaser.Scene {
   startBaking() {
     this.phase = 'baking';
     this.startedAt = this.time.now;
-    this.timer = createBakeTimer(this.heat, this.target);
+    this.timer = createBakeTimer(this.heat, this.target, { greenFactor: factors().greenWindow });
     this.heatBtns.forEach((b) => { b.zone.disableInteractive(); });
     this.heatBtns.forEach((b, i) => { if (i + 1 !== this.heat) b.box.setAlpha(0.45); });
     this.go.setTexture('icon-out');
@@ -209,10 +210,10 @@ export class BakeScene extends Phaser.Scene {
     this.unmolded = plain;
     const lift = 150;
     for (const part of [this.cake.moldBack, this.cake.moldFront]) {
-      this.tweens.add({ targets: part, y: part.y - lift, alpha: 0, duration: 650, ease: 'Back.easeIn' });
+      this.tweens.add({ targets: part, y: part.y - lift, alpha: 0, duration: dur(650), ease: 'Back.easeIn' });
     }
     this.tweens.add({
-      targets: plain, scaleX: plain.scaleX * 1.06, scaleY: plain.scaleY * 1.06, duration: 160, delay: 560, yoyo: true,
+      targets: plain, scaleX: plain.scaleX * 1.06, scaleY: plain.scaleY * 1.06, duration: dur(160), delay: dur(560), yoyo: true,
     });
     this.bar.setValidateEnabled(true);
   }

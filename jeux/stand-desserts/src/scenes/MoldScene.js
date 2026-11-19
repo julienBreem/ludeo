@@ -7,6 +7,7 @@ import { addStepBar } from '../ui/stepBar.js';
 import { addOrderReminder } from '../ui/orderReminder.js';
 import { goNext, restart } from '../ui/flow.js';
 import { splash } from '../ui/fx.js';
+import { dur } from '../ui/pace.js';
 
 const CARD = 230;
 const STEP = 244;
@@ -109,19 +110,19 @@ export class MoldScene extends Phaser.Scene {
     c.slot.add(box);
 
     this.bowl.setPosition(x - 70, bowlY).setAngle(0).setVisible(true).setAlpha(1);
-    this.tweens.add({ targets: this.bowl, angle: -28, x: x - 90, duration: 300, ease: 'Quad.easeOut' });
+    this.tweens.add({ targets: this.bowl, angle: -28, x: x - 90, duration: dur(300), ease: 'Quad.easeOut' });
 
     this.stream.setPosition(x - 8, lipY).setScale(1, 0).setAlpha(1).setVisible(true);
     this.tweens.add({
-      targets: this.stream, scaleY: (targetY - lipY - 10) / 100, duration: 260, delay: 200, ease: 'Quad.easeIn',
+      targets: this.stream, scaleY: (targetY - lipY - 10) / 100, duration: dur(260), delay: dur(200), ease: 'Quad.easeIn',
       onComplete: () => splash(this, x - 8, targetY - 24, BATTER),
     });
     this.tweens.add({
-      targets: box, scaleX: 1, scaleY: 1, duration: FILL_MS, delay: 300, ease: 'Sine.easeOut',
+      targets: box, scaleX: 1, scaleY: 1, duration: dur(FILL_MS), delay: dur(300), ease: 'Sine.easeOut',
       onComplete: () => {
-        this.tweens.add({ targets: this.stream, alpha: 0, scaleX: 0.2, duration: 200, onComplete: () => this.stream.setVisible(false) });
+        this.tweens.add({ targets: this.stream, alpha: 0, scaleX: 0.2, duration: dur(200), onComplete: () => this.stream.setVisible(false) });
         this.tweens.add({
-          targets: this.bowl, angle: 0, alpha: 0, duration: 300, onComplete: () => this.bowl.setVisible(false),
+          targets: this.bowl, angle: 0, alpha: 0, duration: dur(300), onComplete: () => this.bowl.setVisible(false),
         });
         this.pouring = false;
         this.bar.setValidateEnabled(true);

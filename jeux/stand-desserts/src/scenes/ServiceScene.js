@@ -15,6 +15,7 @@ import { GRID } from '../logic/paint.js';
 import { zoneEdges } from '../logic/zones.js';
 import { DESSERTS } from '../logic/catalog.js';
 import { addCoins } from '../logic/economy.js';
+import { dur } from '../ui/pace.js';
 
 const CLIENT_X = 300;
 const CLIENT_Y = 470;
@@ -84,10 +85,10 @@ export class ServiceScene extends Phaser.Scene {
     // The face follows the eating: the client waits neutral, then eats with the round's mood
     // (a perfect cake is eaten happily, a 0/5 pushed away cross).
     this.tweens.add({
-      targets: [this.plate, this.cake], x: PLATE_X, duration: 700, ease: 'Sine.easeOut',
+      targets: [this.plate, this.cake], x: PLATE_X, duration: dur(700), ease: 'Sine.easeOut',
       onComplete: () => {
         this.client.setMood(mood);
-        this.eat(() => this.time.delayedCall(350, () => this.startReveal(mood)));
+        this.eat(() => this.time.delayedCall(dur(350), () => this.startReveal(mood)));
       },
     });
     this.events.once('shutdown', () => this.stopBlink?.());
@@ -102,7 +103,7 @@ export class ServiceScene extends Phaser.Scene {
       finished = true;
       done();
     };
-    this.time.delayedCall(SAFETY_MS * Math.max(1, this.bites) + 1000, finish);
+    this.time.delayedCall(dur(SAFETY_MS * Math.max(1, this.bites) + 1000), finish);
     if (!this.cake.eat) { finish(); return; } // no shape (cannot happen in play): nothing to eat
     if (this.bites <= 0) {
       talk(this, this.client, 300);
@@ -110,7 +111,7 @@ export class ServiceScene extends Phaser.Scene {
         fromLeft: true,
         onDone: () => {
           this.tweens.add({
-            targets: [this.plate, this.cake], x: PLATE_X + PUSH_X, duration: 380, ease: 'Back.easeOut',
+            targets: [this.plate, this.cake], x: PLATE_X + PUSH_X, duration: dur(380), ease: 'Back.easeOut',
             onComplete: finish,
           });
         },
@@ -162,11 +163,11 @@ export class ServiceScene extends Phaser.Scene {
     if (i >= STEPS.length) {
       this.client.setMood(mood);
       if (this.coinsEarned === 5) confetti(this);
-      this.time.delayedCall(500, () => this.payout());
+      this.time.delayedCall(dur(500), () => this.payout());
       return;
     }
     this.buildRow(i);
-    this.time.delayedCall(STEP_MS, () => this.reveal(i + 1, mood));
+    this.time.delayedCall(dur(STEP_MS), () => this.reveal(i + 1, mood));
   }
 
   buildRow(i) {
@@ -360,10 +361,10 @@ export class ServiceScene extends Phaser.Scene {
     if (n === 0) return this.showNext();
     let landed = 0;
     for (let k = 0; k < n; k++) {
-      this.time.delayedCall(k * 220, () => {
+      this.time.delayedCall(dur(k * 220), () => {
         const coin = this.add.image(this.client.x + 80, CLIENT_Y - 60, 'coin').setScale(0.6).setDepth(600);
         this.tweens.add({
-          targets: coin, x: W - 250, y: 60, scale: 0.8, duration: 520, ease: 'Sine.easeIn',
+          targets: coin, x: W - 250, y: 60, scale: 0.8, duration: dur(520), ease: 'Sine.easeIn',
           onComplete: () => {
             coin.destroy();
             this.shownCoins++;
