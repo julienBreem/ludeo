@@ -27,7 +27,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DESSERTS } from '../../jeux/stand-desserts/src/logic/catalog.js';
-import { GREEN_MIN, GREEN_MAX } from '../../jeux/stand-desserts/src/logic/bake.js';
+import { GREEN_MIN, GREEN_MAX, LEVEL_NUMBERS, rightAlarm } from '../../jeux/stand-desserts/src/logic/bake.js';
 import { COLOR_HEX } from '../../jeux/stand-desserts/src/config.js';
 import { bitesFor } from '../../jeux/stand-desserts/src/logic/scoring.js';
 import { BRUSH_RADIUS } from '../../jeux/stand-desserts/src/logic/paint.js';
@@ -48,6 +48,8 @@ const SCENE_TIMEOUT = 10000;
 // Layout constants of the scenes (screen px, 1280×800 canvas at 1:1).
 const OK_BTN = [1201, 721];
 const LEFT_BTN = [79, 721]; // ↺ in prep scenes, shop in Stand, back in Shop
+const BAKE_GO = [1160, 540]; // ▶ / oven mitt
+const BAKE_DIAL = [905, 565]; // timer / clock pivot
 
 fs.mkdirSync(outDir, { recursive: true });
 // One Chrome per run, with its own profile and a DevTools port the OS picks (read back from
@@ -387,26 +389,49 @@ const actions = {
     await waitScene('Bake');
   },
 
-  async bake({ doubleTap = false, shot: name } = {}) {
+  // Bake at the round's Cuisson level (read from the scene): the heat of the dessert, then
+  // N1 out in the green, N2 out when the hand is on the dessert's number, N3 the alarm dragged to
+  // the start + the duration, out when it rings. `level` checks the round plays that level.
+  async bake({ doubleTap = false, level, shot: name } = {}) {
     await waitScene('Bake');
+    const n = await sceneEval('Bake', 's => s.level');
+    if (level !== undefined) check(n === level, `Cuisson plays level ${level} (${n})`);
     const heat = DESSERTS[order.dessert].heat;
     await tap([[900, 1030, 1160][heat - 1], 290]);
+    if (n === 3) {
+      const bt = await sceneEval('Bake', 's => s.bt');
+      check(Number.isInteger(bt.start) && bt.start >= 1 && bt.start <= 10 && bt.duration === 1, `N3 start ${bt.start} h, ${bt.duration} h`);
+      check(await sceneEval('Bake', 's => !s.go.input.enabled'), 'N3: ▶ waits for the alarm');
+      const alarm = rightAlarm(bt);
+      const pt = (h, r = 110) => [BAKE_DIAL[0] + r * Math.sin((h / 12) * 2 * Math.PI), BAKE_DIAL[1] - r * Math.cos((h / 12) * 2 * Math.PI)];
+      await drag([pt(bt.start + 6, 90), pt(alarm + 2), pt(alarm + 0.3)]);
+      const set = await sceneEval('Bake', 's => s.alarm');
+      check(set === alarm, `N3 alarm dragged to ${alarm} h (${set})`);
+      if (name) await shot(`${name}-alarm`);
+    }
     if (doubleTap) {
       // ▶ then a second tap 120 ms later: the cake must stay in the oven
-      await tap([1030, 520], 40);
+      await tap(BAKE_GO, 40);
       await sleep(120);
-      await tap([1030, 520], 40);
+      await tap(BAKE_GO, 40);
       await sleep(200);
       const phase = await sceneEval('Bake', 's => s.phase');
       check(phase === 'baking', `oven double tap does not take the cake out (phase ${phase})`);
     } else {
-      await tap([1030, 520]);
+      await tap(BAKE_GO);
     }
-    const mid = (GREEN_MIN + GREEN_MAX) / 2;
-    await waitFor('golden', () => sceneEval('Bake', `s => s.timer && s.timer.gauge() >= ${mid}`), 30000);
-    await tap([1030, 520]);
-    const g = await sceneEval('Bake', 's => s.finalGauge');
-    check(g >= GREEN_MIN && g <= GREEN_MAX, `taken out golden (gauge ${g.toFixed(3)})`);
+    if (n === 1) {
+      const mid = (GREEN_MIN + GREEN_MAX) / 2;
+      await waitFor('golden', () => sceneEval('Bake', `s => s.timer && s.timer.gauge() >= ${mid}`), 30000);
+    } else if (n === 2) {
+      const num = LEVEL_NUMBERS[order.dessert];
+      await waitFor(`hand on ${num}`, () => sceneEval('Bake', `s => s.timer && s.timer.elapsed() >= ${num}`), 30000);
+    } else {
+      await waitFor('alarm rings', () => sceneEval('Bake', 's => s.rang'), 40000);
+    }
+    await tap(BAKE_GO);
+    const st = await sceneEval('Bake', 's => s.finalState');
+    check(st === 'dore', `N${n}: taken out golden (${st})`);
     await sleep(800);
     if (name) await shot(name);
     await tap(OK_BTN);
@@ -544,7 +569,7 @@ const actions = {
   },
 
   // Lot 1: from the home, the parent space sets the levels with real taps: `themes` = theme levels
-  // ({lecture: n, nombres: n}), `phase` = pâte's own level (n, or 'theme' for « Comme le thème »).
+  // ({lecture: n, nombres: n, temps: n}), `phase` = pâte's own level (n, or 'theme' for « Comme le thème »).
   async parentLevels({ themes = {}, phase } = {}) {
     await loadHome(URL);
     await tapEl('#gear');

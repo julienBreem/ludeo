@@ -70,7 +70,7 @@ test('every game lists its phases: unique ids, a known theme, a French name, 1 o
 test('the stand phases, their themes and which ones have levels', () => {
   const g = GAMES.find(x => x.id === 'stand-desserts');
   assert.deepEqual(g.phases.map(p => [p.id, p.theme, p.levels]), [
-    ['commande', 'lecture', 3], ['pate', 'nombres', 3], ['moule', 'geometrie', 1], ['cuisson', 'temps', 1],
+    ['commande', 'lecture', 3], ['pate', 'nombres', 3], ['moule', 'geometrie', 1], ['cuisson', 'temps', 3],
     ['couleur', 'couleurs-fractions', 1], ['toppings', 'logique', 1], ['service', 'monnaie', 1],
   ]);
   assert.deepEqual(g.phases.filter(p => p.scored === false).map(p => p.id), ['commande']);

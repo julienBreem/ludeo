@@ -8,6 +8,7 @@
 // round at the stored levels).
 // Levels: ?debug&level=<phase>:<n>,... (e.g. ?debug&level=pate:3) forces phase levels for this page
 // (shared/runtime.js phaseLevels), for the sample round and every new client.
+// Half hours: ?debug&half=1 lets Cuisson N3 ask for ½ h and snap the alarm to half hours.
 // Order: ?debug&order=<shape>/<colours>/<toppings>[/<dessert>] (e.g. licorne/rose-violet-jaune/
 // fraise:2-bougie:1-chantilly:3) gives every new client that order (game-state.js newRound).
 import { createRound } from './logic/round.js';
@@ -87,6 +88,11 @@ export function installSampleRound(scene) {
   round.recordSample = debugParams()?.get('record') === '1'; // ...unless asked to (tests)
   setRound(round);
   return round;
+}
+
+// Debug only: ?debug&<name>=1 (e.g. &half=1: Cuisson N3 with ½ h durations, logic/bake.js HALF_HOURS).
+export function debugFlag(name) {
+  return debugParams()?.get(name) === '1';
 }
 
 // Debug only: collect errors in window.__errors and mirror them on <body data-errors>.

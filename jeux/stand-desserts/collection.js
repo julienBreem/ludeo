@@ -20,7 +20,7 @@ export const PHASES = [
   { id: 'commande', name: 'Commande', theme: 'lecture', levels: 3, scored: false },
   { id: 'pate', name: 'Pâte', theme: 'nombres', levels: 3 },
   { id: 'moule', name: 'Moule', theme: 'geometrie', levels: 1 },
-  { id: 'cuisson', name: 'Cuisson', theme: 'temps', levels: 1 },
+  { id: 'cuisson', name: 'Cuisson', theme: 'temps', levels: 3 },
   { id: 'couleur', name: 'Glaçage', theme: 'couleurs-fractions', levels: 1 },
   { id: 'toppings', name: 'Toppings', theme: 'logique', levels: 1 },
   { id: 'service', name: 'Service', theme: 'monnaie', levels: 1 },

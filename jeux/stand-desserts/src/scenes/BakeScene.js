@@ -1,9 +1,20 @@
 // Bake: choose the heat, start the oven, take the cake out at the right time (unmold).
-import { W, H, OUTLINE } from '../config.js';
+// Theme `temps`, level read from the round (kept from the client's arrival):
+// N1: a round timer with a green sector (the gauge: take out in the green).
+// N2: a timer numbered 1..5; the card says « 3 » (digit + dice): take out when the hand is on 3.
+// N3: a clock; the card shows the start time on a small clock and « + 1 h »: she drags the red alarm
+//     hand to the end time, starts, the hour hand runs (1 h ≈ 6 s x pace), the alarm rings and the
+//     oven stops; she takes the cake out. A wrong alarm bakes it too little / too long.
+// The heat (flames) is chosen at every level.
+import { OUTLINE } from '../config.js';
 import { getRound } from '../game-state.js';
 import { DESSERTS } from '../logic/catalog.js';
-import { createBakeTimer, bakeState, GREEN_MIN, GREEN_MAX } from '../logic/bake.js';
-import { judgeBake } from '../logic/scoring.js';
+import {
+  createBakeTimer, bakeState, GREEN_MIN, GREEN_MAX, HALF_HOURS, bakeTarget, bakeWindow, judgeAmount,
+  amountGauge, createTimeTimer, angleToAlarm, alarmDelay, clockHours,
+} from '../logic/bake.js';
+import { ensureTimerTextures, pivotOrigin, TIMER_RUN, CLOCK_MIN_SCALE } from '../ui/timerArt.js';
+import { debugFlag } from '../debug.js';
 import { addStepBar } from '../ui/stepBar.js';
 import { addOrderReminder } from '../ui/orderReminder.js';
 import { addIconButton } from '../ui/button.js';
@@ -21,16 +32,30 @@ const WIN_X = OVEN_X - 192;
 const WIN_Y = OVEN_Y - 75;
 const WIN_W = 384;
 const WIN_H = 238;
-const GAUGE_X = 760;
-const GAUGE_TOP = 190;
-const GAUGE_BOT = 660;
-const GAUGE_W = 56;
+// The timer / clock, right of the oven, under the heat buttons.
+const DIAL_X = 905;
+const DIAL_Y = 565;
+const DIAL_K = 0.725; // every layer of the dial at this scale, on the pivot (timerArt.js FRAMES)
+const DIAL_HIT = 300; // N3: a disc this wide around the pivot turns the alarm hand (the knob is ~30 px)
+const ALARM_ICON_X = 1160;
+const ALARM_ICON_Y = 405;
+const CARD_H = 112;
+const CLOCK_CARD_H = 210; // N3: the start-time clock at CLOCK_MIN_SCALE (its digits stay readable)
+const DEG = Math.PI / 180;
+const CARD_GAP = 20;
+// N2/N3: flames card + time card from here, right of the widest order reminder (Commande N2 word
+// strip, ~256 px), and ending above the heat buttons (y 230).
+const ROW_X = 272;
+const TURN = 2 * Math.PI;
+const FONT = 'Arial Black, Arial, sans-serif';
+const INK = '#222222';
 const HEAT_X = [900, 1030, 1160];
 const HEAT_Y = 290;
 const HEAT_BOX = 120;
 const TARGET_Y = 175;
-const GO_X = 1030;
-const GO_Y = 520;
+const TARGET_Y_ROW = 171;
+const GO_X = 1160;
+const GO_Y = 540;
 const RISE_END = GREEN_MIN;
 // ▶ and the oven mitt are the same button: a double tap must not start and take out at once.
 const TAKE_OUT_GUARD_MS = 700;
@@ -44,20 +69,33 @@ export class BakeScene extends Phaser.Scene {
     const round = getRound();
     this.round = round;
     if (window.__game) window.__round = round;
+    this.level = round.levels?.cuisson ?? 1;
+    // The target is kept on the round: a ↺ restart keeps the same start time (N3).
+    if (round.bakeTarget?.level !== this.level) {
+      const halfHours = this.level === 3 && (HALF_HOURS || debugFlag('half'));
+      round.bakeTarget = bakeTarget(round.order.dessert, this.level, { halfHours });
+    }
+    this.bt = round.bakeTarget;
     this.target = DESSERTS[round.order.dessert].heat;
+    this.win = bakeWindow(this.bt, { greenWindow: factors().greenWindow });
     this.heat = null;
     this.phase = 'idle'; // idle -> ready (heat chosen) -> baking -> out
     this.timer = null;
     this.heatBtns = [];
     this.startedAt = 0;
     this.finalGauge = null;
+    this.finalState = null;
     this.unmolded = null;
     this.glowTween = null;
     this.heatEvent = null;
+    this.alarm = this.bt.kind === 'clock' ? this.bt.start : null; // N3: on the start time until she sets it
+    this.rang = false;
+    this.dragging = false;
 
     this.cameras.main.setBackgroundColor(0xffebee);
+    ensureTimerTextures(this);
     addOrderReminder(this, round.order, 'cuisson', round.levels?.commande);
-    this.drawTargetFlames();
+    this.drawInstructions();
 
     this.add.image(OVEN_X, OVEN_Y, 'oven');
     this.cake = drawCake(this, OVEN_X + CAKE_DX, OVEN_Y + CAKE_DY, { ...round.cake, bake: null, glaze: null, toppings: [] },
@@ -67,7 +105,7 @@ export class BakeScene extends Phaser.Scene {
     this.glow = this.add.rectangle(WIN_X + WIN_W / 2, WIN_Y + WIN_H / 2, WIN_W, WIN_H, 0xff8a30, 0.0)
       .setBlendMode(Phaser.BlendModes.ADD).setDepth(5);
 
-    this.drawGauge();
+    this.drawDial();
     this.drawHeatButtons();
     this.go = addIconButton(this, GO_X, GO_Y, 'icon-go', () => this.onGo(), { size: 150 });
     this.setGoEnabled(false);
@@ -75,25 +113,71 @@ export class BakeScene extends Phaser.Scene {
     this.bar = addStepBar(this, { onRestart: () => restart(this), onValidate: () => this.validate() });
   }
 
-  // The heat to aim for, as flames on a card above the oven (an instruction, not a guess).
-  drawTargetFlames() {
-    const n = this.target;
-    const w = 40 + n * 64;
-    const h = 112;
-    const x = OVEN_X;
-    const y = TARGET_Y;
-    const card = this.add.container(x, y).setDepth(20);
+  // The instructions above the oven: the heat as flames (every level), then at N2 the number to bake
+  // until (digit + dice), at N3 the start time on a small clock (« 2 h » beside it) and « + 1 h ».
+  drawInstructions() {
+    if (this.bt.kind === 'sector') {
+      this.targetCard = this.card(OVEN_X, this.flamesContent());
+      return;
+    }
+    const flames = this.flamesContent();
+    const time = this.bt.kind === 'number' ? this.numberContent() : this.clockContent();
+    this.targetCard = this.card(ROW_X + flames.w / 2, flames, TARGET_Y_ROW);
+    this.timeCard = this.card(ROW_X + flames.w + CARD_GAP + time.w / 2, time, TARGET_Y_ROW);
+  }
+
+  // A white card centred on x at y (TARGET_Y) around {items, w} (items laid out around x = 0).
+  // A taller card (N3 clock) grows upwards: every card ends at the same bottom line.
+  card(x, { items, w, h = CARD_H }, y = TARGET_Y) {
+    const card = this.add.container(x, y + (CARD_H - h) / 2).setDepth(20);
     const bg = this.add.graphics();
     bg.fillStyle(0x000000, 0.15).fillRoundedRect(-w / 2 + 3, -h / 2 + 5, w, h, 26);
     bg.fillStyle(0xffffff, 1).fillRoundedRect(-w / 2, -h / 2, w, h, 26);
     bg.lineStyle(5, 0x66bb6a, 1).strokeRoundedRect(-w / 2, -h / 2, w, h, 26);
-    card.add(bg);
+    card.add([bg, ...items]);
+    return card;
+  }
+
+  flamesContent() {
+    const n = this.target;
+    const items = [];
     for (let i = 0; i < n; i++) {
       const f = this.add.image((i - (n - 1) / 2) * 64, 0, 'flame');
       f.setScale(84 / f.height);
-      card.add(f);
+      items.push(f);
     }
-    this.targetCard = card;
+    return { items, w: 40 + n * 64 };
+  }
+
+  // N2: a small numbered timer, the digit, its dice.
+  numberContent() {
+    const n = this.bt.number;
+    const face = this.add.image(-92, 0, 'timer-face-numbers').setOrigin(...pivotOrigin('timer-face-numbers')).setScale(0.19);
+    const digit = this.add.text(-10, 2, String(n), { fontFamily: FONT, fontSize: '72px', color: INK }).setOrigin(0.5);
+    const dice = this.add.image(78, 0, `dice-${n}`).setDisplaySize(72, 72);
+    return { items: [face, digit, dice], w: 252 };
+  }
+
+  // N3: the start time on a small clock (never under CLOCK_MIN_SCALE: its digits must stay
+  // readable) with « 2 h » beside it, then the duration « + 1 h ».
+  clockContent() {
+    const { start, duration } = this.bt;
+    const k = CLOCK_MIN_SCALE;
+    const face = this.add.image(0, 0, 'clock-face').setOrigin(...pivotOrigin('clock-face')).setScale(k);
+    const hand = this.add.image(0, 0, 'clock-hour-hand').setOrigin(...pivotOrigin('clock-hour-hand')).setScale(k)
+      .setRotation(start * 30 * DEG);
+    const at = this.add.text(0, 0, `${start} h`, { fontFamily: FONT, fontSize: '32px', color: '#666666' }).setOrigin(0, 0.5);
+    const plus = this.add.text(0, 0, `+ ${duration === 0.5 ? '½' : '1'} h`, { fontFamily: FONT, fontSize: '44px', color: INK }).setOrigin(0, 0.5);
+    const fw = face.displayWidth;
+    const w = 14 + fw + 8 + at.width + 16 + plus.width + 16;
+    const x0 = -w / 2 + 14;
+    // the face's pivot sits below its frame centre (bells on top): centre the frame in the card
+    const py = (pivotOrigin('clock-face')[1] - 0.5) * face.displayHeight;
+    face.setPosition(x0 + fw / 2, py);
+    hand.setPosition(x0 + fw / 2, py);
+    at.setPosition(x0 + fw + 8, py);
+    plus.setPosition(at.x + at.width + 16, py);
+    return { items: [face, hand, at, plus], w, h: CLOCK_CARD_H };
   }
 
   setRise(g) {
@@ -101,22 +185,60 @@ export class BakeScene extends Phaser.Scene {
     this.cake.top.setScale(f, 0.55 * f);
   }
 
-  drawGauge() {
-    const h = GAUGE_BOT - GAUGE_TOP;
-    const y = v => GAUGE_BOT - v * h;
-    const g = this.add.graphics();
-    g.fillStyle(0x000000, 0.15).fillRoundedRect(GAUGE_X - GAUGE_W / 2 + 3, GAUGE_TOP + 5, GAUGE_W, h, 20);
-    g.fillStyle(0xffffff, 1).fillRoundedRect(GAUGE_X - GAUGE_W / 2 - 6, GAUGE_TOP - 6, GAUGE_W + 12, h + 12, 24);
-    // brown (top), green, yellow (bottom)
-    g.fillStyle(0x8d5524, 1).fillRoundedRect(GAUGE_X - GAUGE_W / 2, GAUGE_TOP, GAUGE_W, y(GREEN_MAX) - GAUGE_TOP + 10, { tl: 18, tr: 18, bl: 0, br: 0 });
-    g.fillStyle(0x66bb6a, 1).fillRect(GAUGE_X - GAUGE_W / 2, y(GREEN_MAX), GAUGE_W, y(GREEN_MIN) - y(GREEN_MAX));
-    g.fillStyle(0xffd54f, 1).fillRoundedRect(GAUGE_X - GAUGE_W / 2, y(GREEN_MIN), GAUGE_W, GAUGE_BOT - y(GREEN_MIN), { tl: 0, tr: 0, bl: 18, br: 18 });
-    g.lineStyle(4, OUTLINE, 1).strokeRoundedRect(GAUGE_X - GAUGE_W / 2, GAUGE_TOP, GAUGE_W, h, 18);
-    this.gaugeY = y;
-    const p = this.add.graphics();
-    p.fillStyle(OUTLINE, 1).fillTriangle(-6, 0, -46, -22, -46, 22);
-    p.fillStyle(0xffffff, 1).fillTriangle(-14, 0, -40, -14, -40, 14);
-    this.pointer = this.add.container(GAUGE_X - GAUGE_W / 2 - 4, y(0), [p]).setDepth(6);
+  // The round timer (N1: green sector, N2: numbers) or the clock (N3, with the alarm hand). Every
+  // layer at DIAL_K with its pivot on (DIAL_X, DIAL_Y) (timerArt.js FRAMES).
+  layer(key) {
+    return this.add.image(DIAL_X, DIAL_Y, key).setOrigin(...pivotOrigin(key)).setScale(DIAL_K);
+  }
+
+  drawDial() {
+    const face = { sector: 'timer-face-sector', number: 'timer-face-numbers', clock: 'clock-face' }[this.bt.kind];
+    this.dialFace = this.layer(face);
+    if (this.bt.kind === 'sector') this.sector = this.layer('timer-sector'); // the green: gauge 0.45..0.70
+    if (this.bt.kind === 'clock') {
+      this.alarmHand = this.layer('clock-alarm-hand');
+      this.hand = this.layer('clock-hour-hand');
+      this.alarmIcon = this.add.image(ALARM_ICON_X, ALARM_ICON_Y, 'icon-alarm').setDisplaySize(84, 84);
+      this.showAlarm();
+      this.showClock(0);
+      // The knob is too small to grab: press or drag anywhere on the dial to turn the alarm hand.
+      const zone = this.add.zone(DIAL_X, DIAL_Y, DIAL_HIT, DIAL_HIT)
+        .setInteractive(new Phaser.Geom.Circle(DIAL_HIT / 2, DIAL_HIT / 2, DIAL_HIT / 2), Phaser.Geom.Circle.Contains);
+      this.alarmZone = zone;
+      zone.on('pointerdown', (p) => { this.dragging = true; this.setAlarmFrom(p); });
+      this.input.on('pointermove', (p) => { if (this.dragging && p.isDown) this.setAlarmFrom(p); });
+      this.input.on('pointerup', () => { this.dragging = false; });
+    } else {
+      this.hand = this.layer('timer-hand');
+    }
+  }
+
+  // N3: the hour hand at the start time + the time gone by.
+  showClock(elapsed) {
+    this.hand.setRotation((this.bt.start + elapsed) * 30 * DEG);
+  }
+
+  showAlarm() {
+    this.alarmHand.setRotation(this.alarm * 30 * DEG);
+  }
+
+  // N3: the alarm follows the finger (snapped to whole / half hours), before the oven starts.
+  setAlarmFrom(p) {
+    if (this.phase !== 'idle' && this.phase !== 'ready') return;
+    const dx = p.x - DIAL_X;
+    const dy = p.y - DIAL_Y;
+    if (Math.hypot(dx, dy) < 24) return; // too close to the centre to tell a direction
+    const angle = (Math.atan2(dx, -dy) + TURN) % TURN;
+    const a = angleToAlarm(angle, this.bt.halfHours);
+    if (a === this.alarm) return;
+    this.alarm = a;
+    this.showAlarm();
+    this.updateGo();
+  }
+
+  // N3: an alarm on the start time is not set yet.
+  alarmSet() {
+    return this.bt.kind !== 'clock' || clockHours(this.alarm) !== clockHours(this.bt.start);
   }
 
   drawHeatButtons() {
@@ -153,7 +275,12 @@ export class BakeScene extends Phaser.Scene {
       this.tweens.add({ targets: b.box, scale: i + 1 === k ? 1.1 : 1, duration: 140, ease: 'Back.easeOut' });
     });
     this.phase = 'ready';
-    this.setGoEnabled(true);
+    this.updateGo();
+  }
+
+  // ▶ once the heat is chosen (and at N3 the alarm set).
+  updateGo() {
+    if (this.phase === 'ready') this.setGoEnabled(this.alarmSet());
   }
 
   setGoEnabled(on) {
@@ -162,14 +289,21 @@ export class BakeScene extends Phaser.Scene {
   }
 
   onGo() {
-    if (this.phase === 'ready') this.startBaking();
+    if (this.phase === 'ready' && this.alarmSet()) this.startBaking();
     else if (this.phase === 'baking' && this.time.now - this.startedAt >= TAKE_OUT_GUARD_MS) this.takeOut();
   }
 
   startBaking() {
     this.phase = 'baking';
     this.startedAt = this.time.now;
-    this.timer = createBakeTimer(this.heat, this.target, { greenFactor: factors().greenWindow });
+    if (this.bt.kind === 'sector') {
+      this.timer = createBakeTimer(this.heat, this.target, { greenFactor: factors().greenWindow });
+    } else {
+      const stopAt = this.bt.kind === 'clock' ? alarmDelay(this.bt.start, this.alarm) : null;
+      this.timer = createTimeTimer(this.bt, this.heat, { anim: factors().anim, stopAt });
+    }
+    this.alarmZone?.disableInteractive();
+    this.dragging = false;
     this.heatBtns.forEach((b) => { b.zone.disableInteractive(); });
     this.heatBtns.forEach((b, i) => { if (i + 1 !== this.heat) b.box.setAlpha(0.45); });
     this.go.setTexture('icon-out');
@@ -177,24 +311,52 @@ export class BakeScene extends Phaser.Scene {
     this.heatEvent = this.time.addEvent({ delay: 650, loop: true, callback: () => heatRise(this, OVEN_X, WIN_Y + WIN_H - 20) });
   }
 
+  // The cake's gauge now (N1: the timer's; N2/N3: what the time x heat gave, on the same scale).
+  gauge() {
+    return this.bt.kind === 'sector' ? this.timer.gauge() : amountGauge(this.timer.amount(), this.win);
+  }
+
   update(time, delta) {
     if (this.phase !== 'baking') return;
     this.timer.tick(delta); // clamped inside, so a hidden tab or sleep never burns the cake
-    const g = this.timer.gauge();
+    const g = this.gauge();
     this.cake.setBakeGauge(g);
     this.setRise(g);
-    this.pointer.y = this.gaugeY(g);
+    if (this.bt.kind === 'sector') this.hand.setRotation(g * TIMER_RUN * DEG);
+    else if (this.bt.kind === 'number') this.hand.setRotation(this.timer.elapsed() * 60 * DEG);
+    else {
+      this.showClock(this.timer.elapsed());
+      if (this.timer.done() && !this.rang) this.ring();
+    }
+  }
+
+  // N3: the hour hand reached the alarm (or the oven ran its longest): the oven stops, the alarm
+  // rings (pictures only, no sound) and the mitt calls her.
+  ring() {
+    this.rang = true;
+    this.heatEvent?.remove();
+    this.glowTween?.stop();
+    this.tweens.add({ targets: this.glow, alpha: 0.06, duration: 300 });
+    const k = this.alarmIcon.scaleX;
+    this.tweens.add({ targets: this.alarmIcon, angle: { from: -14, to: 14 }, duration: 90, yoyo: true, repeat: 7, onComplete: () => this.alarmIcon.setAngle(0) });
+    this.tweens.add({ targets: this.alarmIcon, scale: k * 1.25, duration: dur(300), yoyo: true });
+    this.alarmHand.setTint(0xffcdd2);
+    this.tweens.add({ targets: this.alarmHand, alpha: { from: 1, to: 0.4 }, duration: 180, yoyo: true, repeat: 3, onComplete: () => this.alarmHand.setAlpha(1).clearTint() });
+    const b = this.go.scaleX;
+    this.ringTween = this.tweens.add({ targets: this.go, scale: b * 1.1, duration: dur(400), yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
   }
 
   takeOut() {
     this.phase = 'out';
-    const g = this.timer.gauge();
+    const g = this.gauge();
     this.finalGauge = g;
+    this.finalState = this.bt.kind === 'sector' ? bakeState(g) : judgeAmount(this.timer.amount(), this.win);
+    this.ringTween?.stop();
     this.heatEvent?.remove();
     this.glowTween?.stop();
     this.tweens.add({ targets: this.glow, alpha: 0, duration: 300 });
     this.setGoEnabled(false);
-    const state = bakeState(g);
+    const state = this.finalState;
     const x = OVEN_X;
     const y = WIN_Y + 20;
     steam(this, x, y);
@@ -220,9 +382,9 @@ export class BakeScene extends Phaser.Scene {
 
   validate() {
     if (this.phase !== 'out') return false;
-    const g = this.finalGauge;
-    this.round.results.cuisson = judgeBake(g);
-    this.round.cake.bake = bakeState(g);
+    const state = this.finalState;
+    this.round.results.cuisson = state === 'dore' ? { ok: true } : { ok: false, reason: state };
+    this.round.cake.bake = state;
     goNext(this);
   }
 }

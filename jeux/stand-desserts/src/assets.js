@@ -156,6 +156,7 @@ export const PRECACHE = [
   'src/ui/orderReminder.js',
   'src/ui/pace.js',
   'src/ui/stepBar.js',
+  'src/ui/timerArt.js',
   'src/ui/words.js',
   // the shared client layers are in the home's precache
   ...ASSETS.map(a => a.file).filter(f => !f.startsWith('../')),
