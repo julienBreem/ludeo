@@ -3,7 +3,7 @@
 import { TOP_SQUASH } from '../config.js';
 import { GRID } from '../logic/paint.js';
 import { zoneMap, layoutToppings } from '../logic/zones.js';
-import { shapeMask, cakeTexture, FRAME, TOPPING_SIZE } from './cakeView.js';
+import { shapeMask, shapeRing, cakeTexture, FRAME, TOPPING_SIZE } from './cakeView.js';
 
 const CELL = FRAME / GRID; // frame units per grid cell
 // Wanted gap between topping anchors, in cells of the 3/4 view (a standing topping is about
@@ -177,16 +177,24 @@ function extremes(mask) {
  * idealCake(scene, order) -> Cake {dessert, shape, doughOk: true, bake: 'dore',
  *   glaze: {cells, size: GRID, colorKeys: order.glaze}, toppings: [{key, x, y}]}
  * Every silhouette cell is painted with its zone's colour (zone i -> value i + 1); toppings are
- * order.toppings expanded in order (each kind `count` times) onto well-spaced spots.
+ * order.toppings expanded in order (each kind `count` times) onto well-spaced spots, or for a
+ * motif order (Toppings N2) the whole motif on the shape's ring of slots.
  */
 export function idealCake(scene, order) {
   const mask = shapeMask(scene, order.shape);
   const zones = zoneMap(mask, GRID, Math.max(1, order.glaze.length));
   const cells = new Uint8Array(GRID * GRID);
   for (let i = 0; i < cells.length; i++) if (zones[i] >= 0) cells[i] = zones[i] + 1;
-  const total = order.toppings.reduce((n, t) => n + t.count, 0);
-  const spots = toppingSpots(mask, total);
-  const keys = assignKinds(mask, spots, order.toppings);
+  let spots;
+  let keys;
+  if (order.toppingMode === 'motif' && order.motif) {
+    spots = shapeRing(scene, order.shape, order.motif.slots).slots;
+    keys = order.motif.sequence.slice(0, spots.length);
+  } else {
+    const total = order.toppings.reduce((n, t) => n + t.count, 0);
+    spots = toppingSpots(mask, total);
+    keys = assignKinds(mask, spots, order.toppings);
+  }
   return {
     dessert: order.dessert,
     shape: order.shape,
@@ -202,7 +210,8 @@ export const ORDER_PX = 460; // the order texture's width (the Stand bubble show
 let lastSig = null;
 
 export function orderSig(order) {
-  return [order.dessert, order.shape, order.glaze.join('+'), order.toppings.map(t => `${t.key}${t.count}`).join('+')].join('-');
+  const ring = order.toppingMode === 'motif' && order.motif ? `ring${order.motif.sequence.join('+')}` : '';
+  return [order.dessert, order.shape, order.glaze.join('+'), order.toppings.map(t => `${t.key}${t.count}`).join('+') + ring].join('-');
 }
 
 // One mask-free texture per order, made on first use and shared by the bubble and the strip.

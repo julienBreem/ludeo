@@ -264,3 +264,122 @@ test('fractions: one word per colour (N1 / N2 lists, sentence parts), failed zon
   assert.deepEqual(failedElements(o, { couleur: { ok: false, zone: 0 } }), [{ kind: 'couleur', index: 0 }]);
   assert.deepEqual(failedElements(o, { couleur: { ok: false } }), [{ kind: 'couleur', index: 0 }, { kind: 'couleur', index: 1 }]);
 });
+
+// ---- Toppings N2-N3 orders: a motif ring, a hint card (no counts at Commande N2 / N3) --------------
+import { motifText } from '../jeux/stand-desserts/src/logic/orderText.js';
+
+// written out by hand, not derived from NOUNS
+const OF = {
+  fraise: 'de fraises', pepites: 'de pépites de chocolat', vermicelles: 'de vermicelles', bougie: 'de bougies',
+  etoile: "d'étoiles", bonbon: 'de bonbons', chantilly: 'de chantilly',
+};
+const SOME = {
+  fraise: 'des fraises', pepites: 'des pépites de chocolat', vermicelles: 'des vermicelles', bougie: 'des bougies',
+  etoile: 'des étoiles', bonbon: 'des bonbons', chantilly: 'de la chantilly',
+};
+const KIND = {
+  fraise: 'fraises', pepites: 'pépites de chocolat', vermicelles: 'vermicelles', bougie: 'bougies',
+  etoile: 'étoiles', bonbon: 'bonbons', chantilly: 'chantilly',
+};
+const and = l => (l.length === 1 ? l[0] : `${l.slice(0, -1).join(', ')} et ${l[l.length - 1]}`);
+// every ordered selection of 1..3 distinct topping kinds
+function kindSelections() {
+  const out = [];
+  for (const a of TOPPINGS) {
+    out.push([a]);
+    for (const b of TOPPINGS) {
+      if (b === a) continue;
+      out.push([a, b]);
+      for (const c of TOPPINGS) if (c !== a && c !== b) out.push([a, b, c]);
+    }
+  }
+  return out;
+}
+const modeOrder = (shape, glaze, kinds, mode) => ({
+  ...order(shape, glaze, kinds.map((key, i) => ({ key, count: 2 + i }))), toppingMode: mode,
+});
+
+test('motif and hint-card orders: every shape × colour × selection of topping kinds, no counts', () => {
+  for (const shape of SHAPES) {
+    const fem = FEMININE_SHAPES.includes(shape);
+    const head = `${fem ? 'Une' : 'Un'} ${NOUNS.shape[shape].word}`;
+    for (const color of COLORS) {
+      const c = NOUNS.color[color][fem ? 'f' : 'm'];
+      for (const kinds of kindSelections()) {
+        const m = modeOrder(shape, [color], kinds, 'motif');
+        const ring = `une couronne ${and(kinds.map(k => OF[k]))}`;
+        assert.equal(orderSentence(m), `${head} ${c}, avec ${ring}.`);
+        assert.equal(motifText(m), ring);
+        assert.deepEqual(orderWords(m, 2).filter(w => w.kind === 'topping').map(w => [w.word, w.index]), [[ring, 0]]);
+        assert.deepEqual(orderWords(m, 3).filter(w => w.kind === 'topping').map(w => w.word), [ring]);
+        const h = modeOrder(shape, [color], kinds, 'hints');
+        assert.equal(orderSentence(h), `${head} ${c}, avec ${and(kinds.map(k => SOME[k]))}.`);
+        assert.deepEqual(orderWords(h, 2).filter(w => w.kind === 'topping').map(w => [w.word, w.key, w.index]),
+          kinds.map((k, i) => [KIND[k], k, i]));
+        for (const o of [m, h]) {
+          const s = orderSentence(o);
+          assert.ok(!/\d/.test(s) && !/\b(un|une|deux|trois|quatre|cinq|six) (fraise|étoile|bougie|bonbon|pépite|poignée|cuillère)/u.test(s), `no count: ${s}`);
+          assert.ok(!/\s{2}|\s[,.]|,\S/u.test(s), `spacing: ${s}`);
+          // N1 labels stay the plain kind names
+          assert.deepEqual(orderWords(o, 1).filter(w => w.kind === 'topping').map(w => w.index), kinds.map((_, i) => i));
+        }
+      }
+    }
+  }
+});
+
+test('motif and hint-card orders: every glaze, with one selection of kinds', () => {
+  for (const shape of SHAPES) {
+    const g = FEMININE_SHAPES.includes(shape) ? 'f' : 'm';
+    for (const glaze of glazes()) {
+      const cols = and(glaze.map(c => NOUNS.color[c][g]));
+      const head = `${g === 'f' ? 'Une' : 'Un'} ${NOUNS.shape[shape].word} ${cols}`;
+      assert.equal(orderSentence(modeOrder(shape, glaze, ['fraise', 'etoile'], 'motif')), `${head}, avec une couronne de fraises et d'étoiles.`);
+      assert.equal(orderSentence(modeOrder(shape, glaze, ['chantilly', 'bonbon', 'etoile'], 'hints')), `${head}, avec de la chantilly, des bonbons et des étoiles.`);
+    }
+  }
+});
+
+test('reference: the couronne and the hint-card kinds', () => {
+  const m = modeOrder('coeur', ['rose', 'violet'], ['fraise', 'etoile'], 'motif');
+  assert.equal(orderSentence(m), "Un cœur rose et violet, avec une couronne de fraises et d'étoiles.");
+  const flat = parts => parts.map(p => (p.br ? '|' : p.pict ? `[${p.pict}]` : p.text)).join('');
+  assert.equal(flat(orderWordParts(m)), "[forme]cœur|[couleur]rose, violet|[topping]une couronne de fraises et d'étoiles");
+  const h = modeOrder('etoile', ['vert'], ['bougie', 'pepites', 'vermicelles'], 'hints');
+  assert.equal(orderSentence(h), 'Une étoile verte, avec des bougies, des pépites de chocolat et des vermicelles.');
+  assert.equal(flat(orderWordParts(h)), '[forme]étoile|[couleur]verte|[topping]bougies, pépites de chocolat, vermicelles');
+  // plain counts orders are unchanged
+  assert.equal(orderSentence({ ...modeOrder('rond', ['rose'], ['fraise'], 'counts') }), 'Un rond rose, avec deux fraises.');
+});
+
+test('hideToppings: one « ? » for the toppings, whatever the mode', () => {
+  const join = parts => parts.map(p => (p.br ? '|' : p.pict ? `[${p.pict}]` : p.text)).join('');
+  for (const mode of ['counts', 'motif', 'hints']) {
+    const o = modeOrder('licorne', ['rose', 'violet'], ['fraise', 'bougie'], mode);
+    assert.equal(join(orderSentenceParts(o, { hideToppings: true })), 'Une licorne rose et violette, avec ?.');
+    assert.equal(join(orderWordParts(o, { hideToppings: true })), '[forme]licorne|[couleur]rose, violette|[topping]?');
+    const marked = orderSentenceParts(o, { hideToppings: true }).filter(p => p.kind === 'topping');
+    assert.deepEqual(marked.map(p => [p.text, p.index]), [['?', 0]]);
+  }
+  // hideShape and hideToppings together
+  const o = modeOrder('etoile', ['blanc'], ['fraise'], 'motif');
+  assert.equal(orderSentence(o), "Une étoile blanche, avec une couronne de fraises.");
+  assert.equal(join(orderSentenceParts(o, { hideShape: true, hideToppings: true })), 'Un ? blanc, avec ?.');
+});
+
+test('failedElements: a motif order marks its one couronne word; hint-card orders the failed kind', () => {
+  const m = modeOrder('coeur', ['rose'], ['fraise', 'etoile', 'bougie'], 'motif');
+  assert.deepEqual(failedElements(m, { toppings: { ok: false, reason: 'emplacements', wrong: [3], empty: [] } }), [{ kind: 'topping', index: 0 }]);
+  const h = modeOrder('coeur', ['rose'], ['fraise', 'etoile', 'bougie'], 'hints');
+  assert.deepEqual(failedElements(h, { toppings: { ok: false, reason: 'trop', key: 'bougie' } }), [{ kind: 'topping', index: 2 }]);
+  // the sentence parts carry the same indexes
+  assert.deepEqual(orderSentenceParts(m).filter(p => p.kind === 'topping').map(p => p.index), [0]);
+  assert.deepEqual(orderSentenceParts(h).filter(p => p.kind === 'topping').map(p => p.index), [0, 1, 2]);
+});
+
+test('every topping has a « some » form and its elision is right', () => {
+  for (const k of TOPPINGS) {
+    assert.equal(NOUNS.topping[k].some, SOME[k], k);
+    assert.equal(motifText(order('rond', ['rose'], [{ key: k, count: 2 }])), `une couronne ${OF[k]}`);
+  }
+});

@@ -241,3 +241,41 @@ test('ringPositions: n symmetric slots, distinct, around the centre', () => {
   }
   assert.deepEqual(ringPositions(0), []);
 });
+
+test('toppingsFor: one mode per level, same draws as generateOrder', async () => {
+  const { toppingsFor } = await import('../jeux/stand-desserts/src/logic/order.js');
+  const kinds = ['fraise', 'pepites', 'vermicelles', 'bougie'];
+  assert.equal(toppingsFor(kinds, 1, makeRng(3)).toppingMode, 'counts');
+  const m = toppingsFor(kinds, 2, makeRng(3));
+  assert.equal(m.toppingMode, 'motif');
+  assert.deepEqual(m.toppings.reduce((a, t) => a + t.count, 0), m.motif.slots);
+  const h = toppingsFor(kinds, 3, makeRng(3));
+  assert.equal(h.toppingMode, 'hints');
+  assert.deepEqual(h.toppings, h.hintCard.solution);
+  assert.equal(toppingsFor(['fraise'], 2, makeRng(3)).toppingMode, 'counts');
+  // generateOrder's toppings are toppingsFor's on the same rng stream
+  for (const lt of [1, 2, 3]) {
+    const a = generateOrder(starterOwned(), makeRng(9), { toppings: lt });
+    assert.equal(a.toppingMode, ['counts', 'motif', 'hints'][lt - 1]);
+  }
+});
+
+test('withToppingLevel (debug orders): a motif / hint card from the order\'s own kinds', async () => {
+  const { withToppingLevel, parseOrderParam } = await import('../jeux/stand-desserts/src/logic/order.js');
+  const o = parseOrderParam('coeur/rose/fraise:2-bougie:1-pepites:3');
+  assert.equal(withToppingLevel(o, 1), o);
+  assert.equal(withToppingLevel(null, 2), null);
+  for (let seed = 1; seed < 40; seed++) {
+    const m = withToppingLevel(o, 2, makeRng(seed));
+    assert.equal(m.toppingMode, 'motif');
+    assert.ok(m.motif.pattern.every(k => ['fraise', 'bougie', 'pepites'].includes(k)));
+    assert.equal(m.shape, 'coeur');
+    const h = withToppingLevel(o, 3, makeRng(seed));
+    assert.equal(h.toppingMode, 'hints');
+    assert.ok(h.toppings.every(t => ['fraise', 'bougie', 'pepites'].includes(t.key)));
+    // an order that has its mode already is left alone
+    assert.equal(withToppingLevel(m, 3), m);
+  }
+  const single = parseOrderParam('rond/rose/fraise:2');
+  assert.equal(withToppingLevel(single, 2).toppingMode, 'counts');
+});

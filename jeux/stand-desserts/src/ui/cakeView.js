@@ -4,6 +4,7 @@
 import { COLOR_HEX, BAKE_TINT, TOP_SQUASH, BATTER } from '../config.js';
 import { GREEN_MIN, GREEN_MAX } from '../logic/bake.js';
 import { maskFromAlpha, GRID } from '../logic/paint.js';
+import { ringSlots } from '../logic/ring.js';
 import { crumbs } from './fx.js';
 import { dur } from './pace.js';
 
@@ -53,6 +54,15 @@ export function shapeMask(scene, shape) {
   const mask = maskFromAlpha(data, canvas.width, canvas.height, GRID);
   maskCache.set(shape, mask);
   return mask;
+}
+
+// Toppings N2: the ring of n slots fitted to a shape (logic/ring.js ringSlots on its mask), cached.
+// -> {slots: [{x, y}] (frame units, top-down), size, centre, inset}
+const ringCache = new Map();
+export function shapeRing(scene, shape, n) {
+  const key = `${shape}/${n}`;
+  if (!ringCache.has(key)) ringCache.set(key, ringSlots(shapeMask(scene, shape), n));
+  return ringCache.get(key);
 }
 
 // 3/4 side band texture for a dessert and a shape: shape-<shape>-side underneath, then the flat

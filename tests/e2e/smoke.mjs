@@ -692,19 +692,68 @@ const actions = {
   },
 
   // race: ✓ then ↺ 60 ms apart; the step must still move on and keep the ✓ result.
-  async toppings({ race = false, shot: name } = {}) {
+  // Toppings level from the scene (`level` checks it): N1 counts, free placement; N2 the motif ring:
+  // a wrong kind is put in the first free slot, dragged off the cake (it must leave), a drop far
+  // from any slot goes back, then every free slot gets its kind; N3 the hint card (at most 3 rows),
+  // the solution's counts by free placement. At N2-N3 the strip must not tell the toppings.
+  async toppings({ race = false, level, shot: name } = {}) {
     await waitScene('Toppings');
-    const spots = [[640, 330], [570, 400], [710, 400], [640, 440], [580, 320], [700, 320]];
-    let i = 0;
-    for (const { key, count } of order.toppings) {
-      const x = await shelfX('Toppings', `topping-${key}`);
-      for (let k = 0; k < count; k++) {
-        await drag([[x, 728], [x, 600], spots[i++]]);
-        await sleep(400);
-      }
+    const info = await sceneEval('Toppings', `s => ({ level: s.level, mode: s.mode, cakeX: s.cakeX,
+      slots: s.slots && s.slots.map(q => ({ x: q.x, y: q.y, want: q.want, key: q.key, prefilled: q.prefilled })),
+      rows: s.hintCard ? s.round.order.hintCard.hints.length : 0, card: !!(s.hintCard && s.hintCard.visible),
+      strip: s.children.list.filter(o => o.depth === 400).flatMap(function walk(o) { return o.list ? o.list.flatMap(walk) : [o]; })
+        .filter(o => o.type === 'Text').map(o => o.text).join(' ') })`);
+    if (level !== undefined) check(info.level === level, `Toppings plays level ${level} (${info.level}, ${info.mode})`);
+    const wantMode = { 1: 'counts', 2: 'motif', 3: 'hints' }[info.level];
+    check(info.mode === wantMode, `N${info.level}: mode ${info.mode}`);
+    if (info.level >= 2) {
+      // the topping words (the shape's own word may be « étoile » too) and a « ? » in their place
+      const text = info.strip.replace(NOUNS.shape[order.shape].word, '');
+      const words = order.toppings.flatMap(t => [NOUNS.topping[t.key].one, NOUNS.topping[t.key].many, NOUNS.topping[t.key].label?.[1]]).filter(Boolean);
+      check(!words.some(w => text.includes(w)) && info.strip.includes('?'), `N${info.level}: the strip does not tell the toppings (« ${info.strip.replace(/\s+/g, ' ').trim()} »)`);
     }
-    const n = await sceneEval('Toppings', 's => s.placed.length');
-    check(n === toppingTotal(order), `${n} toppings placed (${order.toppings.map(t => `${t.count} ${t.key}`).join(', ')})`);
+    const dragFromShelf = async (key, to) => {
+      const x = await shelfX('Toppings', `topping-${key}`);
+      await drag([[x, 728], [x, 600], to]);
+      await sleep(350);
+    };
+    if (info.mode === 'motif') {
+      const { motif } = order;
+      check([6, 8].includes(info.slots.length) && info.slots.length === motif.slots, `N2: a ring of ${info.slots.length} slots`);
+      check(info.slots.filter(q => q.prefilled).length === motif.prefill && info.slots.every((q, i) => (i < motif.prefill) === !!q.key),
+        `N2: the motif's start (${motif.prefill}) is there: ${motif.pattern.join(' ')}`);
+      const free = info.slots.filter(q => !q.prefilled);
+      // a drop far from every slot goes back to the shelf
+      await dragFromShelf(free[0].want, [Math.round(info.cakeX), 380]);
+      check(await sceneEval('Toppings', 's => s.slots.filter(q => q.key).length') === motif.prefill, 'N2: a drop away from the slots goes back');
+      // a wrong kind in the first free slot, then dragged off the cake
+      const wrongKey = motif.pattern.find(k => k !== free[0].want) ?? 'fraise';
+      await dragFromShelf(wrongKey, [Math.round(free[0].x), Math.round(free[0].y)]);
+      check(await sceneEval('Toppings', `s => s.slots[${motif.prefill}].key`) === wrongKey, `N2: ${wrongKey} snapped into the free slot`);
+      if (name) await shot(`${name}-wrong`);
+      await drag([[Math.round(free[0].x), Math.round(free[0].y)], [Math.round(free[0].x), 600], [640, 728]]);
+      await sleep(400);
+      check(await sceneEval('Toppings', `s => s.slots[${motif.prefill}].key === null && !s.drag`), 'N2: the wrong topping dragged off the cake is gone');
+      for (const q of free) await dragFromShelf(q.want, [Math.round(q.x + 14), Math.round(q.y - 10)]);
+      const got = await sceneEval('Toppings', 's => s.slots.map(q => q.key)');
+      check(got.join() === motif.sequence.join(), `N2: the ring holds the motif (${got.join(' ')})`);
+    } else {
+      if (info.mode === 'hints') check(info.card && info.rows >= 2 && info.rows <= 3, `N3: the hint card is shown (${info.rows} rows)`);
+      const total = toppingTotal(order);
+      // spots on the cake, well apart (screen px), from the scene's own hit test
+      const spots = await sceneEval('Toppings', `s => { const out = [];
+        for (const [dx, dy] of [[0, -40], [-70, 30], [70, 30], [0, 100], [-80, -60], [80, -60], [-140, 60], [140, 60], [-60, 130], [60, 130], [0, -120], [0, 40]]) {
+          const x = Math.round(s.cakeX + dx); const y = 375 + dy;
+          if (s.onCake(x, y)) out.push([x, y]);
+        } return out; }`);
+      check(spots.length >= total, `${spots.length} spots on the cake for ${total} toppings`);
+      let i = 0;
+      for (const { key, count } of order.toppings) {
+        for (let k = 0; k < count; k++) await dragFromShelf(key, spots[i++]);
+      }
+      const n = await sceneEval('Toppings', 's => s.placed.length');
+      check(n === total, `${n} toppings placed (${order.toppings.map(t => `${t.count} ${t.key}`).join(', ')})`);
+    }
     if (name) await shot(name);
     if (race) {
       await tap(OK_BTN, 30);
@@ -769,7 +818,7 @@ const actions = {
   },
 
   // Lot 1: from the home, the parent space sets the levels with real taps: `themes` = theme levels
-  // ({lecture: n, nombres: n, temps: n, 'couleurs-fractions': n}), `phase` = pâte's own level (n, or 'theme' for « Comme le thème »).
+  // ({lecture: n, nombres: n, temps: n, 'couleurs-fractions': n, logique: n}), `phase` = pâte's own level (n, or 'theme' for « Comme le thème »).
   async parentLevels({ themes = {}, phase } = {}) {
     await loadHome(URL);
     await tapEl('#gear');

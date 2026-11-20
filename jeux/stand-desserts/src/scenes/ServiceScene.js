@@ -10,7 +10,9 @@
 // together. Cuisson N2 / N3: beside the pale / burnt cake, the timer on the number or the clock with
 // the alarm on the hour she had to set. Glaçage N2 / N3: the failed zone (with fractions, the
 // whole part of that colour) painted with the expected colour, and that colour's recipe
-// (pot + pot = pot), or its pot alone for a base.
+// (pot + pot = pot), or its pot alone for a base. Toppings N2: the ring of slots, the wrong and the
+// empty ones circled in red with the right topping see-through; N3: the hint card again, with the
+// number of each kind it gave.
 import { W, H, TOUCH, COLOR_HEX, OUTLINE, BATTER, TOP_SQUASH } from '../config.js';
 import { getRound, getState, updateState } from '../game-state.js';
 import { addIconButton } from '../ui/button.js';
@@ -454,6 +456,14 @@ export class ServiceScene extends Phaser.Scene {
     const reason = res.reason;
     const c = this.add.container(0, 0);
     const base = { dessert: o.dessert, doughOk: true, shape: 'rond', toppings: [], glaze: null };
+    if (step === 'toppings' && reason === 'emplacements' && o.motif) {
+      this.expectedRing(c, res, x);
+      return c;
+    }
+    if (step === 'toppings' && o.toppingMode === 'hints' && o.hintCard) {
+      this.expectedHints(c, res, x);
+      return c;
+    }
     switch (reason) {
       case 'intrus':
       case 'manque':
@@ -608,6 +618,82 @@ export class ServiceScene extends Phaser.Scene {
     pot(x + 20, recipe[0], 48);
     pot(x + 85, recipe[1], 48);
     pot(x + 160, want, 64);
+  }
+
+  // Toppings N2: the motif's ring seen in 3/4 (an ellipse), slot by slot: the right ones as she
+  // left them (the start of the motif on its golden-edged plate), each wrong or empty one in a red
+  // dashed ring with the topping it needed, see-through.
+  expectedRing(c, res, x) {
+    const { motif } = this.round.order;
+    const bad = new Set([...(res.wrong ?? []), ...(res.empty ?? [])]);
+    const n = motif.sequence.length;
+    const cx = x + 50;
+    const cy = -4;
+    const RX = 118;
+    const RY = 30;
+    const ITEM = 38;
+    // the slots go clockwise; 8 of them start at the top, 6 half a step later, so that no two
+    // are stacked at the flat ends of the ellipse
+    const start = n === 8 ? 0 : 0.5;
+    const g = this.add.graphics();
+    g.fillStyle(0xfff3e0, 1).fillEllipse(cx, cy, 2 * RX + 30, 2 * RY + 26);
+    g.lineStyle(4, OUTLINE, 1).strokeEllipse(cx, cy, 2 * RX + 30, 2 * RY + 26);
+    c.add(g);
+    // back slots first, so the front ones overlap them
+    const spots = motif.sequence.map((want, k) => {
+      const a = ((-90 + (360 * (k + start)) / n) * Math.PI) / 180;
+      return { k, want, px: cx + RX * Math.cos(a), py: cy + RY * Math.sin(a) };
+    }).sort((p, q) => p.py - q.py);
+    for (const { k, want, px, py } of spots) {
+      if (k < motif.prefill) {
+        const plate = this.add.graphics();
+        plate.fillStyle(0xffffff, 1).fillCircle(px, py, ITEM / 2);
+        plate.lineStyle(3, 0xf4b400, 1).strokeCircle(px, py, ITEM / 2);
+        c.add(plate);
+      }
+      const t = this.add.image(px, py, `topping-${want}`);
+      t.setScale((ITEM * 0.85) / Math.max(t.width, t.height));
+      if (bad.has(k)) {
+        const ring = this.add.graphics();
+        ring.fillStyle(0xffffff, 0.85).fillCircle(px, py, ITEM / 2 + 2);
+        ring.lineStyle(5, 0xe53935, 1).strokeCircle(px, py, ITEM / 2 + 2);
+        c.add(ring);
+        t.setAlpha(0.45);
+      }
+      c.add(t);
+    }
+  }
+
+  // Toppings N3: the hint card again (small, its yellow band on top), with what it gave: each kind
+  // and its number. The kind she got wrong has a red badge (+ too many, − too few); a kind that
+  // was not on the card at all comes last, crossed.
+  expectedHints(c, res, x) {
+    const sol = this.round.order.hintCard.solution;
+    const items = sol.map(t => ({ key: t.key, count: t.count, sign: 0 }));
+    const hit = items.find(it => it.key === res.key);
+    if (res.reason === 'trop' && hit) hit.sign = 1;
+    else if (res.reason === 'pas-assez' && hit) hit.sign = -1;
+    else if (res.reason === 'mauvais-topping' && res.key && !hit) items.push({ key: res.key, count: null, sign: 'x' });
+    const PITCH = 84;
+    const w = items.length * PITCH + 16;
+    const left = x + 40 - w / 2;
+    const g = this.add.graphics();
+    g.fillStyle(0xffffff, 1).fillRoundedRect(left, -36, w, 72, 16);
+    g.fillStyle(0xffe082, 1).fillRoundedRect(left, -36, w, 14, { tl: 16, tr: 16, bl: 0, br: 0 });
+    g.lineStyle(4, 0x64b5f6, 1).strokeRoundedRect(left, -36, w, 72, 16);
+    c.add(g);
+    items.forEach((it, i) => {
+      const ix = left + 8 + PITCH * i + 28;
+      const t = this.add.image(ix, 6, `topping-${it.key}`);
+      t.setScale(46 / Math.max(t.width, t.height));
+      c.add(t);
+      if (it.count !== null) {
+        c.add(this.add.text(ix + 40, 6, String(it.count), {
+          ...TEXT_STYLE, fontSize: '34px', color: '#1f2a44',
+        }).setOrigin(0.5));
+      }
+      if (it.sign) this.badge(c, ix, it.sign, { x: ix - 22, y: 22, r: 15 });
+    });
   }
 
   // Moule N2: the mould she needed (3/4) and, on a small card, the clue that told it.

@@ -22,7 +22,7 @@ export const PHASES = [
   { id: 'moule', name: 'Moule', theme: 'geometrie', levels: 3 },
   { id: 'cuisson', name: 'Cuisson', theme: 'temps', levels: 3 },
   { id: 'couleur', name: 'Glaçage', theme: 'couleurs-fractions', levels: 3 },
-  { id: 'toppings', name: 'Toppings', theme: 'logique', levels: 1 },
+  { id: 'toppings', name: 'Toppings', theme: 'logique', levels: 3 },
   { id: 'service', name: 'Service', theme: 'monnaie', levels: 1 },
 ];
 

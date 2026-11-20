@@ -9,6 +9,9 @@
 // additive fill.
 // Moule N2-N3 (hideShape): the strip must not tell the shape. The words / sentence show « ? » in
 // place of the shape's word; the picture (Commande N1) is replaced by the shape pictogram and « ? ».
+// Toppings N2-N3 (hideToppings): the strip must not tell the toppings (the motif and the counts are
+// the exercise). The words / sentence show « ? » in place of the toppings; the picture shows the
+// cake without them, with a pulsing « ? » over it.
 import { TOP_SQUASH, BACKDROP } from '../config.js';
 import { FRAME, TOPPING_SIZE } from './cakeView.js';
 import { idealCake, orderCakeKey, orderSig, ORDER_PX } from './orderCake.js';
@@ -100,10 +103,11 @@ const WORDS_MAX_H = 168;
 
 // Commande N2 / N3: the card shows the words (N2, by category with pictograms) or the sentence
 // (N3) instead of the picture; the step's words get a pulsing marker.
-function addWordReminder(scene, order, step, level, hideShape) {
+function addWordReminder(scene, order, step, level, hideShape, hideToppings) {
   ensureWordTextures(scene);
   const kind = STEP_KIND[step];
-  const parts = level >= 3 ? orderSentenceParts(order, { hideShape }) : orderWordParts(order, { hideShape });
+  const opts = { hideShape, hideToppings };
+  const parts = level >= 3 ? orderSentenceParts(order, opts) : orderWordParts(order, opts);
   const mark = p => !!kind && p.kind === kind;
   let text = null;
   for (const [i, fit] of WORDS_FITS.entries()) {
@@ -148,17 +152,40 @@ function addHiddenShapeCard(scene) {
   return c;
 }
 
+// The picture card with the cake but none of its toppings, and a pulsing « ? » where they stand.
+function addHiddenToppingsCard(scene, order) {
+  ensureWordTextures(scene);
+  const c = scene.add.container(X, Y).setDepth(400);
+  c.cardW = CARD_W;
+  c.cardH = CARD_H;
+  const bg = scene.add.graphics();
+  bg.fillStyle(0x000000, 0.15).fillRoundedRect(3, 5, CARD_W, CARD_H, 22);
+  bg.fillStyle(BACKDROP, 1).fillRoundedRect(0, 0, CARD_W, CARD_H, 22);
+  const bare = { ...order, toppings: [], toppingMode: 'counts' };
+  delete bare.motif;
+  delete bare.hintCard;
+  const scale = UNIT / K;
+  const cake = scene.add.image(CARD_W / 2, CARD_H / 2 + 14, orderCakeKey(scene, bare)).setScale(scale);
+  const q = scene.add.text(CARD_W / 2, CARD_H / 2 - 6, '?', {
+    fontFamily: 'Arial Black, Arial, sans-serif', fontSize: '84px', color: '#1f2a44', stroke: '#ffffff', strokeThickness: 10,
+  }).setOrigin(0.5);
+  c.add([bg, cake, q]);
+  c.glow = scene.tweens.add({ targets: q, alpha: { from: 0.45, to: 1 }, duration: 650, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+  return c;
+}
+
 /**
  * addOrderReminder(scene, order, step: 'pate'|'moule'|'cuisson'|'couleur'|'toppings', level = 1,
- *   {hideShape = false}) -> Container
+ *   {hideShape = false, hideToppings = false}) -> Container
  * The card sits at the top-left, depth 400. Its pulse is a tween owned by the scene. `level` is
  * the round's Commande level: 1 shows the cake, 2 the words, 3 the sentence. hideShape (Moule
- * N2-N3): the shape is not shown (« ? »). The container's cardW / cardH give the card's size (its
- * top-left is the container's position).
+ * N2-N3): the shape is not shown (« ? »). hideToppings (Toppings N2-N3): nor the toppings. The
+ * container's cardW / cardH give the card's size (its top-left is the container's position).
  */
-export function addOrderReminder(scene, order, step, level = 1, { hideShape = false } = {}) {
-  if (level >= 2) return addWordReminder(scene, order, step, level, hideShape);
+export function addOrderReminder(scene, order, step, level = 1, { hideShape = false, hideToppings = false } = {}) {
+  if (level >= 2) return addWordReminder(scene, order, step, level, hideShape, hideToppings);
   if (hideShape) return addHiddenShapeCard(scene);
+  if (hideToppings) return addHiddenToppingsCard(scene, order);
   const c = scene.add.container(X, Y).setDepth(400);
   c.cardW = CARD_W;
   c.cardH = CARD_H;

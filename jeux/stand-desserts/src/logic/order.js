@@ -166,33 +166,44 @@ export function generateOrder(owned, rng = Math.random, levels = {}) {
   const lc = levelOf(levels, 'couleur');
   const lt = levelOf(levels, 'toppings');
   const glazeBands = glazeBandsFor(lc, owned, rng);
-  const kinds = ownedKeys(owned, 'topping');
-  let toppingMode = 'counts';
-  let motif = null;
-  let hintCard = null;
-  let toppings;
-  if (lt === 2) motif = motifFor(kinds, rng);
-  if (lt === 3) hintCard = hintCardFor(kinds, rng);
-  if (motif) {
-    toppingMode = 'motif';
-    toppings = countsOf(motif.sequence);
-  } else if (hintCard) {
-    toppingMode = 'hints';
-    toppings = hintCard.solution.map(t => ({ ...t }));
-  } else {
-    toppings = countsToppings(kinds, rng);
-  }
+  const tops = toppingsFor(ownedKeys(owned, 'topping'), lt, rng);
   const order = {
     dessert: pick(Object.keys(DESSERTS), rng),
     shape: pick(ownedKeys(owned, 'shape'), rng),
     glaze: [...glazeBands],
     glazeBands,
-    toppings,
-    toppingMode,
+    toppings: tops.toppings,
+    toppingMode: tops.toppingMode,
   };
-  if (motif) order.motif = motif;
-  if (hintCard) order.hintCard = hintCard;
+  if (tops.motif) order.motif = tops.motif;
+  if (tops.hintCard) order.hintCard = tops.hintCard;
   return order;
+}
+
+/**
+ * toppingsFor(kinds, level, rng) -> {toppingMode, toppings, motif?, hintCard?}
+ * The toppings part of an order for a Toppings level, from the kinds that can be used: level 1
+ * counts; level 2 a motif (falls back to counts with fewer than 2 kinds); level 3 a hint card
+ * (same fallback).
+ */
+export function toppingsFor(kinds, level, rng = Math.random) {
+  const motif = level === 2 ? motifFor(kinds, rng) : null;
+  const hintCard = level === 3 ? hintCardFor(kinds, rng) : null;
+  if (motif) return { toppingMode: 'motif', toppings: countsOf(motif.sequence), motif };
+  if (hintCard) return { toppingMode: 'hints', toppings: hintCard.solution.map(t => ({ ...t })), hintCard };
+  return { toppingMode: 'counts', toppings: countsToppings(kinds, rng) };
+}
+
+/**
+ * withToppingLevel(order, level, rng) -> Order (debug: ?debug&order= at Toppings N2 / N3)
+ * An order given as plain counts (parseOrderParam) gets the motif or the hint card of that level,
+ * made with its own topping kinds. An order that already has a mode is returned as it is.
+ */
+export function withToppingLevel(order, level, rng = Math.random) {
+  if (!order || order.toppingMode || ![2, 3].includes(level)) return order;
+  const tops = toppingsFor(order.toppings.map(t => t.key), level, rng);
+  if (tops.toppingMode === 'counts') return { ...order, toppingMode: 'counts' };
+  return { ...order, ...tops };
 }
 
 /**
