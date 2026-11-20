@@ -731,8 +731,18 @@ const actions = {
       check(info.slots.filter(q => q.prefilled).length === motif.prefill && info.slots.every((q, i) => (i < motif.prefill) === !!q.key),
         `N2: the motif's start (${motif.prefill}) is there: ${motif.pattern.join(' ')}`);
       const free = info.slots.filter(q => !q.prefilled);
-      // a drop far from every slot goes back to the shelf
-      await dragFromShelf(free[0].want, [Math.round(info.cakeX), 380]);
+      // a drop on the cake but out of every free slot's snap reach goes back to the shelf. The spot
+      // comes from the scene's own tests: the ring is fitted to each shape, so a fixed point (the
+      // cake's centre) is within reach of a slot on some shapes (triangle).
+      const away = await sceneEval('Toppings', `s => { let best = null;
+        for (let dy = -150; dy <= 150; dy += 10) for (let dx = -200; dx <= 200; dx += 10) {
+          const x = Math.round(s.cakeX + dx); const y = 375 + dy;
+          if (!s.onCake(x, y) || s.nearestSlot(x, y, q => !q.key)) continue;
+          const d = Math.min(...s.slots.filter(q => !q.key).map(q => Math.hypot(q.x - x, q.y - y)));
+          if (!best || d > best.d) best = { x, y, d };
+        } return best; }`);
+      check(away !== null, `N2: a spot on the cake out of the free slots' reach (${away && [away.x, away.y]}, ${away && Math.round(away.d)} px)`);
+      await dragFromShelf(free[0].want, [away.x, away.y]);
       check(await sceneEval('Toppings', 's => s.slots.filter(q => q.key).length') === motif.prefill, 'N2: a drop away from the slots goes back');
       // a wrong kind in the first free slot, then dragged off the cake
       const wrongKey = motif.pattern.find(k => k !== free[0].want) ?? 'fraise';
