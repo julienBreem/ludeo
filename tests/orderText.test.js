@@ -316,6 +316,9 @@ test('motif and hint-card orders: every shape × colour × selection of topping 
         assert.equal(orderSentence(h), `${head} ${c}, avec ${and(kinds.map(k => SOME[k]))}.`);
         assert.deepEqual(orderWords(h, 2).filter(w => w.kind === 'topping').map(w => [w.word, w.key, w.index]),
           kinds.map((k, i) => [KIND[k], k, i]));
+        // N1 labels too: the kind in the plural, whatever its count (« fraise » would tell 1)
+        const h1 = { ...h, toppings: h.toppings.map(t => ({ ...t, count: 1 })) };
+        assert.deepEqual(orderWords(h1, 1).filter(w => w.kind === 'topping').map(w => w.word), kinds.map(k => KIND[k]));
         for (const o of [m, h]) {
           const s = orderSentence(o);
           assert.ok(!/\d/.test(s) && !/\b(un|une|deux|trois|quatre|cinq|six) (fraise|étoile|bougie|bonbon|pépite|poignée|cuillère)/u.test(s), `no count: ${s}`);

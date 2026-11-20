@@ -14,6 +14,8 @@
 // the sample round of ?debug&scene= too (its ideal cake), e.g. ?debug&scene=Paint&level=couleur:3&order=
 // rond/rose-violet-violet/fraise:1. At Toppings N2 / N3 (&level=toppings:2) the order's topping
 // kinds make a motif / a hint card (logic/order.js withToppingLevel); &seed=<n> picks which one.
+// Every catalog key is accepted, owned or not: a topping that is not owned is not on the shelf, so
+// the round cannot be solved; name owned ones. At Glaçage N3 the bands are of equal area.
 import { createRound } from './logic/round.js';
 import { STEPS } from './logic/scoring.js';
 import { generateClient } from '../../../shared/client.js';
@@ -21,7 +23,7 @@ import { setRound } from './game-state.js';
 import { phaseLevels } from '../../../shared/runtime.js';
 import { ID } from '../collection.js';
 import { idealCake } from './ui/orderCake.js';
-import { parseOrderParam, withToppingLevel } from './logic/order.js';
+import { parseOrderParam, withToppingLevel, withGlazeLevel } from './logic/order.js';
 import { makeRng } from './logic/rng.js';
 
 const PARAM = 'scene';
@@ -90,9 +92,10 @@ export function debugRng() {
 
 export function installSampleRound(scene) {
   const levels = phaseLevels(ID);
-  const order = withToppingLevel(parseOrderParam(debugParams()?.get('order') ?? null) ?? sampleOrder(), levels.toppings, debugRng());
+  const order = withGlazeLevel(withToppingLevel(parseOrderParam(debugParams()?.get('order') ?? null) ?? sampleOrder(), levels.toppings, debugRng()), levels.couleur);
   const round = createRound(order);
-  round.cake = idealCake(scene, order);
+  // her cake: the order's (a hint-card order with its real counts, which its picture does not show)
+  round.cake = idealCake(scene, order.toppingMode === 'hints' ? { ...order, toppingMode: 'counts' } : order);
   round.client = generateClient();
   round.levels = levels;
   const { score, alt } = urlScore();
@@ -102,7 +105,6 @@ export function installSampleRound(scene) {
     // N2: the first slot to fill wrong, the last one left empty
     const { motif } = order;
     round.results.toppings = { ok: false, reason: 'emplacements', wrong: [motif.prefill], empty: [motif.slots - 1] };
-    round.toppingSlots = motif.sequence.map((k, i) => (i === motif.slots - 1 ? null : i === motif.prefill ? motif.pattern.find(x => x !== k) : k));
   } else if (t && !t.ok && order.toppingMode === 'hints' && t.reason !== 'mauvais-topping') {
     // N3: too many / too few of a kind the card gives
     round.results.toppings = { ...t, key: order.toppings[order.toppings.length - 1].key };

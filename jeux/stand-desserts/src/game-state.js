@@ -2,10 +2,10 @@
 // The State is always re-read from storage (logic/save.js currentState): the copy kept here is
 // only a fallback for a browser that refuses storage, never written over the stored one.
 import { currentState, updateStored } from './logic/save.js';
-import { generateOrder, parseOrderParam, withToppingLevel } from './logic/order.js';
+import { generateOrder, parseOrderParam, withToppingLevel, withGlazeLevel } from './logic/order.js';
 import { createRound } from './logic/round.js';
 import { generateClient } from '../../../shared/client.js';
-import { phaseLevels } from '../../../shared/runtime.js';
+import { phaseLevels, phaseWins } from '../../../shared/runtime.js';
 import { ID } from '../collection.js';
 
 let state = null; // last State read or written (fallback when storage is refused)
@@ -34,12 +34,14 @@ export function updateState(fn) {
   return state;
 }
 
-// A fresh Round for a new client: order from owned items + client look + the level of each phase,
+// A fresh Round for a new client: order from owned items + client look + the level of each phase
+// (and the phase's recent wins, for the steps inside a level),
 // read now and kept until Service (a change in the parent space applies to the next client).
 export function newRound() {
   const previous = round?.client ?? null;
   const levels = phaseLevels(ID);
-  round = createRound(withToppingLevel(debugOrder(), levels.toppings) ?? generateOrder(getState().owned, Math.random, levels));
+  const debug = withGlazeLevel(withToppingLevel(debugOrder(), levels.toppings), levels.couleur);
+  round = createRound(debug ?? generateOrder(getState().owned, Math.random, levels, phaseWins(ID)));
   round.client = generateClient(Math.random, previous);
   round.levels = levels;
   return round;

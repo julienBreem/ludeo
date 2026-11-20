@@ -28,7 +28,10 @@ function pickDistinct(list, n, rng) {
 }
 
 const MAX_HINT_TOTAL = 8;
-export const MAX_RING_SLOTS = 8;
+// Toppings N2: every motif goes on a ring of 6 slots, a multiple of each period (2 and 3), so the
+// closed ring reads the same from either side of its seam; the first 4 are already placed.
+export const RING_SLOTS = 6;
+export const RING_PREFILL = 4;
 
 // Equal-band patterns of level 3: letters are colours, each letter one run of adjacent bands, so
 // every colour covers a plain fraction (1/3, 2/3, 1/4, 1/2, 3/4) and at least one is repeated.
@@ -39,6 +42,11 @@ export const BAND_PATTERNS = [
 
 // Motifs of level 2, one period (letters are topping kinds): AB, then AAB, then ABC.
 export const MOTIFS = [[0, 1], [0, 0, 1], [0, 1, 2]];
+// Progression inside a level (spec §6 « AB → AAB → ABC », « plus tard − 1 »): the wins among the
+// phase's recent results (shared/history.js, at most 5, cleared when its level changes) that a
+// motif, or the « − 1 » hint, needs before it is drawn.
+export const MOTIF_UNLOCK = [0, 1, 3];
+export const MINUS_UNLOCK = 2;
 
 export const N1_MAX_BANDS = 2;
 
@@ -87,20 +95,18 @@ function glazeBandsFor(level, owned, rng) {
   return pattern.map(i => colors[i]);
 }
 
-// Level 2: a ring of 6 or 8 slots, the start of the motif already placed (at least two periods,
-// at least two slots left to fill). AB may use 6 slots; AAB and ABC need 8.
-function motifFor(kinds, rng) {
-  const usable = MOTIFS.filter(m => Math.max(...m) + 1 <= kinds.length);
+// Level 2: a ring of RING_SLOTS slots, the start of the motif already placed (RING_PREFILL: two
+// periods of AB, one period and the next start of AAB / ABC), two slots left to fill. The motifs
+// come with the recent wins (MOTIF_UNLOCK).
+function motifFor(kinds, rng, wins = Infinity) {
+  const usable = MOTIFS.filter((m, i) => Math.max(...m) + 1 <= kinds.length && wins >= MOTIF_UNLOCK[i]);
   if (!usable.length) return null;
   const letters = pick(usable, rng);
   const used = pickDistinct(kinds, Math.max(...letters) + 1, rng);
   const pattern = letters.map(i => used[i]);
-  const slots = letters.length === 2 && rng() < 0.5 ? 6 : MAX_RING_SLOTS;
-  const maxPrefill = slots - 2;
-  const minPrefill = 2 * pattern.length;
-  const prefill = minPrefill + Math.floor(rng() * (Math.min(maxPrefill, 6) - minPrefill + 1));
+  const slots = RING_SLOTS;
   const sequence = Array.from({ length: slots }, (_, i) => pattern[i % pattern.length]);
-  return { slots, pattern, sequence, prefill };
+  return { slots, pattern, sequence, prefill: RING_PREFILL };
 }
 
 // solveHints(hints) -> [{key, count}] or null. A hint is {key, rel: 'count', count} (the card
@@ -122,15 +128,17 @@ export function solveHints(hints) {
 }
 
 // Level 3: the card gives one kind by pictures, the others by « = », « + 1 » or (with 2 or more
-// to take from) « − 1 » on an earlier kind. Total <= 8, every count >= 1.
-function hintCardFor(kinds, rng) {
+// to take from, once MINUS_UNLOCK recent wins are reached) « − 1 » on an earlier kind. Total <= 8,
+// every count >= 1.
+function hintCardFor(kinds, rng, wins = Infinity) {
+  const rels = wins >= MINUS_UNLOCK ? ['same', 'plus', 'minus'] : ['same', 'plus'];
   if (kinds.length < 2) return null;
   for (let attempt = 0; attempt < 50; attempt++) {
     const nKinds = Math.min(kinds.length, 2 + Math.floor(rng() * 2));
     const keys = pickDistinct(kinds, nKinds, rng);
     const hints = [{ key: keys[0], rel: 'count', count: 2 + Math.floor(rng() * 3) }];
     for (let i = 1; i < keys.length; i++) {
-      const rel = pick(['same', 'plus', 'minus'], rng);
+      const rel = pick(rels, rng);
       hints.push({ key: keys[i], rel, of: keys[Math.floor(rng() * i)], n: rel === 'same' ? 0 : 1 });
     }
     const solution = solveHints(hints);
@@ -151,8 +159,10 @@ function countsToppings(kinds, rng) {
 }
 
 /**
- * generateOrder(owned, rng, levels) -> Order
+ * generateOrder(owned, rng, levels, wins) -> Order
  * `levels` is the round's phase levels ({couleur, toppings, ...}); a missing or unknown level is 1.
+ * `wins` ({toppings: n}) the recent wins of a phase (shared/runtime.js phaseWins): Toppings N2-N3
+ * unlock their harder motifs and « − 1 » with it; missing, everything is open.
  * Always: dessert, shape, `glaze` (the colour of each equal band, left to right: same list as
  * glazeBands) and `toppings` ([{key, count}], the total the cake needs, whatever the mode).
  * Added by level:
@@ -162,11 +172,11 @@ function countsToppings(kinds, rng) {
  *  - toppingMode 'counts' (level 1, as before), 'motif' (level 2: `motif` = {slots, pattern,
  *    sequence, prefill}) or 'hints' (level 3: `hintCard` = {hints, solution}).
  */
-export function generateOrder(owned, rng = Math.random, levels = {}) {
+export function generateOrder(owned, rng = Math.random, levels = {}, wins = {}) {
   const lc = levelOf(levels, 'couleur');
   const lt = levelOf(levels, 'toppings');
   const glazeBands = glazeBandsFor(lc, owned, rng);
-  const tops = toppingsFor(ownedKeys(owned, 'topping'), lt, rng);
+  const tops = toppingsFor(ownedKeys(owned, 'topping'), lt, rng, wins.toppings ?? Infinity);
   const order = {
     dessert: pick(Object.keys(DESSERTS), rng),
     shape: pick(ownedKeys(owned, 'shape'), rng),
@@ -177,18 +187,32 @@ export function generateOrder(owned, rng = Math.random, levels = {}) {
   };
   if (tops.motif) order.motif = tops.motif;
   if (tops.hintCard) order.hintCard = tops.hintCard;
-  return order;
+  return withGlazeLevel(order, lc);
+}
+
+/**
+ * withGlazeLevel(order, level) -> Order
+ * Glaçage N3 cuts the cake in bands of equal area (zones.js equalArea): the order says so
+ * (`equalArea: true`), so that its picture, the guides, the rim ticks and the judging agree.
+ * Other levels keep equal widths (no flag). Also for debug orders (?debug&order=).
+ */
+export function withGlazeLevel(order, level) {
+  if (!order) return order;
+  const out = { ...order };
+  if (level === 3) out.equalArea = true;
+  else delete out.equalArea;
+  return out;
 }
 
 /**
  * toppingsFor(kinds, level, rng) -> {toppingMode, toppings, motif?, hintCard?}
  * The toppings part of an order for a Toppings level, from the kinds that can be used: level 1
  * counts; level 2 a motif (falls back to counts with fewer than 2 kinds); level 3 a hint card
- * (same fallback).
+ * (same fallback). `wins`: the phase's recent wins (MOTIF_UNLOCK, MINUS_UNLOCK); default all open.
  */
-export function toppingsFor(kinds, level, rng = Math.random) {
-  const motif = level === 2 ? motifFor(kinds, rng) : null;
-  const hintCard = level === 3 ? hintCardFor(kinds, rng) : null;
+export function toppingsFor(kinds, level, rng = Math.random, wins = Infinity) {
+  const motif = level === 2 ? motifFor(kinds, rng, wins) : null;
+  const hintCard = level === 3 ? hintCardFor(kinds, rng, wins) : null;
   if (motif) return { toppingMode: 'motif', toppings: countsOf(motif.sequence), motif };
   if (hintCard) return { toppingMode: 'hints', toppings: hintCard.solution.map(t => ({ ...t })), hintCard };
   return { toppingMode: 'counts', toppings: countsToppings(kinds, rng) };
@@ -198,6 +222,8 @@ export function toppingsFor(kinds, level, rng = Math.random) {
  * withToppingLevel(order, level, rng) -> Order (debug: ?debug&order= at Toppings N2 / N3)
  * An order given as plain counts (parseOrderParam) gets the motif or the hint card of that level,
  * made with its own topping kinds. An order that already has a mode is returned as it is.
+ * The kinds are taken as given, owned or not: a kind that is not owned is not on the shelf, so
+ * such a debug round cannot be solved (name owned toppings in ?order=).
  */
 export function withToppingLevel(order, level, rng = Math.random) {
   if (!order || order.toppingMode || ![2, 3].includes(level)) return order;

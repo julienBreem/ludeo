@@ -3,7 +3,7 @@
 import { loadCollection, saveCollection } from './store.js';
 import { effectiveSettings } from './effective.js';
 import { GAMES } from '../jeux/registry.js';
-import { phaseLevel, isLevel } from './difficulty.js';
+import { phaseLevel, phaseKey, isLevel } from './difficulty.js';
 import { recordResult } from './history.js';
 
 export const CHECK_MS = 60 * 1000;
@@ -98,6 +98,16 @@ export function storedPhaseLevels(gameId) {
 // overrides of ?debug&level= on top.
 export function phaseLevels(gameId) {
   return { ...storedPhaseLevels(gameId), ...debugLevels(phasesOf(gameId)) };
+}
+
+// The wins among each phase's recent results ({ [phaseId]: n }, 0..HISTORY_MAX): a game may make
+// a level harder step by step with it. The history only holds results played at the phase's
+// stored level (a level change clears it).
+export function phaseWins(gameId) {
+  const c = getCollection();
+  const out = {};
+  for (const p of phasesOf(gameId)) out[p.id] = (c.history?.[phaseKey(gameId, p.id)] ?? []).filter(ok => ok === true).length;
+  return out;
 }
 
 // Saves a phase's result (its point at Service) for the parent's proposals. Nothing for a phase

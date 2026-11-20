@@ -163,7 +163,7 @@ export function motifText(order) {
  * One word per element, in the order shape, colours (zones left to right), toppings.
  * Level 1: toppings named without a number (« fraises »); level ≥ 2: « 2 fraises », but a motif
  * order is one word « une couronne de fraises et d'étoiles » (index 0) and a hint-card order
- * names the kinds only (« fraises »). hideToppings (Toppings N2-N3 strip): one word « ? ».
+ * names the kinds only, in the plural, at every level (« fraises »). hideToppings (Toppings N2-N3 strip): one word « ? ».
  * `index` is the zone index for colours, the position in order.toppings for toppings, 0 for the shape.
  * When a colour covers several adjacent bands (Glaçage N3) there is one word per colour, as a
  * fraction (« un tiers rose », « deux tiers violet »): `index` is its first band, `bands` all of them.
@@ -172,7 +172,8 @@ export function orderWords(order, level = 1, { hideShape = false, hideToppings =
   const shape = shapeOf(order, hideShape);
   const out = [{ key: order.shape, kind: 'forme', word: shape.word, index: 0 }];
   for (const c of colorItems(order.glaze ?? [], shape.g)) out.push({ key: c.key, kind: 'couleur', word: c.word, index: c.index, bands: c.bands });
-  const uncounted = level >= 2 || hideToppings ? uncountedToppings(order, false, hideToppings) : null;
+  // a hint-card order names its kinds in the plural at every level (« fraise » would tell a count of 1)
+  const uncounted = level >= 2 || hideToppings || order.toppingMode === 'hints' ? uncountedToppings(order, false, hideToppings) : null;
   if (uncounted) {
     for (const p of uncounted) out.push({ key: p.key, kind: 'topping', word: p.text, index: p.index });
     return out;

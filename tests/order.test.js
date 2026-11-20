@@ -84,7 +84,8 @@ test('parseOrderParam (debug order): valid, defaults, rejects unknown or malform
 
 // ---- Lot 3: level-aware glaze and toppings ----
 import { obtainable, mixedColors, basesOf } from '../jeux/stand-desserts/src/logic/colors.js';
-import { BAND_PATTERNS, solveHints, ringPositions } from '../jeux/stand-desserts/src/logic/order.js';
+import { BAND_PATTERNS, solveHints, ringPositions, RING_SLOTS, RING_PREFILL, MOTIF_UNLOCK, MINUS_UNLOCK, withGlazeLevel } from '../jeux/stand-desserts/src/logic/order.js';
+import { buy } from '../jeux/stand-desserts/src/logic/economy.js';
 
 const STARTER = starterOwned();
 const RICH = [...STARTER, 'color:marron', 'color:noir', 'topping:etoile', 'topping:bonbon', 'topping:chantilly'];
@@ -155,29 +156,105 @@ const minPeriod = seq => {
   return seq.length;
 };
 
-test('N2 motif: unambiguous prefix, owned kinds, 6 or 8 slots, >= 2 blanks', () => {
-  const rng = makeRng(31); const slotsSeen = new Set(); const periods = new Set();
+test('N2 motif: 6-slot ring, a multiple of the period, 4 placed, 2 blanks, owned kinds', () => {
+  const rng = makeRng(31); const periods = new Set();
   for (const owned of [STARTER, RICH]) {
     for (let i = 0; i < 1500; i++) {
       const o = generateOrder(owned, rng, { toppings: 2 });
       assert.equal(o.toppingMode, 'motif');
       const { slots, pattern, sequence, prefill } = o.motif;
-      assert.ok(slots === 6 || slots === 8);
+      assert.equal(slots, RING_SLOTS);
+      assert.equal(slots % pattern.length, 0, 'the ring closes on a whole period');
       assert.equal(sequence.length, slots);
-      assert.ok(prefill >= 2 * pattern.length, 'two full periods');
+      assert.equal(prefill, RING_PREFILL);
+      assert.ok(prefill > pattern.length, 'a whole period and the start of the next one');
       assert.ok(slots - prefill >= 2);
       for (const k of sequence) assert.ok(ownedKeys(owned, 'topping').includes(k));
       sequence.forEach((k, j) => assert.equal(k, pattern[j % pattern.length]));
       const prefix = sequence.slice(0, prefill);
       assert.equal(minPeriod(prefix), pattern.length, 'prefix reveals the period');
-      assert.equal(new Set(pattern).size, new Set([...pattern]).size);
+      // the closed ring: around the seam (last slot -> first) the motif goes on, in both directions
+      const around = [...sequence, ...sequence];
+      assert.equal(minPeriod(around), pattern.length, 'no break at the seam');
+      assert.equal(minPeriod([...around].reverse()), pattern.length, 'read backwards too');
       // toppings = counts of the whole sequence
       assert.equal(o.toppings.reduce((a, t) => a + t.count, 0), slots);
-      slotsSeen.add(slots); periods.add(pattern.join('') && pattern.length + ':' + new Set(pattern).size);
+      periods.add(pattern.length + ':' + new Set(pattern).size);
     }
   }
-  assert.deepEqual([...slotsSeen].sort(), [6, 8]);
   assert.deepEqual([...periods].sort(), ['2:2', '3:2', '3:3']);
+});
+
+test('N2-N3 progression: AB first, AAB after a win, ABC after 3; « − 1 » after 2 wins', () => {
+  const motifsAt = (wins) => {
+    const rng = makeRng(77); const seen = new Set();
+    for (let i = 0; i < 400; i++) {
+      const { pattern } = generateOrder(RICH, rng, { toppings: 2 }, { toppings: wins }).motif;
+      seen.add(pattern.length + ':' + new Set(pattern).size);
+    }
+    return [...seen].sort();
+  };
+  assert.deepEqual(motifsAt(0), ['2:2']);
+  assert.deepEqual(motifsAt(1), ['2:2', '3:2']);
+  assert.deepEqual(motifsAt(2), ['2:2', '3:2']);
+  assert.deepEqual(motifsAt(3), ['2:2', '3:2', '3:3']);
+  assert.deepEqual(motifsAt(5), ['2:2', '3:2', '3:3']);
+  const relsAt = (wins) => {
+    const rng = makeRng(78); const seen = new Set();
+    for (let i = 0; i < 600; i++) for (const h of generateOrder(RICH, rng, { toppings: 3 }, { toppings: wins }).hintCard.hints) seen.add(h.rel);
+    return [...seen].sort();
+  };
+  assert.deepEqual(relsAt(0), ['count', 'plus', 'same']);
+  assert.deepEqual(relsAt(1), ['count', 'plus', 'same']);
+  assert.deepEqual(relsAt(MINUS_UNLOCK), ['count', 'minus', 'plus', 'same']);
+  assert.deepEqual(MOTIF_UNLOCK, [0, 1, 3]);
+});
+
+test('Glaçage N3 orders are cut in equal areas; N1-N2 keep equal widths', () => {
+  const rng = makeRng(61);
+  for (let i = 0; i < 200; i++) {
+    assert.equal(generateOrder(RICH, rng, { couleur: 3 }).equalArea, true);
+    for (const lc of [1, 2]) assert.ok(!('equalArea' in generateOrder(RICH, rng, { couleur: lc })));
+  }
+  const base = { dessert: 'gateau', shape: 'rond', glaze: ['rose'], toppings: [] };
+  assert.equal(withGlazeLevel(base, 3).equalArea, true);
+  assert.ok(!('equalArea' in withGlazeLevel({ ...base, equalArea: true }, 2)));
+  assert.equal(withGlazeLevel(null, 3), null);
+});
+
+test('old save with bleu / vert bought at N1: N2-N3 orders use the four bases, vert only as a mix', () => {
+  const OLD = [...STARTER, 'color:bleu', 'color:vert'];
+  assert.deepEqual(basesOf(OLD), ['rouge', 'bleu', 'jaune', 'blanc']);
+  for (const level of [2, 3]) {
+    const rng = makeRng(90 + level); let vert = 0;
+    for (let i = 0; i < 800; i++) {
+      const o = generateOrder(OLD, rng, { couleur: level });
+      assert.ok(o.glazeBands.every(c => obtainable(basesOf(OLD)).includes(c)), o.glazeBands.join());
+      if (o.glazeBands.includes('vert')) vert++;
+    }
+    assert.ok(vert > 0, 'vert is ordered (made with bleu + jaune)');
+  }
+});
+
+test('bought bases: after buying marron and noir, N2-N3 orders ask for beige and gris', () => {
+  let state = { coins: 100, owned: [...STARTER] };
+  for (const id of ['color:marron', 'color:noir']) {
+    state = buy(state, id);
+    assert.ok(state && state.owned.includes(id), id);
+  }
+  assert.equal(state.coins, 100 - 12 - 14);
+  assert.deepEqual(basesOf(state.owned), ['rouge', 'bleu', 'jaune', 'blanc', 'marron', 'noir']);
+  const seen = new Set();
+  for (const level of [2, 3]) {
+    const rng = makeRng(95 + level);
+    for (let i = 0; i < 1500; i++) for (const c of generateOrder(state.owned, rng, { couleur: level }).glazeBands) seen.add(c);
+  }
+  for (const c of ['beige', 'gris', 'marron', 'noir']) assert.ok(seen.has(c), c);
+  // without them, never
+  const rng = makeRng(99);
+  for (let i = 0; i < 1000; i++) {
+    for (const c of generateOrder(STARTER, rng, { couleur: 3 }).glazeBands) assert.ok(!['beige', 'gris', 'marron', 'noir'].includes(c), c);
+  }
 });
 
 test('N3 hints: unique non-negative solution, total <= 8, minus only from >= 2, matches toppings', () => {

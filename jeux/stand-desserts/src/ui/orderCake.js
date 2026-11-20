@@ -1,8 +1,9 @@
 // The cake an order asks for, as a Cake that drawCake can show: golden, smooth dough, every glaze
-// zone fully painted with its colour, and the ordered toppings spread over the top, well apart.
+// zone fully painted with its colour (equal-area bands at Glaçage N3), and the ordered toppings
+// spread over the top, well apart.
 import { TOP_SQUASH } from '../config.js';
 import { GRID } from '../logic/paint.js';
-import { zoneMap, layoutToppings } from '../logic/zones.js';
+import { zoneMap, layoutToppings, bandOptions } from '../logic/zones.js';
 import { shapeMask, shapeRing, cakeTexture, FRAME, TOPPING_SIZE } from './cakeView.js';
 
 const CELL = FRAME / GRID; // frame units per grid cell
@@ -176,13 +177,19 @@ function extremes(mask) {
 /**
  * idealCake(scene, order) -> Cake {dessert, shape, doughOk: true, bake: 'dore',
  *   glaze: {cells, size: GRID, colorKeys: order.glaze}, toppings: [{key, x, y}]}
- * Every silhouette cell is painted with its zone's colour (zone i -> value i + 1); toppings are
- * order.toppings expanded in order (each kind `count` times) onto well-spaced spots, or for a
- * motif order (Toppings N2) the whole motif on the shape's ring of slots.
+ * Every silhouette cell is painted with its zone's colour (zone i -> value i + 1, bands as
+ * zones.js bandOptions(order)); toppings are order.toppings expanded in order (each kind `count`
+ * times) onto well-spaced spots, or for a motif order (Toppings N2) the whole motif on the shape's
+ * ring of slots. A hint-card order (Toppings N3) shows one of each kind: its counts are the
+ * exercise, so no picture of the order may give them.
  */
+export function shownToppings(order) {
+  return order.toppingMode === 'hints' ? order.toppings.map(t => ({ key: t.key, count: 1 })) : order.toppings;
+}
+
 export function idealCake(scene, order) {
   const mask = shapeMask(scene, order.shape);
-  const zones = zoneMap(mask, GRID, Math.max(1, order.glaze.length));
+  const zones = zoneMap(mask, GRID, Math.max(1, order.glaze.length), bandOptions(order));
   const cells = new Uint8Array(GRID * GRID);
   for (let i = 0; i < cells.length; i++) if (zones[i] >= 0) cells[i] = zones[i] + 1;
   let spots;
@@ -191,9 +198,10 @@ export function idealCake(scene, order) {
     spots = shapeRing(scene, order.shape, order.motif.slots).slots;
     keys = order.motif.sequence.slice(0, spots.length);
   } else {
-    const total = order.toppings.reduce((n, t) => n + t.count, 0);
+    const shown = shownToppings(order);
+    const total = shown.reduce((n, t) => n + t.count, 0);
     spots = toppingSpots(mask, total);
-    keys = assignKinds(mask, spots, order.toppings);
+    keys = assignKinds(mask, spots, shown);
   }
   return {
     dessert: order.dessert,
@@ -211,7 +219,8 @@ let lastSig = null;
 
 export function orderSig(order) {
   const ring = order.toppingMode === 'motif' && order.motif ? `ring${order.motif.sequence.join('+')}` : '';
-  return [order.dessert, order.shape, order.glaze.join('+'), order.toppings.map(t => `${t.key}${t.count}`).join('+') + ring].join('-');
+  const area = order.equalArea ? 'area' : '';
+  return [order.dessert, order.shape, order.glaze.join('+') + area, shownToppings(order).map(t => `${t.key}${t.count}`).join('+') + ring].join('-');
 }
 
 // One mask-free texture per order, made on first use and shared by the bubble and the strip.
@@ -247,7 +256,7 @@ const STAND_DOWN = TOPPING_SIZE * (1 - STAND_ORIGIN_Y);
 export function orderGeometry(scene, order) {
   const mask = shapeMask(scene, order.shape);
   const n = Math.max(1, order.glaze.length);
-  const zones = zoneMap(mask, GRID, n);
+  const zones = zoneMap(mask, GRID, n, bandOptions(order));
   const fx = u => u * CELL - FRAME / 2;
   const fy = v => (v * CELL - FRAME / 2) * TOP_SQUASH;
   let minX = GRID; let maxX = -1; let minY = GRID; let maxY = -1;

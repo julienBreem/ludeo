@@ -22,7 +22,7 @@ import { blink, popIn, confetti, talk } from '../ui/fx.js';
 import { goNext } from '../ui/flow.js';
 import { STEPS, scoreRound, bitesFor } from '../logic/scoring.js';
 import { GRID } from '../logic/paint.js';
-import { zoneEdges, zoneMap } from '../logic/zones.js';
+import { zoneEdges, zoneMap, bandOptions } from '../logic/zones.js';
 import { recipeFor } from '../logic/colors.js';
 import { INGREDIENTS, DESSERTS } from '../logic/catalog.js';
 import { fixedRecipe, toPour } from '../logic/recipe.js';
@@ -549,7 +549,7 @@ export class ServiceScene extends Phaser.Scene {
         // colour stays visible above it)
         c.add(this.miniCake({ ...base, shape: o.shape, bake: 'dore', glaze: cake.glaze }, x, SWAP_MINI));
         const mask = shapeMask(this, o.shape);
-        const edges = [-Infinity, ...zoneEdges(mask, GRID, o.glaze.length), Infinity];
+        const edges = [-Infinity, ...zoneEdges(mask, GRID, o.glaze.length, bandOptions(o)), Infinity];
         let minX = GRID;
         let maxX = -1;
         for (let n = 0; n < mask.length; n++) {
@@ -595,7 +595,7 @@ export class ServiceScene extends Phaser.Scene {
     const want = o.glaze[z];
     const bands = colorRuns(o.glaze).find(r => r.bands.includes(z))?.bands ?? [z];
     const mask = shapeMask(this, o.shape);
-    const zones = zoneMap(mask, GRID, n);
+    const zones = zoneMap(mask, GRID, n, bandOptions(o));
     const cells = new Uint8Array(GRID * GRID);
     for (let i = 0; i < cells.length; i++) if (bands.includes(zones[i])) cells[i] = 1;
     const cake = { dessert: o.dessert, doughOk: true, shape: o.shape, toppings: [], bake: 'dore', glaze: { cells, size: GRID, colorKeys: [want] } };
@@ -632,9 +632,9 @@ export class ServiceScene extends Phaser.Scene {
     const RX = 118;
     const RY = 30;
     const ITEM = 38;
-    // the slots go clockwise; 8 of them start at the top, 6 half a step later, so that no two
-    // are stacked at the flat ends of the ellipse
-    const start = n === 8 ? 0 : 0.5;
+    // the slots go clockwise from just right of the top, half a step after it, as on the cake's
+    // ring (logic/ring.js); with the 6-slot ring none are stacked at the flat ends of the ellipse
+    const start = 0.5;
     const g = this.add.graphics();
     g.fillStyle(0xfff3e0, 1).fillEllipse(cx, cy, 2 * RX + 30, 2 * RY + 26);
     g.lineStyle(4, OUTLINE, 1).strokeEllipse(cx, cy, 2 * RX + 30, 2 * RY + 26);
@@ -688,11 +688,12 @@ export class ServiceScene extends Phaser.Scene {
       t.setScale(46 / Math.max(t.width, t.height));
       c.add(t);
       if (it.count !== null) {
-        c.add(this.add.text(ix + 40, 6, String(it.count), {
+        c.add(this.add.text(ix + 46, 6, String(it.count), {
           ...TEXT_STYLE, fontSize: '34px', color: '#1f2a44',
         }).setOrigin(0.5));
       }
-      if (it.sign) this.badge(c, ix, it.sign, { x: ix - 22, y: 22, r: 15 });
+      // on the icon's top-right corner: it belongs to that kind, not to a number
+      if (it.sign) this.badge(c, ix, it.sign, { x: ix + 17, y: -15, r: 13 });
     });
   }
 

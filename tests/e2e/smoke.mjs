@@ -616,6 +616,14 @@ const actions = {
       check([3, 4].includes(zoneCount) && new Set(order.glaze).size < zoneCount, `N3: ${zoneCount} bands, a colour over several (${order.glaze.join(' ')})`);
       const ticks = await sceneEval('Paint', 's => s.ticks?.length ?? 0');
       check(ticks === 2 * (zoneCount - 1), `N3: ${ticks} rim graduations at the band edges`);
+      // equal-area bands: each holds 1/n of the silhouette, within one column's cells
+      const area = await sceneEval('Paint', `s => {
+        const cols = new Array(64).fill(0); const c = new Array(s.nZones).fill(0); let t = 0;
+        s.full.forEach((v, i) => { if (!v) return; const x = i % 64; cols[x]++; t++; c[s.edges.filter(e => x >= e).length]++; });
+        return { flag: s.round.order.equalArea === true, col: Math.max(...cols), t, c };
+      }`);
+      check(area.flag && area.c.every(k => Math.abs(k - area.t / zoneCount) <= area.col),
+        `N3: bands of equal area (${area.c.join(' | ')} of ${area.t})`);
     }
     const potX = key => sceneEval('Paint', `s => s.pots.find(p => p.key === ${JSON.stringify(key)})?.x ?? null`);
     if (n >= 2) {
@@ -719,7 +727,7 @@ const actions = {
     };
     if (info.mode === 'motif') {
       const { motif } = order;
-      check([6, 8].includes(info.slots.length) && info.slots.length === motif.slots, `N2: a ring of ${info.slots.length} slots`);
+      check(info.slots.length === 6 && info.slots.length === motif.slots && 6 % motif.pattern.length === 0, `N2: a ring of ${info.slots.length} slots, a multiple of the period`);
       check(info.slots.filter(q => q.prefilled).length === motif.prefill && info.slots.every((q, i) => (i < motif.prefill) === !!q.key),
         `N2: the motif's start (${motif.prefill}) is there: ${motif.pattern.join(' ')}`);
       const free = info.slots.filter(q => !q.prefilled);

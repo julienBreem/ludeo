@@ -7,6 +7,8 @@
 //   by a neutral category pictogram; toppings counted in digits.
 // - N3: one sentence (numbers in letters); the eye button shows the cake again for 2 s, as often
 //   as she likes.
+// A hint-card order (Toppings N3) shows one topping of each kind in every picture (orderCake.js
+// shownToppings): its counts are the exercise.
 // The bubble grows to its content. At every level only ✓ moves on (the bubble holds tap targets at
 // N1 and N3; N2 behaves the same, so the three levels agree).
 // The home button (top-left) goes back to the collection home. Reset lives in the home's parent space.
