@@ -12,11 +12,11 @@ import { getState, updateState } from '../game-state.js';
 import { addIconButton } from '../ui/button.js';
 import { goTo } from '../ui/flow.js';
 import { splash, sparkle } from '../ui/fx.js';
-import { shopItems } from '../logic/catalog.js';
+import { dur } from '../ui/pace.js';
+import { shopItems, itemById } from '../logic/catalog.js';
 import { canBuy, buy } from '../logic/economy.js';
 import { phaseLevels } from '../../../../shared/runtime.js';
 import { ID } from '../../collection.js';
-import { itemById } from '../logic/catalog.js';
 import { ensureMoneyTextures, coinGroups, piggyBank, dashedCircle, MISSING } from '../ui/moneyArt.js';
 
 
@@ -189,10 +189,10 @@ export class ShopScene extends Phaser.Scene {
     layer.add(this.add.image(px + 270, py + 110, 'coin').setDisplaySize(48, 48));
     layer.add(this.add.text(px + 304, py + 110, String(price), { ...TEXT_STYLE, fontSize: '56px' }).setOrigin(0, 0.5));
     layer.setAlpha(0);
-    this.tweens.add({ targets: layer, alpha: 1, duration: 200 });
+    this.tweens.add({ targets: layer, alpha: 1, duration: dur(200) });
     this.piggy = { layer, dim, have, price, missing };
     // any tap closes it (after a short moment, so the opening tap does not)
-    this.time.delayedCall(250, () => dim.once('pointerup', () => this.closePiggy()));
+    this.time.delayedCall(dur(250), () => dim.once('pointerup', () => this.closePiggy()));
   }
 
   closePiggy() {
@@ -200,6 +200,6 @@ export class ShopScene extends Phaser.Scene {
     const { layer, dim } = this.piggy;
     this.piggy = null;
     dim.disableInteractive(); // the fading layer must not catch the next tap (the back button)
-    this.tweens.add({ targets: layer, alpha: 0, duration: 180, onComplete: () => layer.destroy() });
+    this.tweens.add({ targets: layer, alpha: 0, duration: dur(180), onComplete: () => layer.destroy() });
   }
 }

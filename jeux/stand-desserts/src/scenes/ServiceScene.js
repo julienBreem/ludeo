@@ -668,7 +668,7 @@ export class ServiceScene extends Phaser.Scene {
     if (res.reason === 'trop' && hit) hit.sign = 1;
     else if (res.reason === 'pas-assez' && hit) hit.sign = -1;
     else if (res.reason === 'mauvais-topping' && res.key && !hit) items.push({ key: res.key, count: null, sign: 'x' });
-    const PITCH = 84;
+    const PITCH = dice ? 110 : 84; // a die (38 px at ix + 52) must clear the next kind's icon
     const w = items.length * PITCH + 16;
     const left = x + 40 - w / 2;
     const g = this.add.graphics();
