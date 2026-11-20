@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 220 310" width="220" height="310">
+<!-- receipt (pink header, zigzag bottom). Code draws the amount in the blank area x 30..190, y 64..218 (centre 110,141) -->
+<defs><linearGradient id="p" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#eef3f9"/></linearGradient><filter id="f" x="-20%" y="-10%" width="140%" height="130%"><feGaussianBlur stdDeviation="4"/></filter></defs>
+<path d="M30 10 H190 Q204 10 204 24 V292 L188.33 278 L172.66 292 L156.99 278 L141.32 292 L125.65 278 L109.98 292 L94.31 278 L78.64 292 L62.97 278 L47.3 292 L31.63 278 L16 292 V24 Q16 10 30 10 Z" fill="#3b5b7a" opacity=".3" filter="url(#f)" transform="translate(3 7)"/>
+<path d="M30 10 H190 Q204 10 204 24 V292 L188.33 278 L172.66 292 L156.99 278 L141.32 292 L125.65 278 L109.98 292 L94.31 278 L78.64 292 L62.97 278 L47.3 292 L31.63 278 L16 292 V24 Q16 10 30 10 Z" fill="url(#p)" stroke="#8fa5c2" stroke-width="3" stroke-linejoin="round"/>
+<path d="M19 26 Q19 13 32 13 H188 Q201 13 201 26 V52 H19 Z" fill="#ff8fb7"/>
+<path d="M19 52 H201" stroke="#e0508a" stroke-width="3"/>
+<circle cx="46" cy="32" r="9" fill="#fff"/><path d="M66 32 H170" stroke="#fff" stroke-width="7" stroke-linecap="round"/>
+<path d="M34 230 H186" stroke="#b9c9de" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="1 9"/>
+<path d="M40 250 H120 M140 250 H180" stroke="#c9d6e6" stroke-width="7" stroke-linecap="round"/>
+<path d="M28 68 V200" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+</svg>

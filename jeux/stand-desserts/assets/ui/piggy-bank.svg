@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 340 280" width="340" height="280">
+<!-- piggy bank (pink pig facing left) with a porthole on its belly. Porthole inside = ellipse cx 200 cy 156 rx 58 ry 44: code draws the savings there, clipped by piggy-bank-mask (same frame) -->
+<defs><radialGradient id="b" cx="0.4" cy="0.28" r="0.85"><stop offset="0" stop-color="#ffd0e3"/><stop offset="0.6" stop-color="#ff9cc4"/><stop offset="1" stop-color="#f06aa2"/></radialGradient><linearGradient id="e" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffb3d1"/><stop offset="1" stop-color="#f06aa2"/></linearGradient><linearGradient id="n" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffc2da"/><stop offset="1" stop-color="#ff8fb7"/></linearGradient><linearGradient id="w" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7a2a52"/><stop offset="1" stop-color="#b0477c"/></linearGradient><filter id="f" x="-10%" y="-40%" width="120%" height="180%"><feGaussianBlur stdDeviation="6"/></filter></defs>
+<ellipse cx="166" cy="266" rx="130" ry="13" fill="#7a1f4a" opacity=".28" filter="url(#f)"/>
+<path d="M292 150 C318 150 322 122 304 120 C290 119 290 138 304 136" fill="none" stroke="#c2336f" stroke-width="11" stroke-linecap="round"/><path d="M292 150 C318 150 322 122 304 120 C290 119 290 138 304 136" fill="none" stroke="#ff9cc4" stroke-width="5.5" stroke-linecap="round"/>
+<path d="M112 214 V250 Q112 262 124 262 H134 Q146 262 146 250 V214 Z" fill="#d94f8a" stroke="#c2336f" stroke-width="3" stroke-linejoin="round"/>
+<path d="M236 214 V250 Q236 262 248 262 H258 Q270 262 270 250 V214 Z" fill="#d94f8a" stroke="#c2336f" stroke-width="3" stroke-linejoin="round"/>
+<path d="M118 66 C112 40 126 30 146 36 C144 52 138 62 130 72 Z" fill="#d94f8a" stroke="#c2336f" stroke-width="3" stroke-linejoin="round"/>
+<ellipse cx="172" cy="150" rx="126" ry="100" fill="url(#b)" stroke="#c2336f" stroke-width="3"/>
+<path d="M78 218 V254 Q78 268 92 268 H104 Q118 268 118 254 V226 Z" fill="url(#e)"/><path d="M78 218 V254 Q78 268 92 268 H104 Q118 268 118 254 V226" fill="none" stroke="#c2336f" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><path d="M80 256 H116" stroke="#c2336f" stroke-width="3" opacity=".45"/>
+<path d="M206 218 V254 Q206 268 220 268 H232 Q246 268 246 254 V226 Z" fill="url(#e)"/><path d="M206 218 V254 Q206 268 220 268 H232 Q246 268 246 254 V226" fill="none" stroke="#c2336f" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><path d="M208 256 H244" stroke="#c2336f" stroke-width="3" opacity=".45"/>
+<ellipse cx="200" cy="158" rx="70" ry="56" fill="#c2336f"/><ellipse cx="200" cy="156" rx="67" ry="53" fill="#fff0f6" stroke="#c2336f" stroke-width="2.5"/>
+<ellipse cx="200" cy="156" rx="58" ry="44" fill="url(#w)" stroke="#c2336f" stroke-width="2.5"/>
+<rect x="164" y="55" width="76" height="13" rx="6.5" fill="#7a1f4a" stroke="#c2336f" stroke-width="2.5"/>
+<path d="M62 84 C44 44 66 28 96 40 C98 62 92 76 80 92 Z" fill="url(#e)" stroke="#c2336f" stroke-width="3" stroke-linejoin="round"/><path d="M70 74 C62 56 70 46 86 48" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".6"/>
+<ellipse cx="48" cy="150" rx="27" ry="33" fill="url(#n)" stroke="#c2336f" stroke-width="3"/><ellipse cx="39" cy="150" rx="5" ry="9" fill="#c2336f"/><ellipse cx="57" cy="150" rx="5" ry="9" fill="#c2336f"/>
+<circle cx="94" cy="116" r="10" fill="#3b1730"/><circle cx="91" cy="112" r="3.5" fill="#fff"/>
+<ellipse cx="104" cy="148" rx="13" ry="9" fill="#ff5c93" opacity=".45"/>
+<path d="M72 180 C80 192 94 194 104 186" fill="none" stroke="#c2336f" stroke-width="4" stroke-linecap="round"/>
+<path d="M116 88 C128 78 142 72 156 68" fill="none" stroke="#fff" stroke-width="9" stroke-linecap="round" opacity=".75"/><path d="M252 80 C268 90 280 104 286 120" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" opacity=".45"/>
+</svg>

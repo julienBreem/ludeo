@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 240 140" width="240" height="140">
+<!-- stylised paper note worth 5: big "5" in a white medallion. Paper = x 5..235, y 7..125 (base 7 px lower) -->
+<defs><linearGradient id="p" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d9f7c8"/><stop offset="1" stop-color="#8fdc9a"/></linearGradient><radialGradient id="m" cx="0.5" cy="0.35" r="0.8"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#dff6e2"/></radialGradient></defs>
+<rect x="5" y="14" width="230" height="118" rx="14" fill="#2f9a55"/>
+<rect x="5" y="7" width="230" height="118" rx="14" fill="url(#p)" stroke="#2f9a55" stroke-width="3"/>
+<rect x="16" y="18" width="208" height="96" rx="8" fill="none" stroke="#fff" stroke-width="3" stroke-dasharray="2 9" stroke-linecap="round" opacity=".9"/>
+<circle cx="38" cy="66" r="15" fill="#dff6e2" stroke="#2f9a55" stroke-width="2.5" opacity=".9"/><circle cx="38" cy="66" r="6" fill="#2f9a55" opacity=".55"/>
+<circle cx="202" cy="66" r="15" fill="#dff6e2" stroke="#2f9a55" stroke-width="2.5" opacity=".9"/><circle cx="202" cy="66" r="6" fill="#2f9a55" opacity=".55"/>
+<ellipse cx="120" cy="66" rx="50" ry="46" fill="url(#m)" stroke="#2f9a55" stroke-width="3"/>
+<path d="M33 4 H12 L9 26 C16 20 36 20 36 37 C36 55 13 58 5 47" transform="translate(97.3 37) scale(1.107)" fill="none" stroke="#14663a" stroke-width="14.45" stroke-linecap="round" stroke-linejoin="round"/><path d="M33 4 H12 L9 26 C16 20 36 20 36 37 C36 55 13 58 5 47" transform="translate(97.3 35) scale(1.107)" fill="none" stroke="#1f9a52" stroke-width="9.94" stroke-linecap="round" stroke-linejoin="round"/><path d="M33 4 H12 L9 26 C16 20 36 20 36 37 C36 55 13 58 5 47" transform="translate(95.3 32.5) scale(1.107)" fill="none" stroke="#fff" stroke-width="2.26" stroke-linecap="round" stroke-linejoin="round" opacity="0.5"/>
+<path d="M22 30 C24 20 30 16 42 15 H110" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" opacity=".8"/>
+</svg>

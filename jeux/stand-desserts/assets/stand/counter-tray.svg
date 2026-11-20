@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 480 160" width="480" height="160">
+<!-- money tray on the counter (white rim, dark blue felt), seen from the front and a little above. Felt = x 50..430 at y 110, x 74..406 at y 38; coins lie centred on y 74 -->
+<defs><linearGradient id="r" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#cfd9ee"/></linearGradient><linearGradient id="w" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#27386f"/><stop offset="1" stop-color="#3f58a8"/></linearGradient><filter id="f" x="-10%" y="-30%" width="120%" height="170%"><feGaussianBlur stdDeviation="5"/></filter></defs>
+<ellipse cx="240" cy="138" rx="232" ry="22" fill="#5a2a00" opacity=".3" filter="url(#f)"/>
+<path d="M70 14 H410 Q428 14 434 30 L466 112 Q474 134 450 134 H30 Q6 134 14 112 L46 30 Q52 14 70 14 Z" fill="#8c9cc8" stroke="#3c4f8a" stroke-width="3" stroke-linejoin="round" transform="translate(0 12)"/>
+<path d="M70 14 H410 Q428 14 434 30 L466 112 Q474 134 450 134 H30 Q6 134 14 112 L46 30 Q52 14 70 14 Z" fill="url(#r)" stroke="#3c4f8a" stroke-width="3" stroke-linejoin="round"/>
+<path d="M82 32 H398 Q410 32 414 42 L438 104 Q443 116 430 116 H50 Q37 116 42 104 L66 42 Q70 32 82 32 Z" fill="url(#w)" stroke="#3c4f8a" stroke-width="3" stroke-linejoin="round"/>
+<path d="M70 46 Q73 38 84 38 H396" fill="none" stroke="#131c44" stroke-width="6" stroke-linecap="round" opacity=".45"/>
+<path d="M60 26 Q64 21 74 21 H300" fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round"/>
+</svg>

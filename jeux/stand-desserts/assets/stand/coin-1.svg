@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 160 160" width="160" height="160">
+<!-- stylised coin worth 1: gold, big "1". Face = disc r 62 centred 80,79 (base 6 px lower). Smaller than coin-2 on purpose -->
+<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff176"/><stop offset="1" stop-color="#ffb300"/></linearGradient><linearGradient id="i" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffc928"/><stop offset="1" stop-color="#ffe066"/></linearGradient></defs>
+<circle cx="80" cy="85" r="62" fill="#b87400"/><circle cx="80" cy="79" r="62" fill="url(#g)" stroke="#b87400" stroke-width="3"/>
+<circle cx="80" cy="79" r="48" fill="url(#i)" stroke="#d18f00" stroke-width="3"/>
+<path d="M9 17 L23 4 V53" transform="translate(58.96 50.5) scale(1.107)" fill="none" stroke="#fff3a0" stroke-width="15.35" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/><path d="M9 17 L23 4 V53" transform="translate(58.96 48) scale(1.107)" fill="none" stroke="#6b3800" stroke-width="14.45" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 17 L23 4 V53" transform="translate(58.96 47) scale(1.107)" fill="none" stroke="#8f4e00" stroke-width="10.84" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 17 L23 4 V53" transform="translate(57.04 45.6) scale(1.107)" fill="none" stroke="#fff" stroke-width="2.17" stroke-linecap="round" stroke-linejoin="round" opacity="0.45"/>
+<path d="M32 64 C37 44 54 30 76 26" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" opacity=".8"/>
+</svg>
