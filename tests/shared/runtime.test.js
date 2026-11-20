@@ -2,6 +2,7 @@ import { test, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { clock, getCollection, getEffective, onEffectiveChange, updateCollection, CHECK_MS, phaseLevels, phaseWins, recordPhaseResult } from '../../shared/runtime.js';
 import { COLLECTION_KEY, defaultCollection } from '../../shared/store.js';
+import { GAMES } from '../../jeux/registry.js';
 
 function memoryStorage() {
   const data = {};
@@ -164,4 +165,28 @@ test('phaseWins: wins among the recent results of each phase, 0 without history'
     assert.equal(phaseWins('stand-desserts').moule, 5);
     assert.deepEqual(phaseWins('inconnu'), {});
   });
+});
+
+// No stand phase is `levels: 1` any more, but the shared layer still supports such phases (a
+// future game's phase that is not educational yet): a fixture game, added for this test only.
+test('a `levels: 1` phase always plays level 1 and saves no result, whatever its theme says', () => {
+  const fixture = {
+    id: 'fixture-game',
+    phases: [{ id: 'plain', theme: 'nombres', levels: 1 }, { id: 'edu', theme: 'nombres' }],
+  };
+  GAMES.push(fixture);
+  try {
+    withStorage(memoryStorage(), () => {
+      updateCollection(c => ({ ...c, levels: { nombres: 3 }, overrides: { 'fixture-game/plain': 2 } }));
+      assert.deepEqual(phaseLevels('fixture-game'), { plain: 1, edu: 3 });
+      assert.equal(recordPhaseResult('fixture-game', 'plain', false, 1), false);
+      assert.equal(recordPhaseResult('fixture-game', 'edu', false, 3), true);
+      assert.deepEqual(getCollection().history, { 'fixture-game/edu': [false] });
+      assert.deepEqual(phaseWins('fixture-game'), { plain: 0, edu: 0 });
+      // ?debug&level= may still force it (debug only, nothing saved)
+      assert.equal(withSearch('?debug&level=plain:2', () => phaseLevels('fixture-game')).plain, 2);
+    });
+  } finally {
+    GAMES.splice(GAMES.indexOf(fixture), 1);
+  }
 });
