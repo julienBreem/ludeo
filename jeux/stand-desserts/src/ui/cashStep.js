@@ -4,8 +4,11 @@
 // target).
 // - N1: coins of 1, one per point; then the total among 3 dice faces. Wrong: the coins come back
 //   out of the till one by one and light up (recount together), the right face lights up.
-// - N2: coins of 1 and 2 (sometimes a 5 note); the total among 3 numbers. Wrong: the same recount.
-// - N3: a ticket shows the amount due (a number and coins of 1); the client pays with a 5 note; she
+// - N2: coins of 1 and 2 (always an addition); the total among 3 numbers. Wrong: the same recount.
+//   At N1-N2 the slid pieces lie side by side in one row across the drawer, in the order she slid
+//   them, every one whole and apart: she counts what she sees when she chooses (not a memory test).
+// - N3: a ticket shows the amount due (a number and coins of 1); the client pays more (a 5 note up
+//   to 4, a 10 note at 5: money.js paidFor); she
 //   slides it into the till, then gives the change from the till's compartments (tap a compartment:
 //   one piece to the tray; tap the tray: the nearest piece goes back) and validates with ✓. Wrong:
 //   the client shows the difference in a bubble (+ / − and the coins), then the right change is
@@ -17,7 +20,7 @@ import { W, OUTLINE, TOUCH } from '../config.js';
 import { dur } from './pace.js';
 import { popIn, sparkle } from './fx.js';
 import { addIconButton } from './button.js';
-import { payment, changeFor, totalOf, choices, RESERVE } from '../logic/money.js';
+import { payment, changeFor, totalOf, choices, RESERVE, FLOAT } from '../logic/money.js';
 import { ensureMoneyTextures, TILL, TRAY_Y, TICKET_AREA, MONEY_FRAMES, moneyKey, isNote } from './moneyArt.js';
 
 export const TRAY_POS = { x: 565, y: 570 };
@@ -28,11 +31,13 @@ const CHOICE_Y = 718;
 const CHOICE_PITCH = 160;
 const CHOICE_SIZE = 124;
 const OK_POS = { x: TRAY_POS.x, y: 718 };
-export const FLOAT = [2, 2, 1, 1, 1]; // N3: what is in the till before the client pays
 const TRAY_SCALE = { coin: 0.6, note: 0.62 };
 const TRAY_PITCH = 100;
 const TRAY_WIDTH = 360; // money line on the felt
 const TAP_PX = 14;
+// N1-N2: the slid pieces in one row across the drawer (till frame px): centre x, y, widest pitch,
+// and the span the row may use (5 coins at scale 0.45, faces 56 px, stay apart and inside x 27..393).
+const ROW = { x: 210, y: 296, pitch: 92, span: 300 };
 const DEPTH = 60;
 const GOOD = 0x66bb6a;
 const SOFT_BAD = 0xffcdd2;
@@ -90,6 +95,12 @@ export class CashStep {
   slotPt(value, i) {
     const p = TILL.slots[value];
     return this.tillPt(p.x + i * TILL.pileDx, p.y + i * TILL.pileDy);
+  }
+
+  // N1-N2: where the i-th of n slid pieces lies in the drawer's row.
+  rowPt(i, n) {
+    const pitch = n > 1 ? Math.min(ROW.pitch, ROW.span / (n - 1)) : 0;
+    return this.tillPt(ROW.x + (i - (n - 1) / 2) * pitch, ROW.y);
   }
 
   inTill(x, y) {
@@ -215,7 +226,9 @@ export class CashStep {
     const up = p => this.dragUp(p);
     s.input.on('pointermove', move);
     s.input.on('pointerup', up);
-    this.handlers.push(['pointermove', move], ['pointerup', up]);
+    // released outside the canvas: same as a release there (the piece goes back to the tray)
+    s.input.on('pointerupoutside', up);
+    this.handlers.push(['pointermove', move], ['pointerup', up], ['pointerupoutside', up]);
   }
 
   nearestTray(x) {
@@ -272,7 +285,7 @@ export class CashStep {
     if (i < 0) return;
     this.tray.splice(i, 1);
     const pile = this.slots[it.value];
-    const pt = this.slotPt(it.value, pile.length);
+    const pt = this.level >= 3 ? this.slotPt(it.value, pile.length) : this.rowPt(this.slid.length, this.pay.coins.length);
     pile.push({ value: it.value, img: it.img, reserve: false });
     this.slid.push(it);
     const k = (isNote(it.value) ? TILL.noteScale : TILL.coinScale) * TILL_POS.scale;
@@ -370,7 +383,7 @@ export class CashStep {
         s.tweens.add({ targets: glow, scale: 1, duration: dur(200), ease: 'Back.easeOut' });
         this.traySize(it.img, it.value);
         const k = it.img.scale;
-        it.img.setScale(TILL.coinScale * TILL_POS.scale);
+        it.img.setScale((isNote(it.value) ? TILL.noteScale : TILL.coinScale) * TILL_POS.scale);
         s.tweens.add({ targets: it.img, x: p.x, y: p.y, scale: k, duration: dur(300), ease: 'Sine.easeOut' });
       });
     });
@@ -385,14 +398,12 @@ export class CashStep {
         if (this.finished) return;
         for (const g of this.glows) g.destroy();
         this.glows = [];
-        // back into the till, where they were
-        for (const [v, pile] of Object.entries(this.slots)) {
-          pile.forEach((it, i) => {
-            const pt = this.slotPt(Number(v), i);
-            const k = (isNote(it.value) ? TILL.noteScale : TILL.coinScale) * TILL_POS.scale;
-            s.tweens.add({ targets: it.img, x: pt.x, y: pt.y, scale: k, duration: dur(300), ease: 'Sine.easeIn' });
-          });
-        }
+        // back into the till, in the row where they were
+        items.forEach((it, i) => {
+          const pt = this.rowPt(i, n);
+          const k = (isNote(it.value) ? TILL.noteScale : TILL.coinScale) * TILL_POS.scale;
+          s.tweens.add({ targets: it.img, x: pt.x, y: pt.y, scale: k, duration: dur(300), ease: 'Sine.easeIn' });
+        });
         s.time.delayedCall(dur(500), () => this.finish());
       });
     });
@@ -601,6 +612,7 @@ export class CashStep {
       firstOk: this.firstOk,
       reserveUsed: this.reserveUsed,
       tray: this.tray.map(it => ({ value: it.value, at: pt(it.img) })),
+      slid: this.slid.map(it => ({ value: it.value, at: pt(it.img), w: Math.round(it.img.displayWidth) })),
       trayAt: [TRAY_POS.x, TRAY_POS.y],
       tillAt: pt(this.tillPt(210, 300)),
       slots,
