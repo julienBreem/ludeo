@@ -1,9 +1,13 @@
 // Service cash step (theme `monnaie`): what the client pays, the change, the total to choose.
 // Coins and notes are plain values (1, 2, 5, 10). `rng` is a () => [0,1) function.
 
-export const PAID_N3 = 5; // the client's note at N3 (10 later)
 export const MAX_TOTAL = 10;
+export const FLOAT = [2, 2, 1, 1, 1]; // N3: what is in the till before the client pays (makes 1..7)
 export const RESERVE = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]; // the scene adds it when changeFor is null (not earnings)
+
+// N3: the client always pays MORE than the amount due (spec: « le client paie plus (5, puis 10) »):
+// a 5 note up to 4, a 10 note at 5. The change (1..5) is always makeable from FLOAT alone.
+export const paidFor = due => (due <= 4 ? 5 : 10);
 
 const pick = (rng, list) => list[Math.min(list.length - 1, Math.floor(rng() * list.length))];
 
@@ -22,13 +26,18 @@ function shuffle(list, rng) {
 
 /**
  * payment(score, level, rng) -> {coins, due?, paid?}
- * N1: `score` coins of 1. N2: 1 and 2 coins totalling `score`, or at 5 sometimes one 5 note.
- * N3: `due` = score, `paid` = PAID_N3 (coins = [paid]).
+ * N1: `score` coins of 1. N2: 1 and 2 coins totalling `score`, always at least two pieces from 2 on
+ * (an addition), and at least one 2 from 3 on (otherwise N2 is N1). With scores up to 5 a 5 note
+ * could only come alone (nothing to add), so N2 pays in coins; the notes are N3's.
+ * N3: `due` = score, `paid` = paidFor(due) > due (coins = [paid]).
  */
 export function payment(score, level = 1, rng = Math.random) {
-  if (level >= 3) return { coins: [PAID_N3], due: score, paid: PAID_N3 };
+  if (level >= 3) {
+    const paid = paidFor(score);
+    return { coins: [paid], due: score, paid };
+  }
   if (level === 2) {
-    if (score === 5 && rng() < 0.4) return { coins: [5] };
+    if (score <= 2) return { coins: Array(score).fill(1) };
     const coins = [];
     let left = score;
     while (left > 0) {
@@ -36,8 +45,8 @@ export function payment(score, level = 1, rng = Math.random) {
       coins.push(c);
       left -= c;
     }
-    // at least one 2 once the score allows it (otherwise N2 is N1)
-    if (score >= 2 && !coins.includes(2)) coins.splice(0, 2, 2);
+    // at least one 2 (otherwise N2 is N1); a lone 2 (score 2) is handled above
+    if (!coins.includes(2)) coins.splice(0, 2, 2);
     return { coins: shuffle(coins, rng) };
   }
   return { coins: Array(score).fill(1) };

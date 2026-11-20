@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { payment, changeFor, totalOf, choices, RESERVE, PAID_N3, MAX_TOTAL } from '../jeux/stand-desserts/src/logic/money.js';
+import { payment, changeFor, totalOf, choices, RESERVE, FLOAT, paidFor, MAX_TOTAL } from '../jeux/stand-desserts/src/logic/money.js';
 import { makeRng } from '../jeux/stand-desserts/src/logic/rng.js';
 
 const SCORES = [1, 2, 3, 4, 5];
@@ -10,25 +10,37 @@ test('N1: score coins of 1', () => {
   for (const s of SCORES) assert.deepEqual(payment(s, 1, makeRng(s)), { coins: Array(s).fill(1) });
 });
 
-test('N2: 1 and 2 coins (or a 5 note) always total the score', () => {
-  let note = 0;
-  let noNote5 = 0;
+test('N2: coins of 1 and 2 totalling the score, always an addition (at least two pieces)', () => {
   for (const s of SCORES) for (const seed of seeds) {
     const { coins, due, paid } = payment(s, 2, makeRng(seed));
     assert.equal(due, undefined);
     assert.equal(paid, undefined);
     assert.equal(totalOf(coins), s, `${s}/${seed}`);
-    assert.ok(coins.every(c => c === 1 || c === 2 || (c === 5 && s === 5 && coins.length === 1)));
-    if (s >= 2 && !coins.includes(5)) assert.ok(coins.includes(2), 'at least one 2');
-    if (s === 5) { if (coins[0] === 5) note++; else noNote5++; }
+    assert.ok(coins.every(c => c === 1 || c === 2), `${s}/${seed}: ${coins}`);
+    if (s >= 2) assert.ok(coins.length >= 2, `${s}/${seed}: at least two pieces (${coins})`);
+    if (s >= 3) assert.ok(coins.includes(2), `${s}/${seed}: at least one 2 (${coins})`);
   }
-  assert.ok(note > 0 && noNote5 > 0, 'a 5 note sometimes at score 5');
+  assert.deepEqual(payment(2, 2, makeRng(1)).coins, [1, 1]);
 });
 
-test('N3: ticket due = score, client pays 5; change always makeable from till + reserve', () => {
+test('N3: ticket due = score, the client always pays more (5 up to 4, 10 at 5)', () => {
+  for (const s of SCORES) for (const seed of seeds.slice(0, 20)) {
+    const p = payment(s, 3, makeRng(seed));
+    assert.equal(p.due, s);
+    assert.ok(p.paid > p.due, `${s}: paid ${p.paid} > due ${p.due}`);
+    assert.equal(p.paid, s <= 4 ? 5 : 10);
+    assert.equal(p.paid, paidFor(s));
+    assert.deepEqual(p.coins, [p.paid]);
+  }
+});
+
+test('N3: the change is never 0 and always makeable from the float alone (and from till + reserve)', () => {
   for (const s of SCORES) {
     const p = payment(s, 3, makeRng(s));
-    assert.deepEqual(p, { coins: [PAID_N3], due: s, paid: PAID_N3 });
+    assert.ok(p.paid - p.due >= 1);
+    const fromFloat = changeFor(p.due, p.paid, FLOAT);
+    assert.ok(fromFloat, `float makes ${p.paid - p.due}`);
+    assert.equal(totalOf(fromFloat), p.paid - p.due);
     for (const till of [[], [1], [2, 2], [5], [1, 2, 5], [1, 1, 1, 1, 1]]) {
       const change = changeFor(p.due, p.paid, [...till, ...RESERVE]);
       assert.ok(change, `${s} ${till}`);
