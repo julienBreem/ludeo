@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { ringSlots, ringCentre, SLOT_SIZE, MIN_SLOT_SIZE, MAX_RADIUS } from '../jeux/stand-desserts/src/logic/ring.js';
-import { ringPositions } from '../jeux/stand-desserts/src/logic/order.js';
+import { ringSlots, ringCentre, SLOT_SIZE, MIN_SLOT_SIZE, MAX_RADIUS, SLOT_REACH } from '../jeux/stand-desserts/src/logic/ring.js';
+import { ringPositions, RING_SLOTS } from '../jeux/stand-desserts/src/logic/order.js';
 import { ITEMS } from '../jeux/stand-desserts/src/logic/catalog.js';
 
 const GRID = 64;
@@ -76,7 +76,18 @@ test('real shapes: slots keep some room inside the outline and do not pile up', 
     }
   }
   // the round and the square cake take the illustrator's full ring: slots of 80 that do not touch
-  for (const name of ['rond', 'carre']) assert.equal(ringSlots(REAL[name], 8).size, SLOT_SIZE, name);
+  for (const name of ['rond', 'carre']) assert.equal(ringSlots(REAL[name], RING_SLOTS).size, SLOT_SIZE, name);
+});
+
+test('slot markers never touch, even the breathing one: size x SLOT_REACH <= the closest gap', () => {
+  for (const [name, mask] of Object.entries(REAL)) {
+    for (const n of [RING_SLOTS, 8]) {
+      const { slots, size } = ringSlots(mask, n);
+      let gap = Infinity;
+      for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) gap = Math.min(gap, Math.hypot(slots[i].x - slots[j].x, slots[i].y - slots[j].y));
+      assert.ok(size * SLOT_REACH <= gap + 1e-9, `${name}/${n}: size ${size}, gap ${gap.toFixed(1)}`);
+    }
+  }
 });
 
 test('symmetric shapes give a symmetric ring: slot k mirrors slot n-1-k about the centre line', () => {

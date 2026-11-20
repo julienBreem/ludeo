@@ -9,7 +9,11 @@
 // (the frame is FRAME units wide, its centre is the cake centre), top-down (before any 3/4 squash).
 
 export const SLOT_SIZE = 80; // a slot's width in frame units when there is room (96 px on a 480 px cake)
-export const MIN_SLOT_SIZE = 60; // slots are never drawn smaller (they may then overlap a little)
+export const MIN_SLOT_SIZE = 60; // slots are never drawn smaller
+// A slot's marker reaches this many times its size from edge to edge at most: the dotted ring is
+// 0.94 of the art, and the next empty slot breathes up to 1.14 (ToppingsScene PULSE); with a
+// little air between them. The size is at most the gap between two slots over this.
+export const SLOT_REACH = 1.15;
 export const MAX_RADIUS = 112; // frame units: the ring never goes further from its centre
 // Frame units kept between a slot centre and the outline, deepest first (the toppings then stay on
 // the cake); a ring nearer the edge is taken only when it spreads the slots clearly more.
@@ -149,8 +153,8 @@ const minGap = (pts) => {
  * ringSlots(mask, n, {grid = 64, frame = 400}) -> {slots: [{x, y}], size, centre: {x, y}, inset}
  * n slot centres (frame units around the frame centre, top-down), clockwise from just right of the
  * top, all inside the mask, about `inset` frame units or more from its outline. `size` is the slot
- * width to draw (SLOT_SIZE when they do not touch, else the smallest gap between two slots, at
- * least MIN_SLOT_SIZE). The inset is the largest one of INSETS that leaves SLOT_SIZE between slots,
+ * width to draw: SLOT_SIZE when there is room, else the smallest gap between two slots over
+ * SLOT_REACH (so markers never touch, even breathing), at least MIN_SLOT_SIZE. The inset is the largest one of INSETS that leaves SLOT_SIZE between slots,
  * or nearly the widest gap any inset gives (GAP_SLACK less). No slots for an empty mask.
  */
 export function ringSlots(mask, n, { grid = 64, frame = 400 } = {}) {
@@ -178,7 +182,7 @@ export function ringSlots(mask, n, { grid = 64, frame = 400 } = {}) {
   const round = v => Math.round(v * 100) / 100;
   return {
     slots: best.slots.map(p => ({ x: round(p.x), y: round(p.y) })),
-    size: Math.max(MIN_SLOT_SIZE, Math.min(SLOT_SIZE, Math.floor(best.gap))),
+    size: Math.max(MIN_SLOT_SIZE, Math.min(SLOT_SIZE, Math.floor(best.gap / SLOT_REACH))),
     centre: toFrame(c),
     inset: best.inset,
   };

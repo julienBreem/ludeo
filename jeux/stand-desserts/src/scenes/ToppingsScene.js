@@ -2,7 +2,7 @@
 // - N1 'counts': drag owned toppings one by one onto the top-down cake. A copy dropped on the cake
 //   (a shape-mask cell) stays put; dropped anywhere else it goes back to the shelf. Every owned
 //   kind is on the shelf; the order can ask for several kinds, each with its own count.
-// - N2 'motif': a ring of 6 or 8 slots fitted to the shape (logic/ring.js); the start of the motif
+// - N2 'motif': a ring of 6 slots fitted to the shape (logic/ring.js); the start of the motif
 //   is already there (slots on a white plate with a golden edge, at full colour: they are part of
 //   the cake, not hints). She continues the pattern: a topping dropped near an empty slot snaps
 //   into the nearest one, anywhere else it goes back. A topping she put can be dragged to another
@@ -14,12 +14,13 @@ import { W, H } from '../config.js';
 import { getRound, getState } from '../game-state.js';
 import { ownedKeys } from '../logic/catalog.js';
 import { GRID } from '../logic/paint.js';
-import { judgeToppings, judgeMotif, judgeOrderToppings } from '../logic/scoring.js';
+import { judgeToppings, judgeOrderToppings } from '../logic/scoring.js';
 import { addStepBar } from '../ui/stepBar.js';
 import { addOrderReminder } from '../ui/orderReminder.js';
 import { drawCake, shapeMask, shapeRing, FRAME, TOPPING_SIZE } from '../ui/cakeView.js';
 import { goNext, restart } from '../ui/flow.js';
 import { popIn, sparkle } from '../ui/fx.js';
+import { dur } from '../ui/pace.js';
 
 const CAKE_Y = 375;
 const CAKE_SIZE = 480;
@@ -34,6 +35,7 @@ const SLOT_ART = 96; // slot-ring texture size
 const IN_SLOT = 80 / 96; // a topping in a slot, relative to the slot (the dashes stay visible around it)
 const SNAP = 84; // screen px: a drop this near a free slot's centre goes into the nearest one
 const PREFILL_EDGE = 0xf4b400;
+const PULSE = 1.14; // the next empty slot breathes up to this scale (logic/ring.js SLOT_REACH counts it)
 // N3 hint card (hint-card art: 400 x 460, face from y 40, content rows at y 162, 269, 376)
 const HINTS_CAKE_X = 520;
 const CARD_X = 1020;
@@ -67,7 +69,7 @@ export class ToppingsScene extends Phaser.Scene {
     this.drag = null;
     this.pulse = null;
     this.hintCard = null;
-    this.sparkled = false; // true while the toppings match the order exactly
+    this.sparkled = false; // N1: true while the toppings match the order exactly
     this.shelfX = {};
 
     this.cameras.main.setBackgroundColor(0xe8f5e9);
@@ -158,7 +160,7 @@ export class ToppingsScene extends Phaser.Scene {
     if (!next) return;
     const m = next.marker;
     this.pulse = this.tweens.add({
-      targets: m, scale: { from: m.baseScale, to: m.baseScale * 1.14 }, duration: 600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+      targets: m, scale: { from: m.baseScale, to: m.baseScale * PULSE }, duration: dur(600), yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
     });
   }
 
@@ -296,15 +298,15 @@ export class ToppingsScene extends Phaser.Scene {
     return this.mode === 'motif' ? this.slots.map(s => s.key) : this.placed.map(p => p.key);
   }
 
-  // ✓ is on once she has put something. Visual feedback only (scoring happens at ✓): one sparkle
-  // when the toppings match the order exactly (N2: every slot right); it can come again only
-  // after the match is lost and regained.
+  // ✓ is on once she has put something. N1 only, visual feedback (scoring happens at ✓): one
+  // sparkle when the toppings match the order exactly; it can come again only after the match is
+  // lost and regained. N2-N3 give no sign before ✓: the motif and the hint card are the exercise,
+  // and a sparkle would let her try until it comes (Service tells what was right).
   afterChange() {
     const mine = this.mode === 'motif' ? this.slots.filter(s => s.key && !s.prefilled).length : this.placed.length;
     this.bar.setValidateEnabled(mine > 0);
-    const exact = this.mode === 'motif'
-      ? judgeMotif(this.answer(), this.round.order.motif.sequence).ok
-      : judgeToppings(this.answer(), this.round.order.toppings).ok;
+    if (this.mode !== 'counts') return;
+    const exact = judgeToppings(this.answer(), this.round.order.toppings).ok;
     if (exact && !this.sparkled) sparkle(this, this.cakeX, CAKE_Y);
     this.sparkled = exact;
   }
@@ -314,7 +316,6 @@ export class ToppingsScene extends Phaser.Scene {
     this.round.cake.toppings = this.mode === 'motif'
       ? this.slots.filter(s => s.key).map(s => ({ key: s.key, x: s.fx, y: s.fy }))
       : this.placed.map(p => ({ ...p }));
-    if (this.mode === 'motif') this.round.toppingSlots = this.answer();
     goNext(this);
   }
 }
