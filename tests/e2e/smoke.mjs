@@ -77,10 +77,22 @@ const requests = [];
 let id = 0;
 const pending = new Map();
 
+// Every DevTools call fails after CDP_TIMEOUT instead of waiting forever (a page whose main thread
+// never yields answers no Runtime.evaluate), and every pending call fails when the socket closes.
+const CDP_TIMEOUT = 30000;
 function send(method, params = {}) {
   return new Promise((resolve, reject) => {
     const i = ++id;
-    pending.set(i, m => (m.error ? reject(new Error(`${method}: ${m.error.message}`)) : resolve(m.result)));
+    const what = method === 'Runtime.evaluate' ? `${method} ${params.expression.replace(/\s+/g, ' ').slice(0, 100)}` : method;
+    const timer = setTimeout(() => {
+      pending.delete(i);
+      reject(new Error(`no answer from Chrome in ${CDP_TIMEOUT / 1000} s to ${what}`));
+    }, CDP_TIMEOUT);
+    pending.set(i, m => {
+      clearTimeout(timer);
+      if (m.error) reject(new Error(`${method}: ${m.error.message}`));
+      else resolve(m.result);
+    });
     ws.send(JSON.stringify({ id: i, method, params }));
   });
 }
@@ -1017,11 +1029,14 @@ try {
   }
   let targets;
   for (let i = 0; port && i < 75 && !targets; i++) {
-    try { targets = await (await fetch(`http://127.0.0.1:${port}/json`)).json(); } catch { await sleep(200); }
+    try { targets = await (await fetch(`http://127.0.0.1:${port}/json`, { signal: AbortSignal.timeout(2000) })).json(); } catch { await sleep(200); }
   }
   if (!targets) throw new Error(`Chrome did not start (${CHROME})`);
   ws = new WebSocket(targets.find(t => t.type === 'page').webSocketDebuggerUrl);
   await new Promise((r, j) => { ws.addEventListener('open', r); ws.addEventListener('error', j); });
+  ws.addEventListener('close', () => {
+    for (const [i, done] of pending) { pending.delete(i); done({ error: { message: 'the DevTools socket closed' } }); }
+  });
   ws.addEventListener('message', ev => {
     const m = JSON.parse(ev.data);
     if (m.id && pending.has(m.id)) { pending.get(m.id)(m); pending.delete(m.id); }
@@ -1052,7 +1067,10 @@ try {
 }
 try { ws?.close(); } catch {}
 chrome.kill();
+// Chrome normally quits on SIGTERM; SIGKILL after 5 s so the run never waits on it.
+const killer = setTimeout(() => chrome.kill('SIGKILL'), 5000);
 await new Promise(r => (chrome.exitCode !== null || chrome.signalCode !== null ? r() : chrome.once('exit', r)));
+clearTimeout(killer);
 fs.rmSync(PROFILE, { recursive: true, force: true });
 log(`screenshots: ${outDir}`);
 if (failed) {
