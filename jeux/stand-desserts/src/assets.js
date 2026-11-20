@@ -162,6 +162,16 @@ export const ASSETS = [
   { key: 'sym-equal', file: 'assets/ui/sym-equal.svg', w: 96, h: 96 },
   { key: 'sym-plus1', file: 'assets/ui/sym-plus1.svg', w: 144, h: 96 },
   { key: 'sym-minus1', file: 'assets/ui/sym-minus1.svg', w: 144, h: 96 },
+  // money: stylised coins and notes, the till, the receipt, the counter tray, the piggy bank and its fill mask
+  { key: 'coin-1', file: 'assets/stand/coin-1.svg', w: 160, h: 160 },
+  { key: 'coin-2', file: 'assets/stand/coin-2.svg', w: 160, h: 160 },
+  { key: 'note-5', file: 'assets/stand/note-5.svg', w: 240, h: 140 },
+  { key: 'note-10', file: 'assets/stand/note-10.svg', w: 240, h: 140 },
+  { key: 'till', file: 'assets/stand/till.svg', w: 420, h: 420 },
+  { key: 'ticket', file: 'assets/stand/ticket.svg', w: 220, h: 310 },
+  { key: 'counter-tray', file: 'assets/stand/counter-tray.svg', w: 480, h: 160 },
+  { key: 'piggy-bank', file: 'assets/ui/piggy-bank.svg', w: 340, h: 280 },
+  { key: 'piggy-bank-mask', file: 'assets/ui/piggy-bank-mask.svg', w: 340, h: 280 },
 ];
 
 // Every file of this game the service worker must cache for offline play, relative to the

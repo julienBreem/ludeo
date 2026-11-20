@@ -250,3 +250,44 @@ Branch feat/art-edu3. 8 new SVGs, all S2. Review sheet rendered with headless Ch
 - The marks sit where each band edge crosses the cake outline, so they depend on the shape and on the number of bands (3 or 4): a fixed image cannot follow that. PaintScene already walks the mask column of each edge for the dotted lines (drawZoneGuides); the same walk gives the two crossings.
 - Recipe used on the sheet (frame units, in the cake's top container, above shape-<k>-line): for each of the n-1 edges, at the top and at the bottom crossing, a vertical tick from 9 units inside the outline to 15 units outside. Stroke 11, round caps, 0x4a2c2a; over it stroke 5, white. Same colours as the dotted lines.
 - No tick at the two ends of the width (on round shapes they are a single point). With tarte, start the tick at the outline (the crust rim hides the inner 19 units).
+
+# Educational lot 4 art (Service cash step and Shop = money) — geometry and contracts
+
+Branch feat/art-edu4. 9 new SVGs, all S2, none meant to be tinted. Review sheet rendered with headless Chromium. Layout numbers marked "sheet" are the ones used on the review sheet (1280x800 frame); they are suggestions.
+
+## Coins and notes — coin-1, coin-2 (160x160), note-5, note-10 (240x140), assets/stand/
+
+- Stylised money, not euro designs: no stars, no map, no symbol, only a big digit. The digits are stroked paths (no font), in the same hand as the timer and the clock.
+- coin-1: gold, face = disc r 62 centred (80,79), base 6 px lower. coin-2: silver ring and gold centre, face = disc r 72 centred (80,78). coin-2 is larger on purpose: at the same scale the two differ by size, by colour and by digit.
+- note-5 soft green, note-10 soft blue: paper x 5..235, y 7..125, base 7 px lower; the digit sits in a white medallion centred (120,66).
+- The existing `coin` (star) stays the score and shop counter icon; coin-1 is the coin that is counted.
+- Sizes: the digit reads down to a 40 px frame for the coins and 80 px wide for the notes (checked on orange, pink and dark blue). Sheet: coins at scale 0.6 on the tray, 0.45 in the till, 0.34 in the groups of 5 and 0.26 on the ticket; notes at 0.62 on the tray and 0.32 in the till.
+- Groups of 5 (shop N1, piggy bank): coins of 1 at scale 0.34, pitch 50 px, rows 54 px apart. A missing coin on the sheet is a dashed circle r 21 (stroke 4, 0xc2336f, white fill), drawn in code.
+
+## till (420x420, assets/stand/)
+
+- Turquoise cash register seen from the front: screen pod, body with two rows of keys and a paper slot, open drawer coming towards the player.
+- Drawer inside: back edge y 240 (x 40..380), front edge y 340 (x 14..406). Four compartments, 1, 2, 5, 10 from left to right, each tagged on the front lip (y 340..394) with a small picture of its value.
+- Compartment centres: x 60, 160, 260, 360 at y 296; each is about 90 px wide there. A pile on the sheet: each next coin 9 px higher and 6 px aside. Drop zone of a compartment: x centre +-48, y 244..340; for N1 the whole drawer (x 14..406, y 240..394) can take the coin and send it to the first compartment.
+- The lip is part of the same picture, so coins are drawn over the drawer and stay above y 340 (a coin at scale 0.45 centred y 296 ends at y 332).
+- Screen: x 176..316, y 22..78, dark and empty; code may write a number there (white, about 40 px).
+- Sheet: scale 1, centre (1010,392): it stands on the worktop, its lip over the worktop's front edge, clear of the awning.
+
+## counter-tray (480x160, assets/stand/)
+
+- Money tray: white rim, dark blue felt (gold coins and pale notes stand out on it), seen from the front and a little above. Not the lilac dough tray.
+- Felt: x 74..406 at y 38, x 50..430 at y 110. Lay coins and notes centred on y 74 (frame), that is 6..8 px above the sprite centre. Five coins at scale 0.6 fit with a pitch of 70 px (they nearly touch); at pitch 100 px there is room for 4.
+- Sheet: scale 1, centre (590,570), on the worktop and overlapping the counter front; the client stays visible on its left.
+
+## ticket (220x310, assets/stand/)
+
+- Receipt with a pink header and a zigzag bottom edge. Paper x 16..204, y 10..292; header down to y 52.
+- Blank area for code: x 30..190, y 64..218, centre (110,141). Sheet: scale 0.8, tilted 5 degrees, the amount at 92 px centred 4 px above the area centre, the same amount as coins of 1 at scale 0.26 under it (pitch 36 px).
+
+## piggy-bank and piggy-bank-mask (340x280, assets/ui/)
+
+- Pink pig facing left, coin slot on its back at (202,61), a porthole on its belly. Not tinted.
+- Porthole inside: ellipse centre (200,156), radii 58 x 44 (y 112..200). The savings are drawn by code inside it: a rectangle 0xffc928 from the level to y 200 with a 7 px 0xfff176 line on top, clipped by the ellipse. Level: top y = 200 - 88 x fraction.
+- piggy-bank-mask: same frame, the porthole in white on transparent, for a bitmap mask at the same x,y and scale. A Graphics ellipse with the numbers above gives the same clip without the file.
+- The fill covers nothing else: it is drawn over piggy-bank, no front layer needed.
+- Sheet: scale 1 at (700,300) with the number and the grouped coins under it; readable down to 80 px wide.
