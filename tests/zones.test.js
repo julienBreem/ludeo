@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { zoneMap, zoneEdges, layoutToppings } from '../jeux/stand-desserts/src/logic/zones.js';
+import fs from 'node:fs';
+import { zoneMap, zoneEdges, layoutToppings, bandOptions } from '../jeux/stand-desserts/src/logic/zones.js';
 
 const SIZE = 20;
 function rectMask(x0, x1, y0, y1) {
@@ -39,6 +40,94 @@ test('zoneEdges returns n-1 boundaries', () => {
   const e3 = zoneEdges(m, SIZE, 3);
   assert.equal(e3.length, 2);
   assert.ok(e3[0] > 3 && e3[0] < e3[1] && e3[1] < 13);
+});
+
+// Glaçage N3: equal-area bands (order.equalArea)
+const G = 64;
+const triMask = (() => {
+  // a triangle pointing up: one cell wide at the top, the whole width at the bottom
+  const m = new Uint8Array(G * G);
+  for (let y = 4; y < 60; y++) for (let x = 0; x < G; x++) if (Math.abs(x + 0.5 - 32) < (y - 4) * 0.5 + 0.5) m[y * G + x] = 1;
+  return m;
+})();
+const counts = (mask, size, n, opts) => {
+  const z = zoneMap(mask, size, n, opts);
+  const c = new Array(n).fill(0);
+  for (const v of z) if (v >= 0) c[v]++;
+  return c;
+};
+const columnMax = (mask, size) => {
+  const cols = new Array(size).fill(0);
+  mask.forEach((v, i) => { if (v) cols[i % size]++; });
+  return Math.max(...cols);
+};
+
+test('equalArea on a triangle: every band holds 1/n of the cells within one column', () => {
+  const total = triMask.reduce((a, b) => a + b, 0);
+  const col = columnMax(triMask, G);
+  for (const n of [2, 3, 4]) {
+    const c = counts(triMask, G, n, { equalArea: true });
+    for (const k of c) assert.ok(Math.abs(k - total / n) <= col, `n=${n}: ${c.join(' | ')} (column ${col})`);
+    // equal widths would give the middle bands far more (the reason for equal areas)
+    if (n === 4) {
+      const w = counts(triMask, G, n);
+      assert.ok(w[1] - w[0] > col, `equal widths: ${w.join(' | ')}`);
+    }
+  }
+});
+
+test('equalArea on the real masks (triangle, cœur and every shape): bands equal within one column', () => {
+  const rowsOf = JSON.parse(fs.readFileSync(new URL('./fixtures/shape-masks.json', import.meta.url), 'utf8'));
+  for (const [name, rows] of Object.entries(rowsOf)) {
+    const m = new Uint8Array(G * G);
+    rows.forEach((r, y) => [...r].forEach((h, i) => {
+      for (let b = 0; b < 4; b++) m[y * G + i * 4 + b] = (parseInt(h, 16) >> (3 - b)) & 1;
+    }));
+    const total = m.reduce((a, b) => a + b, 0);
+    const col = columnMax(m, G);
+    for (const n of [2, 3, 4]) {
+      const c = counts(m, G, n, { equalArea: true });
+      for (const k of c) assert.ok(Math.abs(k - total / n) <= col, `${name} n=${n}: ${c.join(' | ')}`);
+    }
+  }
+});
+
+test('equalArea edges: integer, increasing, inside the silhouette; zoneMap cuts there', () => {
+  for (const n of [2, 3, 4]) {
+    const e = zoneEdges(triMask, G, n, { equalArea: true });
+    assert.equal(e.length, n - 1);
+    e.forEach((x, i) => {
+      assert.ok(Number.isInteger(x));
+      if (i) assert.ok(x > e[i - 1]);
+    });
+    const z = zoneMap(triMask, G, n, { equalArea: true });
+    for (let i = 0; i < z.length; i++) {
+      if (!triMask[i]) { assert.equal(z[i], -1); continue; }
+      assert.equal(z[i], e.filter(x => i % G >= x).length);
+    }
+  }
+  assert.deepEqual(zoneEdges(triMask, G, 1, { equalArea: true }), []);
+});
+
+test('equalArea on a rectangle matches equal widths; without it widths stay equal (N1-N2)', () => {
+  const m = rectMask(2, 13, 3, 9); // 12 wide
+  for (const n of [2, 3, 4]) {
+    assert.deepEqual(zoneEdges(m, SIZE, n, { equalArea: true }), zoneEdges(m, SIZE, n));
+    assert.deepEqual(Array.from(zoneMap(m, SIZE, n, { equalArea: true })), Array.from(zoneMap(m, SIZE, n)));
+  }
+  // default and equalArea: false are the equal-width cut, on any shape
+  for (const n of [2, 3, 4]) {
+    assert.deepEqual(Array.from(zoneMap(triMask, G, n, { equalArea: false })), Array.from(zoneMap(triMask, G, n)));
+    const xs = [];
+    triMask.forEach((v, i) => { if (v) xs.push(i % G); });
+    const minX = Math.min(...xs);
+    const width = Math.max(...xs) - minX + 1;
+    const e = zoneEdges(triMask, G, n);
+    for (let k = 1; k < n; k++) assert.ok(Math.abs(e[k - 1] - (minX + (width * k) / n)) < 1e-9, `${n}: ${e}`);
+  }
+  assert.deepEqual(bandOptions({ equalArea: true }), { equalArea: true });
+  assert.deepEqual(bandOptions({}), { equalArea: false });
+  assert.deepEqual(bandOptions(null), { equalArea: false });
 });
 
 test('layoutToppings: 6 points inside a small disc mask, pairwise distance >= 4', () => {

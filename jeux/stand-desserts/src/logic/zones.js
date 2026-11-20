@@ -10,28 +10,72 @@ function extremeColumns(mask, size) {
   return maxX < minX ? null : { minX, maxX };
 }
 
-export function zoneMap(mask, size, n) {
-  const out = new Int8Array(size * size).fill(-1);
-  const ext = extremeColumns(mask, size);
-  if (!ext) return out;
-  const width = ext.maxX - ext.minX + 1;
+// Equal-area band edges (Glaçage N3): the n-1 column boundaries (integers, cell x units) where
+// the cells counted column by column, left to right, come nearest to k/n of the silhouette. Each
+// band then holds 1/n of the cells within one column's count; edges are strictly increasing.
+function areaEdges(mask, size, n, ext) {
+  const cols = new Array(size).fill(0);
+  let total = 0;
   for (let i = 0; i < mask.length; i++) {
     if (!mask[i]) continue;
-    const x = i % size;
-    out[i] = Math.min(n - 1, Math.floor(((x - ext.minX) * n) / width));
+    cols[i % size]++;
+    total++;
   }
-  return out;
+  const edges = [];
+  let acc = 0; // cells left of column x
+  let x = ext.minX;
+  for (let k = 1; k < n; k++) {
+    const target = (total * k) / n;
+    const lo = (edges[edges.length - 1] ?? ext.minX) + 1; // every band keeps at least one column
+    const hi = ext.maxX - (n - 1 - k); // ...and leaves one to each band after it
+    while (x < lo) acc += cols[x++];
+    while (x < hi && Math.abs(acc + cols[x] - target) <= Math.abs(acc - target)) acc += cols[x++];
+    edges.push(x);
+  }
+  return edges;
 }
 
-// Band boundaries in cell x units: the n-1 x values where a band starts.
-export function zoneEdges(mask, size, n) {
+/**
+ * zoneEdges(mask, size, n, {equalArea = false}) -> number[]
+ * The n-1 band boundaries in cell x units (a band starts there). Equal width by default (Glaçage
+ * N1-N2: the silhouette's width cut in n); `equalArea` (Glaçage N3, order.equalArea): each band
+ * covers 1/n of the silhouette's cells (within one column), so tiers and quarts are real parts.
+ */
+export function zoneEdges(mask, size, n, { equalArea = false } = {}) {
   const ext = extremeColumns(mask, size);
-  if (!ext) return [];
+  if (!ext || n <= 1) return [];
+  if (equalArea) return areaEdges(mask, size, n, ext);
   const width = ext.maxX - ext.minX + 1;
   const edges = [];
   for (let k = 1; k < n; k++) edges.push(ext.minX + (width * k) / n);
   return edges;
 }
+
+/**
+ * zoneMap(mask, size, n, {equalArea = false}) -> Int8Array (band index per cell, -1 outside)
+ * Vertical bands left to right, cut at zoneEdges (same options): a cell is in the band whose
+ * edges hold its left side.
+ */
+export function zoneMap(mask, size, n, { equalArea = false } = {}) {
+  const out = new Int8Array(size * size).fill(-1);
+  const ext = extremeColumns(mask, size);
+  if (!ext) return out;
+  const width = ext.maxX - ext.minX + 1;
+  const edges = equalArea ? zoneEdges(mask, size, n, { equalArea }) : null;
+  for (let i = 0; i < mask.length; i++) {
+    if (!mask[i]) continue;
+    const x = i % size;
+    if (edges) {
+      let z = 0;
+      while (z < edges.length && x >= edges[z]) z++;
+      out[i] = z;
+    } else out[i] = Math.min(n - 1, Math.floor(((x - ext.minX) * n) / width));
+  }
+  return out;
+}
+
+// The band options of an order: equal areas when it says so (Glaçage N3), else equal widths.
+export const bandOptions = order => ({ equalArea: order?.equalArea === true });
 
 // Topping anchors in cell units, laid out symmetrically about the mask's vertical axis (the
 // centre of its x-extent): mirrored pairs, plus one point on the axis for an odd count. A pair

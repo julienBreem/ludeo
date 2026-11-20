@@ -9,8 +9,9 @@
 // the bowl pours into it, a second pot mixes (colors.js mix: an unknown mix is the muddy
 // « mélange raté », which paints but is always wrong); the pot button beside the bowl puts the new
 // colour on the shelf (and selects it); tapping the bowl empties it. Up to 3 equal zones, dotted
-// lines. N3 the same shelf and bowl, 3 or 4 equal bands where a colour may cover several adjacent
-// ones (thirds, quarters), no dotted lines: graduations on the rim at the band edges.
+// lines. N3 the same shelf and bowl, 3 or 4 bands of equal area (zones.js equalArea) where a colour
+// may cover several adjacent ones (thirds, quarters), no dotted lines: graduations on the rim at
+// the band edges.
 // colorKeys only grows (a cell's value is its index + 1), so a pot taken off a full shelf keeps the
 // colour of what it painted.
 import { W, H, OUTLINE, COLOR_HEX } from '../config.js';
@@ -20,7 +21,7 @@ import { basesOf, mix } from '../logic/colors.js';
 import { dur } from '../ui/pace.js';
 import { ensureMixTextures, drawRimTicks, BOWL_W, BOWL_H, BOWL_OPENING } from '../ui/mixArt.js';
 import { createPaintGrid, GRID, BRUSH_RADIUS } from '../logic/paint.js';
-import { zoneMap, zoneEdges } from '../logic/zones.js';
+import { zoneMap, zoneEdges, bandOptions } from '../logic/zones.js';
 import { judgeColor, minZoneCoverage, COVERAGE_OK } from '../logic/scoring.js';
 import { addStepBar } from '../ui/stepBar.js';
 import { addOrderReminder } from '../ui/orderReminder.js';
@@ -90,6 +91,7 @@ export class PaintScene extends Phaser.Scene {
     this.colorKeys = this.mixing ? basesOf(owned) : ownedKeys(owned, 'color');
     this.selected = 0; // 1-based index into colorKeys, 0 = no pot chosen
     this.potDrag = null; // N2-N3: {pot, id, x, y, ghost}
+    this.bowlDown = false; // N2-N3: a press that started on the bowl (a tap there empties it)
     this.made = []; // N2-N3: the pots she made, oldest first
     const full = shapeMask(this, shape);
     this.full = full;
@@ -97,12 +99,13 @@ export class PaintScene extends Phaser.Scene {
     const rim = round.cake.dessert === 'tarte' ? rimMask(this, shape) : null;
     this.mask = rim ? paintableUnderRim(full, rim) : full;
     const nZones = Math.max(1, round.order.glaze.length);
-    // Zones follow the silhouette's width (as on the order picture); cells under the rim count
-    // in no zone.
+    // Zones cut the silhouette as on the order picture (equal widths, equal areas at N3:
+    // order.equalArea); cells under the rim count in no zone.
     this.nZones = nZones;
-    this.zones = zoneMap(full, GRID, nZones);
+    const bands = bandOptions(round.order);
+    this.zones = zoneMap(full, GRID, nZones, bands);
     if (rim) for (let i = 0; i < this.zones.length; i++) if (!this.mask[i]) this.zones[i] = -1;
-    this.edges = zoneEdges(full, GRID, nZones);
+    this.edges = zoneEdges(full, GRID, nZones, bands);
     this.grid = createPaintGrid(this.mask, GRID);
     this.stroke = null; // {id, u, v}
     this.painted = false;
@@ -126,8 +129,9 @@ export class PaintScene extends Phaser.Scene {
 
     this.input.on('pointerdown', (p, over) => this.onDown(p, over));
     this.input.on('pointermove', p => this.onMove(p));
-    this.input.on('pointerup', p => this.onUp(p));
-    this.input.on('pointerupoutside', p => this.onUp(p));
+    // any release ends a press on the bowl (the bowl's own pointerup runs before these)
+    this.input.on('pointerup', (p) => { this.bowlDown = false; this.onUp(p); });
+    this.input.on('pointerupoutside', (p) => { this.bowlDown = false; this.onUp(p); });
 
     this.bar = addStepBar(this, { onRestart: () => restart(this), onValidate: () => this.validate() });
   }
