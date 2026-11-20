@@ -1,6 +1,6 @@
 import { test, mock } from 'node:test';
 import assert from 'node:assert/strict';
-import { clock, getCollection, getEffective, onEffectiveChange, updateCollection, CHECK_MS, phaseLevels, recordPhaseResult } from '../../shared/runtime.js';
+import { clock, getCollection, getEffective, onEffectiveChange, updateCollection, CHECK_MS, phaseLevels, phaseWins, recordPhaseResult } from '../../shared/runtime.js';
 import { COLLECTION_KEY, defaultCollection } from '../../shared/store.js';
 
 function memoryStorage() {
@@ -147,5 +147,21 @@ test('recordPhaseResult (I1): only a round played at the stored level counts', (
     // the debug override does not change what the parent set
     withSearch('?debug&level=pate:3', () => assert.equal(recordPhaseResult('stand-desserts', 'pate', true, 2), true));
     assert.deepEqual(getCollection().history['stand-desserts/pate'], [false, true]);
+  });
+});
+
+test('phaseWins: wins among the recent results of each phase, 0 without history', () => {
+  withStorage(memoryStorage(), () => {
+    assert.equal(phaseWins('stand-desserts').pate, 0);
+    assert.deepEqual(Object.keys(phaseWins('stand-desserts')).sort(), Object.keys(phaseLevels('stand-desserts')).sort());
+    for (const ok of [true, false, true, true]) recordPhaseResult('stand-desserts', 'pate', ok, 1);
+    recordPhaseResult('stand-desserts', 'moule', false, 1);
+    const w = phaseWins('stand-desserts');
+    assert.equal(w.pate, 3);
+    assert.equal(w.moule, 0);
+    // only the last HISTORY_MAX results count
+    for (let i = 0; i < 6; i++) recordPhaseResult('stand-desserts', 'moule', true, 1);
+    assert.equal(phaseWins('stand-desserts').moule, 5);
+    assert.deepEqual(phaseWins('inconnu'), {});
   });
 });

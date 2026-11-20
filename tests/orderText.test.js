@@ -198,19 +198,19 @@ test('distinct colours over every shape × selection of 1..3 among the bases and
 test('N3 reference sentences: repeated bands read as fractions', () => {
   const cases = [
     [order('coeur', ['rose', 'violet', 'violet'], [{ key: 'fraise', count: 2 }]),
-      'Un cœur, un tiers rose et deux tiers violet, avec deux fraises.'],
-    [order('rond', ['jaune', 'vert', 'vert', 'vert'], []), 'Un rond, un quart jaune et trois quarts vert.'],
+      'Un cœur, un tiers rose et deux tiers violets, avec deux fraises.'],
+    [order('rond', ['jaune', 'vert', 'vert', 'vert'], []), 'Un rond, un quart jaune et trois quarts verts.'],
     [order('etoile', ['rose', 'rose', 'violet', 'violet'], [{ key: 'etoile', count: 1 }]),
       'Une étoile, une moitié rose et une moitié violette, avec une étoile.'],
     [order('licorne', ['blanc', 'blanc', 'gris', 'noir'], []), 'Une licorne, une moitié blanche, un quart gris et un quart noir.'],
     [order('carre', ['orange', 'bleuclair', 'bleuclair', 'rouge'], []), 'Un carré, un quart orange, une moitié bleu clair et un quart rouge.'],
-    [order('coeur', ['vert', 'vert', 'blanc'], []), 'Un cœur, deux tiers vert et un tiers blanc.'],
+    [order('coeur', ['vert', 'vert', 'blanc'], []), 'Un cœur, deux tiers verts et un tiers blanc.'],
   ];
   for (const [o, want] of cases) assert.equal(orderSentence(o), want);
 });
 
 // expected text of one run, built from the pattern independently of orderText.js
-const FRACTION_TEXT = { '1/2': ['une moitié', 'f'], '1/3': ['un tiers', 'm'], '2/3': ['deux tiers', 'm'], '1/4': ['un quart', 'm'], '3/4': ['trois quarts', 'm'] };
+const FRACTION_TEXT = { '1/2': ['une moitié', 'f'], '1/3': ['un tiers', 'm'], '2/3': ['deux tiers', 'mp'], '1/4': ['un quart', 'm'], '3/4': ['trois quarts', 'mp'] };
 const share = (len, n) => (2 * len === n ? '1/2' : `${len}/${n}`);
 
 test('fractions over every shape × band pattern × colours among the bases and mixes', () => {
@@ -253,13 +253,13 @@ test('colorRuns: adjacent bands of one colour, with their reduced fraction', () 
 test('fractions: one word per colour (N1 / N2 lists, sentence parts), failed zone -> its run', () => {
   const o = order('coeur', ['rose', 'violet', 'violet', 'violet'], [{ key: 'fraise', count: 2 }]);
   assert.deepEqual(orderWords(o).filter(w => w.kind === 'couleur').map(w => [w.word, w.index, w.bands]),
-    [['un quart rose', 0, [0]], ['trois quarts violet', 1, [1, 2, 3]]]);
-  assert.deepEqual(orderWords(o, 2).filter(w => w.kind === 'couleur').map(w => w.word), ['un quart rose', 'trois quarts violet']);
+    [['un quart rose', 0, [0]], ['trois quarts violets', 1, [1, 2, 3]]]);
+  assert.deepEqual(orderWords(o, 2).filter(w => w.kind === 'couleur').map(w => w.word), ['un quart rose', 'trois quarts violets']);
   assert.deepEqual(orderWordParts(o).filter(p => p.kind === 'couleur').map(p => `${p.index}:${p.text}`),
-    ['0:un quart rose', '1:trois quarts violet']);
+    ['0:un quart rose', '1:trois quarts violets']);
   const parts = orderSentenceParts(o);
   assert.equal(parts.map(p => p.text).join(''), orderSentence(o));
-  assert.deepEqual(parts.filter(p => p.kind === 'couleur').map(p => `${p.index}:${p.text}`), ['0:un quart rose', '1:trois quarts violet']);
+  assert.deepEqual(parts.filter(p => p.kind === 'couleur').map(p => `${p.index}:${p.text}`), ['0:un quart rose', '1:trois quarts violets']);
   for (const zone of [1, 2, 3]) assert.deepEqual(failedElements(o, { couleur: { ok: false, zone } }), [{ kind: 'couleur', index: 1 }]);
   assert.deepEqual(failedElements(o, { couleur: { ok: false, zone: 0 } }), [{ kind: 'couleur', index: 0 }]);
   assert.deepEqual(failedElements(o, { couleur: { ok: false } }), [{ kind: 'couleur', index: 0 }, { kind: 'couleur', index: 1 }]);
@@ -385,4 +385,18 @@ test('every topping has a « some » form and its elision is right', () => {
     assert.equal(NOUNS.topping[k].some, SOME[k], k);
     assert.equal(motifText(order('rond', ['rose'], [{ key: k, count: 2 }])), `une couronne ${OF[k]}`);
   }
+});
+
+test('M2: colours agree with the fraction noun, plural included; invariable colours stay', () => {
+  const sentence = (shape, glaze) => orderSentence(order(shape, glaze, []));
+  assert.equal(sentence('etoile', ['violet', 'violet', 'rose', 'rose']), 'Une étoile, une moitié violette et une moitié rose.');
+  assert.equal(sentence('coeur', ['violet', 'rose', 'rose']), 'Un cœur, un tiers violet et deux tiers roses.');
+  assert.equal(sentence('rond', ['vert', 'vert', 'vert', 'rose']), 'Un rond, trois quarts verts et un quart rose.');
+  assert.equal(sentence('rond', ['rose', 'vert', 'vert', 'vert']), 'Un rond, un quart rose et trois quarts verts.');
+  assert.equal(sentence('rond', ['marron', 'orange', 'orange']), 'Un rond, un tiers marron et deux tiers orange.');
+  assert.equal(sentence('rond', ['bleuclair', 'bleuclair', 'bleuclair', 'gris']), 'Un rond, trois quarts bleu clair et un quart gris.');
+  assert.equal(sentence('rond', ['blanc', 'blanc', 'noir']), 'Un rond, deux tiers blancs et un tiers noir.');
+  for (const k of ALL_COLORS) assert.ok(NOUNS.color[k].mp, k);
+  for (const k of ['marron', 'orange', 'bleuclair']) assert.equal(NOUNS.color[k].mp, NOUNS.color[k].m, k);
+  assert.equal(NOUNS.color.rose.mp, 'roses');
 });

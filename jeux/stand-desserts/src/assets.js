@@ -178,6 +178,7 @@ export const PRECACHE = [
   'src/logic/catalog.js',
   'src/logic/colors.js',
   'src/logic/economy.js',
+  'src/logic/money.js',
   'src/logic/order.js',
   'src/logic/orderText.js',
   'src/logic/paint.js',

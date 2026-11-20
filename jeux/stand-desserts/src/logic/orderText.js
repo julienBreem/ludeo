@@ -26,21 +26,21 @@ export const NOUNS = {
     hexagone: { word: 'hexagone', g: 'm' },
   },
   color: {
-    rose: { m: 'rose', f: 'rose' },
-    violet: { m: 'violet', f: 'violette' },
-    jaune: { m: 'jaune', f: 'jaune' },
-    blanc: { m: 'blanc', f: 'blanche' },
-    bleu: { m: 'bleu', f: 'bleue' },
-    vert: { m: 'vert', f: 'verte' },
+    rose: { m: 'rose', f: 'rose', mp: 'roses' },
+    violet: { m: 'violet', f: 'violette', mp: 'violets' },
+    jaune: { m: 'jaune', f: 'jaune', mp: 'jaunes' },
+    blanc: { m: 'blanc', f: 'blanche', mp: 'blancs' },
+    bleu: { m: 'bleu', f: 'bleue', mp: 'bleus' },
+    vert: { m: 'vert', f: 'verte', mp: 'verts' },
     // Glaçage N2-N3 bases and mixes; « bleu clair » (compound colour) and « marron » / « orange »
     // (nouns used as colours) do not agree
-    rouge: { m: 'rouge', f: 'rouge' },
-    orange: { m: 'orange', f: 'orange' },
-    bleuclair: { m: 'bleu clair', f: 'bleu clair' },
-    beige: { m: 'beige', f: 'beige' },
-    gris: { m: 'gris', f: 'grise' },
-    marron: { m: 'marron', f: 'marron' },
-    noir: { m: 'noir', f: 'noire' },
+    rouge: { m: 'rouge', f: 'rouge', mp: 'rouges' },
+    orange: { m: 'orange', f: 'orange', mp: 'orange' },
+    bleuclair: { m: 'bleu clair', f: 'bleu clair', mp: 'bleu clair' },
+    beige: { m: 'beige', f: 'beige', mp: 'beiges' },
+    gris: { m: 'gris', f: 'grise', mp: 'gris' },
+    marron: { m: 'marron', f: 'marron', mp: 'marron' },
+    noir: { m: 'noir', f: 'noire', mp: 'noirs' },
   },
   topping: {
     fraise: { one: 'fraise', many: 'fraises', g: 'f', some: 'des fraises' },
@@ -58,14 +58,15 @@ export const NOUNS = {
 const NUMBERS = [null, null, 'deux', 'trois', 'quatre', 'cinq', 'six'];
 
 // Glaçage N3: a colour over several adjacent bands is read as a fraction of the cake. The colour
-// agrees with the fraction's noun: « une moitié violette », « un tiers violet », « deux tiers
-// violet » (the colour of that part, kept singular), « trois quarts vert ».
+// agrees with the fraction's noun, plural included: « une moitié violette », « un tiers violet »,
+// « deux tiers violets », « trois quarts verts », « deux tiers roses ». Invariable colours (orange,
+// marron, bleu clair) stay as they are.
 export const FRACTIONS = {
   '1/2': { text: 'une moitié', g: 'f' },
   '1/3': { text: 'un tiers', g: 'm' },
-  '2/3': { text: 'deux tiers', g: 'm' },
+  '2/3': { text: 'deux tiers', g: 'm', plural: true },
   '1/4': { text: 'un quart', g: 'm' },
-  '3/4': { text: 'trois quarts', g: 'm' },
+  '3/4': { text: 'trois quarts', g: 'm', plural: true },
 };
 
 const gcd = (a, b) => (b ? gcd(b, a % b) : a);
@@ -98,7 +99,7 @@ function colorItems(glaze, g) {
   if (!hasFractions(glaze)) return glaze.map((key, index) => ({ key, index, bands: [index], word: colorWord(key, g) }));
   return colorRuns(glaze).map((r) => {
     const f = FRACTIONS[r.fraction];
-    const word = f ? `${f.text} ${colorWord(r.key, f.g)}` : colorWord(r.key, g);
+    const word = f ? `${f.text} ${colorWord(r.key, f.g, f.plural)}` : colorWord(r.key, g);
     return { key: r.key, index: r.start, bands: r.bands, word };
   });
 }
@@ -116,7 +117,7 @@ const shapeNoun = key => NOUNS.shape[key] ?? { word: key, g: 'm' };
 // colours), so that « Une … violette » does not tell an étoile or a licorne.
 const HIDDEN = { word: '?', g: 'm' };
 const shapeOf = (order, hideShape) => (hideShape ? HIDDEN : shapeNoun(order.shape));
-const colorWord = (key, g) => NOUNS.color[key]?.[g] ?? key;
+const colorWord = (key, g, plural = false) => (plural ? NOUNS.color[key]?.mp : NOUNS.color[key]?.[g]) ?? key;
 const toppingNoun = key => NOUNS.topping[key] ?? { one: key, many: `${key}s`, g: 'm' };
 const counted = (t, count) => (count === 1 ? t.one : t.many);
 // the kind without a number, plural: « fraises », « vermicelles », « chantilly »
