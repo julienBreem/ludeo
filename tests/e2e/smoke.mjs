@@ -20,7 +20,16 @@
 // Exit code 0 = pass, 1 = fail.
 //
 // The game state is read (never written) through a hook on Phaser's SceneManager.update that
-// exposes the SceneManager as window.__sm; inputs are only CDP mouse events.
+// exposes the SceneManager as window.__sm and adds up the game time (the loop's smoothed delta) in
+// window.__gameMs; inputs are only CDP mouse events.
+//
+// Waits follow the game, not the wall clock: a wait's budget is game time, so a slow or loaded host
+// (where Phaser's smoothDelta makes game time run at a fraction of wall time) only makes it longer.
+// A wait fails early only when the game stops advancing (no game time for STALL_MS with the page
+// visible), and at worst after a generous wall-clock cap. Every timeout message tells the page's
+// visibility and the frames drawn in the last second: a hidden page with 0 frames is the host's
+// display asleep (macOS: headless Chrome stops rendering), not a game freeze. On macOS the run keeps
+// the display and the system awake with `caffeinate -dimsu`, ended with the run.
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -46,7 +55,9 @@ const EVENING_NOW = '2026-11-19T20:00'; // ?debug&now= values (shared/runtime.js
 const DAY_NOW = '2026-11-19T12:00';
 const ORIGIN = new globalThis.URL(URL).origin;
 const CHROME = process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
-const SCENE_TIMEOUT = 10000;
+const SCENE_TIMEOUT = 10000; // game ms (see waitFor)
+const STALL_MS = 20000; // wall ms without any game time, page visible: the game stopped
+const WALL_FACTOR = 10; // a wait gives up after timeout x WALL_FACTOR + 60 s of wall time, whatever happens
 
 // Layout constants of the scenes (screen px, 1280×800 canvas at 1:1).
 const OK_BTN = [1201, 721];
@@ -67,8 +78,17 @@ const steps = JSON.parse(fs.readFileSync(stepsFile, 'utf8'));
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const log = (...a) => console.log(...a);
 
+// macOS: keep the display, the disks and the system awake for the whole run (a sleeping display
+// hides the headless page and stops its rendering). -w: caffeinate also ends if this process dies.
+let awake = null;
+if (process.platform === 'darwin') {
+  awake = spawn('/usr/bin/caffeinate', ['-dimsu', '-w', String(process.pid)], { stdio: 'ignore' });
+  awake.on('error', e => { log(`  (caffeinate not started: ${e.message})`); awake = null; });
+}
+
 const chrome = spawn(CHROME, ['--headless=new', '--use-angle=swiftshader', '--enable-unsafe-swiftshader',
   '--remote-debugging-port=0', '--window-size=1280,800', `--user-data-dir=${PROFILE}`,
+  '--disable-renderer-backgrounding', '--disable-backgrounding-occluded-windows', '--disable-background-timer-throttling',
   '--no-first-run', '--no-default-browser-check', 'about:blank'], { stdio: 'ignore' });
 
 let ws;
@@ -170,7 +190,7 @@ async function grabMany(x, n) {
 const HOOK = `(() => {
   if (typeof Phaser === 'undefined') return false;
   const P = Phaser.Scenes.SceneManager.prototype;
-  if (!P.__smokeHook) { P.__smokeHook = true; const o = P.update; P.update = function (...a) { window.__sm = this; return o.apply(this, a); }; }
+  if (!P.__smokeHook) { P.__smokeHook = true; const o = P.update; P.update = function (time, delta, ...a) { window.__sm = this; window.__gameMs = (window.__gameMs ?? 0) + (delta || 0); return o.call(this, time, delta, ...a); }; }
   // Counts the confetti emitters (they are created at y = -20 and destroyed after ~3 s, too short to poll).
   const F = Phaser.GameObjects.GameObjectFactory.prototype;
   if (!F.__smokeHook) { F.__smokeHook = true; window.__confetti = 0; const o = F.particles; F.particles = function (x, y, ...a) { if (y === -20) window.__confetti++; return o.call(this, x, y, ...a); }; }
@@ -195,28 +215,86 @@ async function loadHome(url) {
   await waitFor('home tile', () => evaluate(`document.readyState === 'complete' && !!document.querySelector('${TILE}')`).catch(() => false), 15000);
 }
 
-async function waitScene(key, timeout = SCENE_TIMEOUT) {
-  const t0 = Date.now();
-  let last = [];
-  while (Date.now() - t0 < timeout) {
-    last = await activeScenes();
-    if (last.length === 1 && last[0] === key) {
-      // the camera has finished fading in
-      const ready = await sceneEval(key, 's => !s.cameras.main.fadeEffect.isRunning');
-      if (ready) return;
-    }
-    await sleep(100);
-  }
-  throw new Error(`stuck: expected scene ${key}, active ${JSON.stringify(last)} after ${timeout} ms`);
+// The page's progress: game time so far (null before the hook or on a page without the game),
+// frame count, visibility, active scenes.
+const PROGRESS = `(() => { const sm = window.__sm; return { ms: typeof window.__gameMs === 'number' ? window.__gameMs : null,
+  frame: sm ? sm.game.loop.frame : null, visibility: document.visibilityState, focus: document.hasFocus(),
+  scenes: sm ? sm.getScenes(true).map(s => s.scene.key) : [] }; })()`;
+const progress = () => evaluate(PROGRESS).catch(() => null);
+
+// What the page is doing, for a timeout message: visibility and the frames drawn in ~1 s (0 frames
+// with a hidden page = the display slept).
+async function pageState() {
+  const a = await progress();
+  await sleep(1000);
+  const b = await progress();
+  if (!b) return 'page not answering';
+  const frames = a?.frame != null && b.frame != null ? b.frame - a.frame : null;
+  const hint = b.visibility !== 'visible' ? ' — page hidden (display asleep?)' : frames === 0 ? ' — no frame drawn' : '';
+  return `visibility ${b.visibility}, focus ${b.focus}, frames in 1 s ${frames}, game ms ${b.ms === null ? '-' : Math.round(b.ms)}, scenes ${JSON.stringify(b.scenes)}${hint}`;
 }
 
+// Polls fn until it is true. `timeout` is a budget of GAME time (wall time while the page has no
+// game, e.g. the home): the wait goes on as long as the game advances. Fails when the budget is
+// spent, when no game time passed for STALL_MS with the page visible (the game stopped), or after
+// timeout x WALL_FACTOR + 60 s of wall time (e.g. a page hidden for that long).
 async function waitFor(desc, fn, timeout = SCENE_TIMEOUT) {
   const t0 = Date.now();
-  while (Date.now() - t0 < timeout) {
+  const wallCap = timeout * WALL_FACTOR + 60000;
+  let spent = 0; // game ms (or wall ms without a game) since the wait started
+  let lastMs = null;
+  let lastWall = t0;
+  let movedAt = t0;
+  let probedAt = 0;
+  const fail = async why => { throw new Error(`timeout waiting for ${desc}: ${why} (${await pageState()})`); };
+  for (;;) {
     if (await fn()) return;
+    const now = Date.now();
+    if (now - probedAt >= 400) {
+      probedAt = now;
+      const p = await progress();
+      if (p?.ms == null) {
+        spent += now - lastWall; // no game on this page (yet): wall time
+        movedAt = now;
+        lastMs = null;
+      } else {
+        if (lastMs === null) lastMs = p.ms;
+        const d = p.ms >= lastMs ? p.ms - lastMs : p.ms; // a new page starts again from 0
+        if (d > 0) movedAt = now;
+        spent += d;
+        lastMs = p.ms;
+        if (d === 0 && p.visibility === 'visible' && now - movedAt > STALL_MS) await fail(`the game stopped advancing for ${STALL_MS / 1000} s`);
+      }
+      lastWall = now;
+      if (spent > timeout) await fail(`${Math.round(spent)} ms of game time (budget ${timeout}), ${Math.round((now - t0) / 1000)} s of wall time`);
+      if (now - t0 > wallCap) await fail(`${Math.round((now - t0) / 1000)} s of wall time, only ${Math.round(spent)} ms of game time`);
+    }
     await sleep(80);
   }
-  throw new Error(`timeout waiting for ${desc}`);
+}
+
+// Waits for `ms` of game time (a short animation the next check depends on).
+async function gameSleep(ms) {
+  let start = null;
+  await waitFor(`${ms} ms of game time`, async () => {
+    const p = await progress();
+    if (p?.ms == null) return false;
+    if (start === null || p.ms < start) start = p.ms;
+    return p.ms - start >= ms;
+  }, ms + 5000);
+}
+
+async function waitScene(key, timeout = SCENE_TIMEOUT) {
+  let last = [];
+  try {
+    await waitFor(`scene ${key}`, async () => {
+      last = await activeScenes();
+      // the camera has finished fading in
+      return last.length === 1 && last[0] === key && await sceneEval(key, 's => !s.cameras.main.fadeEffect.isRunning');
+    }, timeout);
+  } catch (e) {
+    throw new Error(`stuck: expected scene ${key}, active ${JSON.stringify(last)}: ${e.message}`);
+  }
 }
 
 async function shot(name) {
@@ -262,7 +340,7 @@ const SERVICE_HISTORY = `(JSON.parse(localStorage.getItem('collection.v1') ?? '{
 async function serviceState() {
   const read = () => sceneEval('Service', `s => ({ revealed: s.revealed, rows: s.rows?.length, cash: s.cash?.phase ?? null,
     now: Math.round(s.time.now), loop: s.game.loop.running, frame: s.game.loop.frame, hidden: document.hidden,
-    visibility: document.visibilityState, focus: document.hasFocus(), status: s.sys.settings.status })`);
+    visibility: document.visibilityState, focus: document.hasFocus(), status: s.sys.settings.status, gameMs: Math.round(window.__gameMs ?? -1) })`);
   try {
     const a = await read();
     await sleep(500);
@@ -289,8 +367,11 @@ async function doCash({ earned, wrong = false, level, shot: name }) {
   const values = info.tray.map(t => t.value);
   const sum = values.reduce((a, b) => a + b, 0);
   if (info.level === 1) check(values.length === earned && values.every(v => v === 1), `N1: ${earned} coins of 1 on the tray (${values})`);
-  if (info.level === 2) check(sum === earned && values.every(v => [1, 2, 5].includes(v)) && (earned < 2 || values.some(v => v !== 1)), `N2: 1 / 2 / 5 totalling ${earned} (${values})`);
-  if (info.level === 3) check(info.due === earned && sum === info.paid && info.need === info.paid - info.due, `N3: ticket ${info.due}, the client pays ${values} (change ${info.need})`);
+  if (info.level === 2) check(sum === earned && values.every(v => [1, 2, 5].includes(v)) && (earned < 2 || values.length >= 2) && (earned < 3 || values.includes(2)), `N2: 1 / 2 totalling ${earned}, an addition (${values})`);
+  if (info.level === 3) {
+    check(info.due === earned && sum === info.paid && info.need === info.paid - info.due, `N3: ticket ${info.due}, the client pays ${values} (change ${info.need})`);
+    check(info.paid > info.due && info.paid === (info.due <= 4 ? 5 : 10), `N3: the client pays more than due (${info.paid} for ${info.due})`);
+  }
   const paid = await sceneEval('Service', 's => s.round.paid === true && s.round.coinsPaid === s.coinsEarned');
   check(paid, 'the coins are credited before the answer (round.paid)');
   let first = true;
@@ -307,6 +388,11 @@ async function doCash({ earned, wrong = false, level, shot: name }) {
   if (info.level < 3) {
     await waitFor('the 3 choices', async () => (await cashInfo()).phase === 'choose');
     info = await cashInfo();
+    // I3: every slid piece lies in the till, whole and apart from the others: she can count them
+    const row = info.slid;
+    const apart = row.every((a, i) => row.every((b, j) => i === j || Math.hypot(a.at[0] - b.at[0], a.at[1] - b.at[1]) >= Math.min(a.w, b.w) * 0.78));
+    const inTill = row.every(r => Math.abs(r.at[1] - info.tillAt[1]) < 60 && Math.abs(r.at[0] - info.tillAt[0]) < 230);
+    check(row.length === values.length && apart && inTill, `the ${row.length} slid pieces lie apart in the till (${row.map(r => r.at.join(',')).join(' ')})`);
     check(info.choices.length === 3 && new Set(info.choices.map(c => c.value)).size === 3 && info.choices.some(c => c.value === info.total),
       `3 different choices with the total ${info.total} (${info.choices.map(c => c.value)})`);
     const pick = info.choices.find(c => (c.value === info.total) !== wrong);
@@ -314,7 +400,7 @@ async function doCash({ earned, wrong = false, level, shot: name }) {
     await tap(pick.at);
     if (wrong) {
       await waitFor('the recount', async () => (await cashInfo()).phase === 'recount');
-      await sleep(Math.min(4000, 900 * info.total));
+      await gameSleep(Math.min(4000, 900 * info.total));
       if (name) await shot(name);
     }
   } else {
@@ -335,7 +421,7 @@ async function doCash({ earned, wrong = false, level, shot: name }) {
     await tap(info.ok);
     if (wrong) {
       await waitFor('the client shows the difference', async () => (await cashInfo()).phase === 'difference');
-      await sleep(700);
+      await gameSleep(700);
       if (name) await shot(name);
     }
   }
@@ -951,11 +1037,11 @@ const actions = {
       const want = r0.played ? [...hist0, cash !== 'wrong'].slice(-5) : hist0;
       check(JSON.stringify(hist1) === JSON.stringify(want), `service history ${r0.played ? 'gets the first answer' : 'unchanged (sample round)'} (${JSON.stringify(hist1)})`);
     } else {
-      await sleep(1500);
+      await gameSleep(3000);
       check(await sceneEval('Service', 's => !s.cash'), '0/5: no cash step');
     }
     try {
-      await waitFor('next button', () => sceneEval('Service', 's => s.next.visible && s.next.input?.enabled'), 20000);
+      await waitFor('next button', () => sceneEval('Service', 's => s.next.visible && s.next.input?.enabled'), 30000);
     } catch (e) {
       throw new Error(`${e.message} (${await serviceState()})`);
     }
@@ -1229,6 +1315,7 @@ const killer = setTimeout(() => chrome.kill('SIGKILL'), 5000);
 await new Promise(r => (chrome.exitCode !== null || chrome.signalCode !== null ? r() : chrome.once('exit', r)));
 clearTimeout(killer);
 fs.rmSync(PROFILE, { recursive: true, force: true });
+try { awake?.kill(); } catch {}
 log(`screenshots: ${outDir}`);
 if (failed) {
   console.error(`SMOKE FAIL: ${failed.message}`);

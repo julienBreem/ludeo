@@ -59,6 +59,7 @@
   {"do": "toppings", "level": 3, "shot": "lvl3-toppings"},
   {"do": "service", "expectCoins": 3, "cash": "wrong", "cashLevel": 3, "cashShot": "lvl3-wrong-change", "shot": "lvl3-service"},
   {"do": "forcedService", "score": 2, "cashLevel": 3, "cashShot": "lvl3-cash-right"},
+  {"do": "forcedService", "score": 5, "cashLevel": 3, "cashShot": "lvl3-cash-five"},
   {"do": "shopN3", "shot": "lvl3-shop-piggy"},
   {"do": "parentLevels", "themes": {"temps": 1, "geometrie": 1, "couleurs-fractions": 1, "logique": 1}, "phase": 2},
   {"do": "pateProposal", "shot": "pate-proposal"}
