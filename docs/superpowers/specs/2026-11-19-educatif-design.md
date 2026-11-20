@@ -106,7 +106,7 @@ Chaque phase : thème principal, puis niveaux.
 **5. Glaçage — `couleurs-fractions`**
 - N1 : pots aux couleurs demandées ; 1 ou 2 zones (moitiés) ; pointillés.
 - N2 : **pots de base rouge, bleu, jaune, blanc + bol de mélange** (rouge+blanc = rose, rouge+bleu = violet, bleu+jaune = vert, rouge+jaune = orange, bleu+blanc = bleu clair) ; le pot obtenu rejoint l'étagère ; bol vidable ; jusqu'à 3 zones égales ; pointillés.
-- N3 : mélanges ; **parts inégales** (un tiers / deux tiers, un quart / trois quarts) = 3 ou 4 bandes dont plusieurs de même couleur ; **pas de pointillés**, seulement des **graduations sur le bord**.
+- N3 (décision du parent) : les bandes sont à **surface égale** pour que tiers et quarts soient de vraies fractions sur toutes les formes (N1–N2 restent à largeur égale) ; mélanges ; **parts inégales** (un tiers / deux tiers, un quart / trois quarts) = 3 ou 4 bandes dont plusieurs de même couleur ; **pas de pointillés**, seulement des **graduations sur le bord**.
 - Boutique : aux niveaux 2–3, elle vend de nouvelles **bases** (marron, noir…) au lieu de couleurs toutes faites.
 - Erreur : la zone ratée, la couleur attendue et **sa recette de mélange**.
 
