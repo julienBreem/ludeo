@@ -253,6 +253,97 @@ const EATEN_INK = `s => new Promise(resolve => {
   });
 })`;
 
+// ---- the Service cash step (theme monnaie) ----------------------------------------------------------
+const cashInfo = () => sceneEval('Service', 's => s.cash?.info() ?? null');
+const SERVICE_HISTORY = `(JSON.parse(localStorage.getItem('collection.v1') ?? '{}').history ?? {})['stand-desserts/service'] ?? []`;
+
+// What the Service scene is doing (for a timeout message): a frame count that does not move means
+// the page stopped rendering.
+async function serviceState() {
+  const read = () => sceneEval('Service', `s => ({ revealed: s.revealed, rows: s.rows?.length, cash: s.cash?.phase ?? null,
+    now: Math.round(s.time.now), loop: s.game.loop.running, frame: s.game.loop.frame, hidden: document.hidden,
+    visibility: document.visibilityState, focus: document.hasFocus(), status: s.sys.settings.status })`);
+  try {
+    const a = await read();
+    await sleep(500);
+    const b = await read();
+    return JSON.stringify({ ...b, framesIn500ms: b.frame - a.frame });
+  } catch (x) {
+    return x.message;
+  }
+}
+
+// Plays the cash step with real gestures: the first piece is dragged into the till, the others are
+// tapped on the tray. N1-N2: taps the right total (or a wrong one: then the recount runs and the step
+// still ends by itself). N3: taps the till's compartments to lay the change (or a wrong amount: the
+// client shows the difference, then the right change is laid) and ✓. Checks what was paid, that the
+// coins were credited before the answer, and that the first answer is the step's result.
+async function doCash({ earned, wrong = false, level, shot: name }) {
+  try {
+    await waitFor('cash step: the payment on the tray', async () => (await cashInfo())?.phase === 'slide', 30000);
+  } catch (e) {
+    throw new Error(`${e.message} (${await serviceState()})`);
+  }
+  let info = await cashInfo();
+  if (level !== undefined) check(info.level === level, `cash step at N${info.level}`);
+  const values = info.tray.map(t => t.value);
+  const sum = values.reduce((a, b) => a + b, 0);
+  if (info.level === 1) check(values.length === earned && values.every(v => v === 1), `N1: ${earned} coins of 1 on the tray (${values})`);
+  if (info.level === 2) check(sum === earned && values.every(v => [1, 2, 5].includes(v)) && (earned < 2 || values.some(v => v !== 1)), `N2: 1 / 2 / 5 totalling ${earned} (${values})`);
+  if (info.level === 3) check(info.due === earned && sum === info.paid && info.need === info.paid - info.due, `N3: ticket ${info.due}, the client pays ${values} (change ${info.need})`);
+  const paid = await sceneEval('Service', 's => s.round.paid === true && s.round.coinsPaid === s.coinsEarned');
+  check(paid, 'the coins are credited before the answer (round.paid)');
+  let first = true;
+  while (info.tray.length) {
+    const n = info.tray.length;
+    const it = info.tray[0];
+    if (first) await drag([it.at, [it.at[0] + 40, it.at[1] - 120], info.tillAt]);
+    else await tap(it.at);
+    first = false;
+    await waitFor('a piece in the till', async () => (await cashInfo()).tray.length < n);
+    info = await cashInfo();
+  }
+  log('  ok: the payment is in the till (one drag, then taps)');
+  if (info.level < 3) {
+    await waitFor('the 3 choices', async () => (await cashInfo()).phase === 'choose');
+    info = await cashInfo();
+    check(info.choices.length === 3 && new Set(info.choices.map(c => c.value)).size === 3 && info.choices.some(c => c.value === info.total),
+      `3 different choices with the total ${info.total} (${info.choices.map(c => c.value)})`);
+    const pick = info.choices.find(c => (c.value === info.total) !== wrong);
+    if (name && !wrong) await shot(name);
+    await tap(pick.at);
+    if (wrong) {
+      await waitFor('the recount', async () => (await cashInfo()).phase === 'recount');
+      await sleep(Math.min(4000, 900 * info.total));
+      if (name) await shot(name);
+    }
+  } else {
+    await waitFor('the change step', async () => (await cashInfo()).phase === 'change');
+    info = await cashInfo();
+    const want = wrong ? (info.need === 0 ? 1 : info.need - 1) : info.need;
+    let left = want;
+    const taps = [];
+    for (const v of [2, 1]) {
+      let have = info.slots[v].count;
+      while (left >= v && have > 0) { taps.push(v); left -= v; have--; }
+    }
+    check(left === 0, `the till can make ${want} (${JSON.stringify(Object.fromEntries(Object.entries(info.slots).map(([v, s]) => [v, s.count])))})`);
+    for (const v of taps) { await tap(info.slots[v].at); await sleep(120); }
+    const given = (await cashInfo()).tray.reduce((a, t) => a + t.value, 0);
+    check(given === want, `${given} laid on the tray`);
+    if (name && !wrong) await shot(name);
+    await tap(info.ok);
+    if (wrong) {
+      await waitFor('the client shows the difference', async () => (await cashInfo()).phase === 'difference');
+      await sleep(700);
+      if (name) await shot(name);
+    }
+  }
+  await waitFor('the cash step ends by itself', async () => (await cashInfo())?.phase === 'done', 30000);
+  info = await cashInfo();
+  check(info.firstOk === !wrong, `the monnaie result is the first answer (${info.firstOk})`);
+}
+
 // ---- one action per scene ------------------------------------------------------------------------
 const actions = {
   // Fresh profile with seeded coins; the parent space sets the profile (a 6-year-old) and applies
@@ -388,6 +479,18 @@ const actions = {
       const card = s.cards.list.find(has);
       return card ? [card.x, card.y] : null; }`);
     check(!!star, `the star mould is on sale (${star})`);
+    const n1 = await sceneEval('Shop', `s => {
+      if (s.level !== 1) return null;
+      const has = o => /^mold-etoile/.test(o.texture?.key ?? '') || (o.list ?? []).some(has);
+      const card = s.cards.list.find(has);
+      const coins = o => (o.texture?.key === 'coin-1' ? 1 : 0) + (o.list ?? []).reduce((a, k) => a + coins(k), 0);
+      const all = s.cards.list.filter(c => c.priceCoins).map(c => [c.priceCoins, coins(c)]);
+      return { star: coins(card), all, texts: card.list.filter(o => o.type === 'Text').length };
+    }`);
+    if (n1) {
+      check(n1.star === 8 && n1.texts === 0, `Shop N1: the star mould's price is 8 coins of 1, no number (${n1.star})`);
+      check(n1.all.every(([p, c]) => p === c) && n1.all.some(([p]) => p === 20), `Shop N1: every price drawn as its coins, up to 20 (${JSON.stringify(n1.all)})`);
+    }
     await tap(star);
     await sleep(80);
     const after = await sceneEval('Shop', 's => ({ coins: Number(s.coinText.text), busy: s.busy, tweens: s.tweens.getTweens().filter(t => t.isActive() || t.isPlaying()).length, bobs: s.tweens.getTweens().filter(t => t.repeat === -1).length, alive: s.tweens.getTweens().filter(t => t.repeat === -1).every(t => t.targets.every(o => o.active)) })');
@@ -399,6 +502,43 @@ const actions = {
     await tap(LEFT_BTN);
     await waitScene('Shop');
     check((await sceneEval('Shop', 's => s.busy')) === false, 'Shop accepts taps on the next visit (busy reset)');
+    await tap(LEFT_BTN);
+    await waitScene('Stand');
+  },
+
+  // Shop at N3 (Service level 3): buys the dearest item she can afford, then taps one she cannot
+  // afford: the piggy bank shows what she has and what is missing; a tap closes it.
+  async shopN3({ shot: name } = {}) {
+    await waitScene('Stand');
+    await tap(LEFT_BTN);
+    await waitScene('Shop');
+    check((await sceneEval('Shop', 's => s.level')) === 3, 'Shop at N3');
+    const cards = () => sceneEval('Shop', `s => {
+      const st = JSON.parse(localStorage.getItem('standDesserts.v1'));
+      return s.cards.list.map(c => {
+        const t = c.list.find(o => o.type === 'Text');
+        return { at: [c.x, c.y], price: t ? Number(t.text) : null };
+      }).filter(c => c.price !== null).map(c => ({ ...c, afford: c.price <= st.coins })); }`);
+    let list = await cards();
+    const coins = await sceneEval('Shop', 's => Number(s.coinText.text)');
+    const buy = list.filter(c => c.afford).sort((a, b) => b.price - a.price)[0];
+    check(!!buy, `something to buy with ${coins} coins`);
+    await tap(buy.at);
+    await sleep(600);
+    const after = await sceneEval('Shop', 's => Number(s.coinText.text)');
+    check(after === coins - buy.price, `Shop N3: bought for ${buy.price}: ${coins} -> ${after}`);
+    list = await cards();
+    const dear = list.find(c => !c.afford);
+    check(!!dear, `an item she cannot afford (${after} coins)`);
+    await tap(dear.at);
+    await waitFor('the piggy bank', () => sceneEval('Shop', 's => !!s.piggy'));
+    const pig = await sceneEval('Shop', 's => ({ have: s.piggy.have, price: s.piggy.price, missing: s.piggy.missing })');
+    check(pig.have === after && pig.price === dear.price && pig.missing === dear.price - after, `piggy bank: has ${pig.have}, price ${pig.price}, missing ${pig.missing}`);
+    await sleep(400);
+    if (name) await shot(name);
+    await tap([640, 760]);
+    await waitFor('the piggy bank closes', () => sceneEval('Shop', 's => !s.piggy'));
+    check((await sceneEval('Shop', 's => Number(s.coinText.text)')) === after, 'nothing bought by the piggy bank');
     await tap(LEFT_BTN);
     await waitScene('Stand');
   },
@@ -799,11 +939,26 @@ const actions = {
     check(res?.ok === true, `toppings result kept after ✓ (${JSON.stringify(res)})`);
   },
 
-  async service({ shot: name, expectCoins, expectConfetti } = {}) {
+  async service({ shot: name, expectCoins, expectConfetti, cash = 'right', cashLevel, cashShot } = {}) {
     await waitScene('Service');
     const served = await sceneEval('Service', 's => JSON.stringify(s.client.client)');
     if (roundClient) check(served === roundClient, 'the Stand client is served');
-    await waitFor('next button', () => sceneEval('Service', 's => s.next.visible && s.next.input?.enabled'), 20000);
+    const r0 = await sceneEval('Service', 's => ({ earned: s.coinsEarned, played: !!s.round.started, level: s.round.levels?.service })');
+    const hist0 = await evaluate(SERVICE_HISTORY);
+    if (r0.earned > 0) {
+      await doCash({ earned: r0.earned, wrong: cash === 'wrong', level: cashLevel, shot: cashShot });
+      const hist1 = await evaluate(SERVICE_HISTORY);
+      const want = r0.played ? [...hist0, cash !== 'wrong'].slice(-5) : hist0;
+      check(JSON.stringify(hist1) === JSON.stringify(want), `service history ${r0.played ? 'gets the first answer' : 'unchanged (sample round)'} (${JSON.stringify(hist1)})`);
+    } else {
+      await sleep(1500);
+      check(await sceneEval('Service', 's => !s.cash'), '0/5: no cash step');
+    }
+    try {
+      await waitFor('next button', () => sceneEval('Service', 's => s.next.visible && s.next.input?.enabled'), 20000);
+    } catch (e) {
+      throw new Error(`${e.message} (${await serviceState()})`);
+    }
     const info = await sceneEval('Service', `s => ({
       order: s.round.order,
       results: s.round.results,
@@ -952,7 +1107,7 @@ const actions = {
   // Opens the Service directly with the debug sample round and a forced score
   // (?debug&scene=Service&score=N), runs the Service checks, then goes on to the Stand. A sample
   // round saves no result for the parent's proposals unless `record` (&record=1).
-  async forcedService({ score, now, expectConfetti, record = false, shot: name }) {
+  async forcedService({ score, now, expectConfetti, record = false, shot: name, cash, cashLevel, cashShot }) {
     const u = new globalThis.URL(GAME_URL);
     u.searchParams.set('debug', '1');
     if (now) u.searchParams.set('now', now);
@@ -971,7 +1126,7 @@ const actions = {
       const after = await history();
       check(after === before, `a debug sample round saves no result (history ${after})`);
     }
-    await actions.service({ shot: name, expectCoins: score, expectConfetti });
+    await actions.service({ shot: name, expectCoins: score, expectConfetti, cash, cashLevel, cashShot });
   },
 
   // I1: without the debug flag, ?scene= and &score= are ignored: the game starts at the Stand
@@ -1063,6 +1218,8 @@ try {
   log(`requests: ${requests.length}, off-origin: 0`);
 } catch (e) {
   failed = e;
+  // a page error often explains a scene that stopped moving
+  if (problems.length && !/console problems/.test(e.message)) failed = new Error(`${e.message} | console problems: ${problems.join(' | ')}`);
   try { await shot('FAIL'); } catch {}
 }
 try { ws?.close(); } catch {}

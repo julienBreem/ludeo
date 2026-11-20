@@ -6,14 +6,20 @@
 // for the parent's level proposals. At Commande N2 / N3 a card at the bottom repeats the order's
 // words / sentence, with the words of the failed points marked. When the dough's quantities were
 // wrong, the recipe comes back at the top left: per kind what was needed (with the operation) and
-// what she poured. Moule N2: the mould she needed with the clue; N3: the mould's pieces put
-// together. Cuisson N2 / N3: beside the pale / burnt cake, the timer on the number or the clock with
-// the alarm on the hour she had to set. Glaçage N2 / N3: the failed zone (with fractions, the
-// whole part of that colour) painted with the expected colour, and that colour's recipe
-// (pot + pot = pot), or its pot alone for a base. Toppings N2: the ring of slots, the wrong and the
-// empty ones circled in red with the right topping see-through; N3: the hint card again, with the
-// number of each kind it gave.
-import { W, H, TOUCH, COLOR_HEX, OUTLINE, BATTER, TOP_SQUASH } from '../config.js';
+// what she poured. Moule N1: the mould she needed (and the shape she took, crossed); N2: the mould
+// with the clue; N3: the mould's pieces put together. Cuisson: beside the pale / burnt cake, the
+// timer with its hand in the green (N1), on the number (N2) or the clock with the alarm on the hour
+// she had to set (N3); the wrong heat: the flames she needed. Glaçage: the failed zone (with
+// fractions, the whole part of that colour) painted with the expected colour, and that colour's
+// pot (N1, with the pot she used crossed) or its recipe (N2 / N3: pot + pot = pot, or the base pot
+// alone). Toppings N1: the order's kinds with their number as dice; N2: the ring of slots, the
+// wrong and the empty ones circled in red with the right topping see-through; N3: the hint card
+// again, with the number of each kind it gave.
+// Then the cash step (ui/cashStep.js, theme `monnaie`, skipped at 0/5): the result card, the plate
+// and the recaps fade out, she takes the payment and answers (the `monnaie` result = her first
+// answer, saved once, played rounds only); the earned coins then fly from the till to the counter
+// (credited once, whatever she answered) and the result card comes back.
+import { W, H, TOUCH, COLOR_HEX, OUTLINE, BATTER } from '../config.js';
 import { getRound, getState, updateState } from '../game-state.js';
 import { addIconButton } from '../ui/button.js';
 import { drawClient } from '../ui/client.js';
@@ -22,7 +28,7 @@ import { blink, popIn, confetti, talk } from '../ui/fx.js';
 import { goNext } from '../ui/flow.js';
 import { STEPS, scoreRound, bitesFor } from '../logic/scoring.js';
 import { GRID } from '../logic/paint.js';
-import { zoneEdges, zoneMap, bandOptions } from '../logic/zones.js';
+import { zoneMap, bandOptions } from '../logic/zones.js';
 import { recipeFor } from '../logic/colors.js';
 import { INGREDIENTS, DESSERTS } from '../logic/catalog.js';
 import { fixedRecipe, toPour } from '../logic/recipe.js';
@@ -31,10 +37,11 @@ import { dur } from '../ui/pace.js';
 import { orderSentenceParts, orderWordParts, failedElements, colorRuns } from '../logic/orderText.js';
 import { ensureWordTextures, flowParts } from '../ui/words.js';
 import { recordPhaseResult } from '../../../../shared/runtime.js';
-import { rightAlarm } from '../logic/bake.js';
-import { ensureTimerTextures, pivotOrigin } from '../ui/timerArt.js';
+import { rightAlarm, bakeTarget, GREEN_MIN, GREEN_MAX } from '../logic/bake.js';
+import { ensureTimerTextures, pivotOrigin, TIMER_RUN } from '../ui/timerArt.js';
 import { clueRow, moldColors } from '../ui/moldArt.js';
 import { ID } from '../../collection.js';
+import { CashStep } from '../ui/cashStep.js';
 
 const CLIENT_X = 300;
 const CLIENT_Y = 470;
@@ -60,7 +67,6 @@ const CARD_H = 470;
 const ROW_H = 90;
 const STEP_MS = 600;
 const MINI = 110; // mini cake pictures, px
-const SWAP_MINI = 150; // the colour-swap cake: bigger, so each zone's colour reads
 const CX = CARD_X + CARD_W / 2; // rows pop in around the card's centre line
 const ICON_X = 720;
 const STATUS_X = 850;
@@ -92,7 +98,11 @@ export class ServiceScene extends Phaser.Scene {
     this.leaving = false;
     // set only for some rounds: Phaser reuses this instance, never keep the last round's
     this.recap = null;
+    this.recapBg = null;
     this.doughRecap = null;
+    this.cash = null;
+    this.rows = [];
+    this.crumbImgs = [];
     const { coins, mood } = scoreRound(round.results);
     this.coinsEarned = coins;
     this.recordResults();
@@ -169,6 +179,7 @@ export class ServiceScene extends Phaser.Scene {
     bg.fillStyle(0x000000, 0.15).fillRoundedRect(RECAP_LEFT + 3, top + 5, RECAP_RIGHT - RECAP_LEFT, h, 24);
     bg.fillStyle(0xffffff, 1).fillRoundedRect(RECAP_LEFT, top, RECAP_RIGHT - RECAP_LEFT, h, 24);
     bg.lineStyle(4, OUTLINE, 1).strokeRoundedRect(RECAP_LEFT, top, RECAP_RIGHT - RECAP_LEFT, h, 24);
+    this.recapBg = bg;
     text.setPosition(RECAP_LEFT + RECAP_PAD, top + RECAP_PAD - 2).setDepth(35);
     text.markers.setAlpha(0);
     this.recap = text;
@@ -336,8 +347,8 @@ export class ServiceScene extends Phaser.Scene {
       ? [[-40, 6, 1, 0], [38, 12, -1, 0.3], [4, -6, 1, -0.2]]
       : [[60, 14, 1, 0.2]];
     for (const [dx, dy, flip, rot] of spots) {
-      this.add.image(this.plate.x + dx * CAKE_SCALE * 2, BASE_Y + dy * CAKE_SCALE * 2, 'crumbs')
-        .setScale(0.45 * flip, 0.45).setRotation(rot).setDepth(24.5);
+      this.crumbImgs.push(this.add.image(this.plate.x + dx * CAKE_SCALE * 2, BASE_Y + dy * CAKE_SCALE * 2, 'crumbs')
+        .setScale(0.45 * flip, 0.45).setRotation(rot).setDepth(24.5));
     }
   }
 
@@ -361,7 +372,9 @@ export class ServiceScene extends Phaser.Scene {
       this.client.setMood(mood);
       this.markWords();
       if (this.coinsEarned === 5) confetti(this);
-      this.time.delayedCall(dur(500), () => this.payout());
+      // 0/5: no cash step; else she looks at the results a moment, then takes the payment
+      if (this.coinsEarned > 0) this.time.delayedCall(dur(1800), () => this.startCash(mood));
+      else this.time.delayedCall(dur(500), () => this.payout());
       return;
     }
     this.buildRow(i);
@@ -387,6 +400,7 @@ export class ServiceScene extends Phaser.Scene {
     }
     c.setScale(1);
     popIn(this, c);
+    this.rows.push(c);
   }
 
   fit(key, size, x) {
@@ -464,6 +478,11 @@ export class ServiceScene extends Phaser.Scene {
       this.expectedHints(c, res, x);
       return c;
     }
+    if (step === 'toppings' && o.toppingMode !== 'motif' && ['trop', 'pas-assez', 'mauvais-topping'].includes(reason)) {
+      // N1 (counts): the order's kinds with the number of each, as dice (the same card as N3)
+      this.expectedHints(c, res, x, { sol: o.toppings, dice: true });
+      return c;
+    }
     switch (reason) {
       case 'intrus':
       case 'manque':
@@ -508,9 +527,14 @@ export class ServiceScene extends Phaser.Scene {
           this.expectedMold(c, o.shape, ex.clue, x);
           break;
         }
-        const shape = cake.shape ?? o.shape;
-        c.add(this.fit(`shape-${shape}-fill`, 80, x).setTint(0xe6e6e6));
-        c.add(this.fit(`shape-${shape}-line`, 80, x));
+        // N1: the mould she needed, and the shape she took, crossed
+        this.expectedMold(c, o.shape, null, x);
+        const took = cake.shape;
+        if (took && took !== o.shape && this.textures.exists(`shape-${took}-fill`)) {
+          c.add(this.fit(`shape-${took}-fill`, 56, x + 70).setTint(0xe6e6e6));
+          c.add(this.fit(`shape-${took}-line`, 56, x + 70));
+          this.badge(c, x + 70, 'x', { x: x + 92, y: 22, r: 16 });
+        }
         break;
       }
       case 'pieces':
@@ -519,64 +543,28 @@ export class ServiceScene extends Phaser.Scene {
       case 'pale':
       case 'brule': {
         // the wrong flames: the flames she needed; else (N2 / N3) the time she needed
-        const bt = this.round.bakeTarget;
+        const bt = this.round.bakeTarget ?? bakeTarget(o.dessert, this.round.levels?.cuisson ?? 1);
         if (res.wrongHeat) {
           c.add(this.miniCake({ ...base, bake: reason }, x - 48));
           this.expectedFlames(c, DESSERTS[o.dessert].heat, x + 82);
           break;
         }
-        const dial = bt?.kind === 'number' || bt?.kind === 'clock';
+        const dial = !!bt;
         c.add(this.miniCake({ ...base, bake: reason }, dial ? x - 56 : x));
         if (dial) this.expectedDial(c, bt, x + 92);
         break;
       }
-      case 'mauvaise-couleur': {
-        if (step === 'couleur' && (this.round.levels?.couleur ?? 1) >= 2) {
-          this.expectedColor(c, res.zone ?? 0, x);
-          break;
-        }
-        const zone = res.zone ?? 0;
-        const want = o.glaze[zone];
-        const used = res.color && COLOR_HEX[res.color] !== undefined ? res.color : null;
-        if ((used && !o.glaze.includes(used)) || !cake.glaze?.cells) {
-          // a colour that is not in the order at all: the pot she used on that zone
-          const key = used ?? Object.keys(COLOR_HEX).find(k => k !== want);
-          c.add(this.fit('pot', 80, x).setTint(COLOR_HEX[key]));
-          break;
-        }
-        // an ordered colour in the wrong zone (left and right mixed up): her cake as she painted
-        // it, in the order's shape, with a cross on the failing zone's front edge (the zone's
-        // colour stays visible above it)
-        c.add(this.miniCake({ ...base, shape: o.shape, bake: 'dore', glaze: cake.glaze }, x, SWAP_MINI));
-        const mask = shapeMask(this, o.shape);
-        const edges = [-Infinity, ...zoneEdges(mask, GRID, o.glaze.length, bandOptions(o)), Infinity];
-        let minX = GRID;
-        let maxX = -1;
-        for (let n = 0; n < mask.length; n++) {
-          if (!mask[n]) continue;
-          minX = Math.min(minX, n % GRID);
-          maxX = Math.max(maxX, n % GRID);
-        }
-        const col = Math.min(maxX, Math.max(minX, Math.floor((Math.max(minX, edges[zone]) + Math.min(maxX + 1, edges[zone + 1])) / 2)));
-        let row = 0; // the silhouette's lowest row in that column: the zone's front edge
-        for (let y = 0; y < GRID; y++) if (mask[y * GRID + col]) row = y;
-        const k = SWAP_MINI / FRAME;
-        const fx = (col + 0.5) * (FRAME / GRID) - FRAME / 2;
-        const fy = ((row + 1) * (FRAME / GRID) - FRAME / 2) * TOP_SQUASH;
-        this.badge(c, x, 'x', { x: x + fx * k, y: 6 + fy * k, r: 14 });
-        break;
-      }
+      case 'mauvaise-couleur':
       case 'pas-couvert': {
-        if (step === 'couleur' && (this.round.levels?.couleur ?? 1) >= 2) {
-          this.expectedColor(c, res.zone ?? 0, x);
+        // the failed zone painted with the colour it needed; N2-N3 with its recipe, N1 with its pot
+        // (and the pot she used there, crossed)
+        const zone = res.zone ?? 0;
+        if ((this.round.levels?.couleur ?? 1) >= 2) {
+          this.expectedColor(c, zone, x);
           break;
         }
-        // a mini cake only half painted with that zone's colour
-        const mask = shapeMask(this, 'rond');
-        const cells = new Uint8Array(GRID * GRID);
-        for (let n = 0; n < cells.length; n++) if (mask[n] && n % GRID < GRID / 2) cells[n] = 1;
-        const color = o.glaze[res.zone ?? 0] ?? o.glaze[0];
-        c.add(this.miniCake({ ...base, bake: 'dore', glaze: { cells, size: GRID, colorKeys: [color] } }, x));
+        const used = reason === 'mauvaise-couleur' && res.color && COLOR_HEX[res.color] !== undefined ? res.color : null;
+        this.expectedColor(c, zone, x, { recipe: false, used });
         break;
       }
       default:
@@ -588,7 +576,9 @@ export class ServiceScene extends Phaser.Scene {
   // Glaçage N2 / N3: the order's cake with only the failed zone glazed, in the colour it needed
   // (with fractions: every band of that colour), then how to get that colour: « a + b = c » in
   // pots, or the base pot alone.
-  expectedColor(c, zone, x) {
+  // N1 ({recipe: false}): the pot of that colour instead of the recipe; `used`: the pot she used on
+  // that zone, small and crossed, when it was another colour.
+  expectedColor(c, zone, x, { recipe: withRecipe = true, used = null } = {}) {
     const o = this.round.order;
     const n = Math.max(1, o.glaze.length);
     const z = Math.min(n - 1, Math.max(0, zone));
@@ -601,9 +591,13 @@ export class ServiceScene extends Phaser.Scene {
     const cake = { dessert: o.dessert, doughOk: true, shape: o.shape, toppings: [], bake: 'dore', glaze: { cells, size: GRID, colorKeys: [want] } };
     c.add(this.miniCake(cake, x - 50, 100));
     const pot = (px, key, size) => c.add(this.fit('pot', size, px).setTint(COLOR_HEX[key] ?? 0xffffff));
-    const recipe = recipeFor(want);
+    const recipe = withRecipe ? recipeFor(want) : null;
     if (!recipe) {
-      pot(x + 60, want, 72);
+      pot(x + 40, want, 64);
+      if (used && used !== want) {
+        pot(x + 108, used, 48);
+        this.badge(c, x + 108, 'x', { x: x + 126, y: 18, r: 14 });
+      }
       return;
     }
     const g = this.add.graphics();
@@ -667,8 +661,8 @@ export class ServiceScene extends Phaser.Scene {
   // Toppings N3: the hint card again (small, its yellow band on top), with what it gave: each kind
   // and its number. The kind she got wrong has a red badge (+ too many, − too few); a kind that
   // was not on the card at all comes last, crossed.
-  expectedHints(c, res, x) {
-    const sol = this.round.order.hintCard.solution;
+  // N1 ({sol: the order's toppings, dice: true}): the same card, the numbers as dice.
+  expectedHints(c, res, x, { sol = this.round.order.hintCard.solution, dice = false } = {}) {
     const items = sol.map(t => ({ key: t.key, count: t.count, sign: 0 }));
     const hit = items.find(it => it.key === res.key);
     if (res.reason === 'trop' && hit) hit.sign = 1;
@@ -687,7 +681,9 @@ export class ServiceScene extends Phaser.Scene {
       const t = this.add.image(ix, 6, `topping-${it.key}`);
       t.setScale(46 / Math.max(t.width, t.height));
       c.add(t);
-      if (it.count !== null) {
+      if (it.count !== null && dice && it.count >= 1 && it.count <= 5) {
+        c.add(this.add.image(ix + 52, 6, `dice-${it.count}`).setDisplaySize(38, 38));
+      } else if (it.count !== null) {
         c.add(this.add.text(ix + 46, 6, String(it.count), {
           ...TEXT_STYLE, fontSize: '34px', color: '#1f2a44',
         }).setOrigin(0.5));
@@ -703,6 +699,7 @@ export class ServiceScene extends Phaser.Scene {
     const mx = x - 52;
     c.add(this.add.image(mx, 4, `mold-${shape}-back`).setScale(k));
     c.add(this.add.image(mx, 4, `mold-${shape}-front`).setScale(k));
+    if (!clue) return;
     const { items, w } = clueRow(this, clue, 40);
     const cw = w + 18;
     const cx = x + 30 + cw / 2;
@@ -746,32 +743,82 @@ export class ServiceScene extends Phaser.Scene {
   expectedDial(c, bt, x) {
     ensureTimerTextures(this);
     const layer = (key, k) => this.add.image(0, 0, key).setOrigin(...pivotOrigin(key)).setScale(k);
-    const faceKey = bt.kind === 'number' ? 'timer-face-numbers' : 'clock-face';
-    const handKey = bt.kind === 'number' ? 'timer-hand' : 'clock-alarm-hand';
+    const faceKey = { sector: 'timer-face-sector', number: 'timer-face-numbers' }[bt.kind] ?? 'clock-face';
+    const handKey = bt.kind === 'clock' ? 'clock-alarm-hand' : 'timer-hand';
     const face = layer(faceKey, 1);
     const k = DIAL_PX / Math.max(face.width, face.height);
     face.setScale(k);
     const hand = layer(handKey, k);
-    hand.setRotation(bt.kind === 'number' ? bt.number * 60 * DEG : rightAlarm(bt) * 30 * DEG);
+    const angle = { sector: ((GREEN_MIN + GREEN_MAX) / 2) * TIMER_RUN, number: bt.number * 60 }[bt.kind] ?? rightAlarm(bt) * 30;
+    hand.setRotation(angle * DEG);
+    // N1: the green sector between the face and the hand (the hand in its middle)
+    const sector = bt.kind === 'sector' ? layer('timer-sector', k) : null;
     // the pivot sits below the frame's centre (the clock's bells): centre the frame on the row
     const py = (pivotOrigin(faceKey)[1] - 0.5) * face.displayHeight + 4;
     face.setPosition(x, py);
     hand.setPosition(x, py);
-    c.add([face, hand]);
+    sector?.setPosition(x, py);
+    c.add(sector ? [face, sector, hand] : [face, hand]);
   }
 
-  payout() {
+  // The earned coins go to her savings once per round (round.paid), whatever the cash step's answer.
+  credit() {
     const n = this.coinsEarned;
     if (n > 0 && !this.round.paid) {
       this.round.paid = true;
       this.round.coinsPaid = n;
       updateState(s => addCoins(s, n));
     }
-    if (n === 0) return this.showNext();
+  }
+
+  // What the Service shows of the round (result card and rows, recaps, the plate): hidden during
+  // the cash step, back after it.
+  resultView() {
+    return [this.card, ...this.rows, this.recap, this.recapBg, this.doughRecap, this.plate, this.cake, ...this.crumbImgs]
+      .filter(o => o?.active);
+  }
+
+  startCash(mood) {
+    if (this.cash || this.leaving) return;
+    this.credit();
+    this.tweens.add({ targets: this.resultView(), alpha: 0, duration: dur(300) });
+    this.cash = new CashStep(this, {
+      level: this.round.levels?.service ?? 1,
+      score: this.coinsEarned,
+      client: this.client,
+      onAnswer: ok => this.recordCash(ok),
+      onDone: () => this.payout(this.cash.tillCenter(), () => {
+        this.client.setMood(mood);
+        this.cash.fadeOut();
+        const view = this.resultView();
+        this.tweens.add({ targets: view, alpha: 1, duration: dur(350), onComplete: () => this.showNext() });
+      }),
+    });
+  }
+
+  // The `monnaie` result: her first answer, once per round, for a round she really played (as
+  // recordResults).
+  recordCash(ok) {
+    const round = this.round;
+    if (round.cashRecorded) return;
+    round.cashRecorded = true;
+    round.cashOk = ok;
+    if (!round.started && !(round.sample && round.recordSample)) return;
+    recordPhaseResult(ID, 'service', ok, round.levels?.service);
+  }
+
+  // The earned coins fly to the counter (from the client, or from the till after the cash step),
+  // then done() (default: icon-next shows).
+  payout(from = null, done = () => this.showNext()) {
+    const n = this.coinsEarned;
+    this.credit();
+    if (n === 0) return done();
+    const fx = from?.x ?? this.client.x + 80;
+    const fy = from?.y ?? CLIENT_Y - 60;
     let landed = 0;
     for (let k = 0; k < n; k++) {
       this.time.delayedCall(dur(k * 220), () => {
-        const coin = this.add.image(this.client.x + 80, CLIENT_Y - 60, 'coin').setScale(0.6).setDepth(600);
+        const coin = this.add.image(fx, fy, 'coin').setScale(0.6).setDepth(600);
         this.tweens.add({
           targets: coin, x: W - 250, y: 60, scale: 0.8, duration: dur(520), ease: 'Sine.easeIn',
           onComplete: () => {
@@ -779,7 +826,7 @@ export class ServiceScene extends Phaser.Scene {
             this.shownCoins++;
             this.coinText.setText(String(this.shownCoins));
             this.tweens.add({ targets: this.coinText, scale: { from: 1.25, to: 1 }, duration: 150 });
-            if (++landed === n) this.showNext();
+            if (++landed === n) done();
           },
         });
       });

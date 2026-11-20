@@ -71,7 +71,7 @@ test('the stand phases, their themes and which ones have levels', () => {
   const g = GAMES.find(x => x.id === 'stand-desserts');
   assert.deepEqual(g.phases.map(p => [p.id, p.theme, p.levels]), [
     ['commande', 'lecture', 3], ['pate', 'nombres', 3], ['moule', 'geometrie', 3], ['cuisson', 'temps', 3],
-    ['couleur', 'couleurs-fractions', 3], ['toppings', 'logique', 3], ['service', 'monnaie', 1],
+    ['couleur', 'couleurs-fractions', 3], ['toppings', 'logique', 3], ['service', 'monnaie', 3],
   ]);
   assert.deepEqual(g.phases.filter(p => p.scored === false).map(p => p.id), ['commande']);
 });
@@ -159,7 +159,7 @@ test('PWA: manifest, icons and service worker', () => {
     assert.ok(HOME_PRECACHE.includes(icon.src), `${icon.src} not in HOME_PRECACHE`);
   }
   const sw = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
-  assert.match(sw, /const CACHE_VERSION = 'v8'/);
+  assert.match(sw, /const CACHE_VERSION = 'v9'/);
   assert.match(sw, /const CACHE = `ludeo-\$\{CACHE_VERSION\}`/, "the collection's own cache prefix");
   assert.match(sw, /k\.startsWith\('ludeo-'\) && k !== CACHE/, "activate deletes only this collection's older caches");
   assert.equal(m.name, 'Ludeo');
