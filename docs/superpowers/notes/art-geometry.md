@@ -284,10 +284,10 @@ Branch feat/art-edu4. 9 new SVGs, all S2, none meant to be tinted. Review sheet 
 - Receipt with a pink header and a zigzag bottom edge. Paper x 16..204, y 10..292; header down to y 52.
 - Blank area for code: x 30..190, y 64..218, centre (110,141). Sheet: scale 0.8, tilted 5 degrees, the amount at 92 px centred 4 px above the area centre, the same amount as coins of 1 at scale 0.26 under it (pitch 36 px).
 
-## piggy-bank and piggy-bank-mask (340x280, assets/ui/)
+## piggy-bank (340x280, assets/ui/)
 
 - Pink pig facing left, coin slot on its back at (202,61), a porthole on its belly. Not tinted.
 - Porthole inside: ellipse centre (200,156), radii 58 x 44 (y 112..200). The savings are drawn by code inside it: a rectangle 0xffc928 from the level to y 200 with a 7 px 0xfff176 line on top, clipped by the ellipse. Level: top y = 200 - 88 x fraction.
-- piggy-bank-mask: same frame, the porthole in white on transparent, for a bitmap mask at the same x,y and scale. A Graphics ellipse with the numbers above gives the same clip without the file.
+- The fill is clipped to the ellipse in code (moneyArt.js piggyBank); the former piggy-bank-mask file was removed in the lot 4 fix wave (it was never used).
 - The fill covers nothing else: it is drawn over piggy-bank, no front layer needed.
 - Sheet: scale 1 at (700,300) with the number and the grouped coins under it; readable down to 80 px wide.

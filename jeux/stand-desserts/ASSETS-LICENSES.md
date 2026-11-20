@@ -152,4 +152,3 @@ The files are released under CC0 1.0 (https://creativecommons.org/publicdomain/z
 | `assets/stand/ticket.svg` | original — drawn for this project | CC0 |
 | `assets/stand/counter-tray.svg` | original — drawn for this project | CC0 |
 | `assets/ui/piggy-bank.svg` | original — drawn for this project | CC0 |
-| `assets/ui/piggy-bank-mask.svg` | original — drawn for this project | CC0 |

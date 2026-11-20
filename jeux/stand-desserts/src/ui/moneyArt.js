@@ -1,7 +1,9 @@
 // Money art (Service cash step and Shop, theme `monnaie`): coin-1, coin-2, note-5, note-10, till,
-// ticket, counter-tray, piggy-bank, piggy-bank-mask. The SVGs (lot 4 art, branch feat/art-edu4) may
-// not be loaded yet: ensureMoneyTextures then draws simple stand-ins under the same keys and frames.
-// Once the SVGs load, textures.exists() is true and nothing here is drawn.
+// ticket, counter-tray, piggy-bank. The lot 4 SVGs are loaded by Boot (assets.js), so in the game
+// textures.exists() is true and ensureMoneyTextures draws nothing. The DRAW stand-ins are only a
+// safety net (an SVG missing from a broken cache shows a simple coin, not Phaser's green box), the
+// same convention as mixArt.js. The piggy bank's porthole fill is clipped in code (piggyBank), so
+// there is no mask texture.
 //
 // Geometry (the art's contract, docs/superpowers/notes/art-geometry.md "Educational lot 4 art"):
 // - coins 160x160 (coin-1 face r 62 at (80,79); coin-2 face r 72 at (80,78)); notes 240x140.
@@ -21,7 +23,6 @@ export const MONEY_FRAMES = {
   ticket: { w: 220, h: 310 },
   'counter-tray': { w: 480, h: 160 },
   'piggy-bank': { w: 340, h: 280 },
-  'piggy-bank-mask': { w: 340, h: 280 },
 };
 export const MONEY_KEYS = Object.keys(MONEY_FRAMES);
 
@@ -157,11 +158,6 @@ const DRAW = {
     g.fillStyle(0x7a2a4a, 1).fillEllipse(200, 156, 116, 88);
     g.lineStyle(7, 0xffffff, 1).strokeEllipse(200, 156, 122, 94);
     g.lineStyle(4, PD, 1).strokeEllipse(200, 156, 132, 104);
-    bake(scene, key, g);
-  },
-  'piggy-bank-mask'(scene, key) {
-    const g = scene.make.graphics({}, false);
-    g.fillStyle(0xffffff, 1).fillEllipse(PIGGY_HOLE.x, PIGGY_HOLE.y, PIGGY_HOLE.rx * 2, PIGGY_HOLE.ry * 2);
     bake(scene, key, g);
   },
 };

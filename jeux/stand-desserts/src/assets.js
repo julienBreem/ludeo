@@ -171,7 +171,6 @@ export const ASSETS = [
   { key: 'ticket', file: 'assets/stand/ticket.svg', w: 220, h: 310 },
   { key: 'counter-tray', file: 'assets/stand/counter-tray.svg', w: 480, h: 160 },
   { key: 'piggy-bank', file: 'assets/ui/piggy-bank.svg', w: 340, h: 280 },
-  { key: 'piggy-bank-mask', file: 'assets/ui/piggy-bank-mask.svg', w: 340, h: 280 },
 ];
 
 // Every file of this game the service worker must cache for offline play, relative to the
