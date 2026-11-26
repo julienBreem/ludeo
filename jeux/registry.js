@@ -5,6 +5,7 @@
 // Adding a game: create jeux/<id>/collection.js (ID, NAME, CATEGORY, TILE, SUPPORTS, PHASES, PRECACHE, reset),
 // import it below and add it to GAMES. tests/registry.test.js checks it.
 import * as standDesserts from './stand-desserts/collection.js';
+import * as pecheCuisine from './peche-cuisine/collection.js';
 import { CLIENT_LAYERS } from '../shared/client.js';
 
 // Settings every game must apply, like the home (tests/registry.test.js checks SUPPORTS).
@@ -26,7 +27,7 @@ const game = m => ({
   reset: m.reset,
 });
 
-export const GAMES = [game(standDesserts)];
+export const GAMES = [game(standDesserts), game(pecheCuisine)];
 
 // Categories that have at least one game, in CATEGORIES order, each with its games.
 export function categoriesWithGames() {

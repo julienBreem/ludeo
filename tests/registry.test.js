@@ -91,6 +91,27 @@ test('the stand reset clears only its own save', () => {
   assert.deepEqual(Object.keys(data), ['collection.v1']);
 });
 
+test('the fishing game is registered as specified', () => {
+  const g = GAMES.find(x => x.id === 'peche-cuisine');
+  assert.ok(g);
+  assert.equal(g.name, 'Pêche et cuisine');
+  assert.equal(g.category, 'compter-observer');
+  assert.equal(g.path, 'jeux/peche-cuisine/index.html');
+  assert.equal(g.tile, 'jeux/peche-cuisine/assets/fish/tile-fish.svg');
+  assert.deepEqual(g.supports, ['rythme', 'soir']);
+  assert.deepEqual(g.phases.map(p => [p.id, p.theme, p.levels]), [
+    ['peche', 'logique', 1], ['pesee', 'nombres', 1], ['cuisine', 'nombres', 1],
+    ['decoupe', 'couleurs-fractions', 1], ['dressage', 'logique', 1],
+  ]);
+});
+
+test('its reset clears only pecheCuisine.v1', () => {
+  const data = { 'pecheCuisine.v1': '{"version":1}', 'standDesserts.v1': '{"version":1}', 'collection.v1': '{"version":1}' };
+  const storage = { removeItem: k => { delete data[k]; } };
+  GAMES.find(x => x.id === 'peche-cuisine').reset(storage);
+  assert.deepEqual(Object.keys(data).sort(), ['collection.v1', 'standDesserts.v1']);
+});
+
 test('every precache path (home + games) exists on disk, is relative, without duplicates', () => {
   const all = [...HOME_PRECACHE, ...GAMES.flatMap(g => g.precache)];
   for (const f of all) {
@@ -159,7 +180,7 @@ test('PWA: manifest, icons and service worker', () => {
     assert.ok(HOME_PRECACHE.includes(icon.src), `${icon.src} not in HOME_PRECACHE`);
   }
   const sw = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
-  assert.match(sw, /const CACHE_VERSION = 'v9'/);
+  assert.match(sw, /const CACHE_VERSION = 'v10'/);
   assert.match(sw, /const CACHE = `ludeo-\$\{CACHE_VERSION\}`/, "the collection's own cache prefix");
   assert.match(sw, /k\.startsWith\('ludeo-'\) && k !== CACHE/, "activate deletes only this collection's older caches");
   assert.equal(m.name, 'Ludeo');

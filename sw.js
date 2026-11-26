@@ -3,7 +3,7 @@
 // UPDATING: bump CACHE_VERSION on every release, then merge into master (see DEPLOY.md).
 import { HOME_PRECACHE, GAMES } from './jeux/registry.js';
 
-const CACHE_VERSION = 'v9';
+const CACHE_VERSION = 'v10';
 // A prefix of this collection only: on <account>.github.io every project site of the account
 // shares one origin and its Cache Storage, so activate deletes only older 'ludeo-*' caches.
 const CACHE = `ludeo-${CACHE_VERSION}`;
