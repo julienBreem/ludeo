@@ -204,7 +204,10 @@ export class FishingScene extends Phaser.Scene {
       return;
     }
     this.angling = strike(a); // hooks at the bite, scares the fish before it
-    if (this.angling.phase === 'fight') this.onHooked();
+    if (this.angling.phase === 'fight') {
+      this.onHooked();
+      this.holding = true; // the striking finger stays down: it already reels (first thrash is ≥ 0.6 s away)
+    }
     else this.onAnglingEvent(this.angling.result);
   }
 
@@ -251,8 +254,11 @@ export class FishingScene extends Phaser.Scene {
     const b = this.bobber;
     switch (e) {
       case 'summon': {
+        // The nearest fish comes, however far: the wait stays short.
         const pool = this.fishes.filter((f) => f !== this.angled);
-        if (pool.length) this.startApproach(pool[Math.floor(Math.random() * pool.length)]);
+        const id = pickFish(this.bobber, pool.map((f) => ({ id: f.id, x: f.c.x, y: f.c.y })), Infinity);
+        const rec = pool.find((f) => f.id === id);
+        if (rec) this.startApproach(rec);
         break;
       }
       case 'nibble':
@@ -353,7 +359,7 @@ export class FishingScene extends Phaser.Scene {
     const g = this.add.graphics().setDepth(D.line + 2);
     g.lineStyle(8, 0xffffff, 1).lineBetween(tip.x, tip.y, b.x, b.y);
     this.tweens.add({ targets: g, alpha: 0, duration: dur(250), onComplete: () => g.destroy() });
-    sparkle(this, b.x, b.y);
+    splash(this, b.x, b.y, 0xffffff); // a plain white burst: sparkles mean a reward
     this.lineOn = false;
     b.setVisible(false);
     this.holding = false;

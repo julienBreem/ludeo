@@ -15,11 +15,14 @@ export const TUNING = {
   nibbleGapMs: [500, 1100],
   biteMs: 1500, // the strike window
   reelMs: { petit: 2200, moyen: 3500, grand: 5000 }, // holding time to land, thrashes excluded
+  // Every thrash lasts longer than breakMs, so holding through one always snaps the line, for
+  // every size: the same act always has the same result. Bigger fish thrash more often and longer.
   thrash: {
-    petit: { gap: [2500, 4000], lasts: [600, 900] },
-    moyen: { gap: [1800, 3000], lasts: [800, 1200] },
-    grand: { gap: [1200, 2200], lasts: [1100, 1600] }, // longer than breakMs: holding through snaps
+    petit: { gap: [2500, 4000], lasts: [1100, 1300] },
+    moyen: { gap: [1800, 3000], lasts: [1150, 1450] },
+    grand: { gap: [1200, 2200], lasts: [1200, 1700] },
   },
+  firstThrash: 0.5, // × the size's shortest gap: every fish thrashes before it can be landed
   breakMs: 1000, // tension (holding during a thrash) that snaps the line
   relaxRate: 2, // tension falls this many times faster than it rises
 };
@@ -58,7 +61,7 @@ export function approach(a, fishId, size, distPx, rng) {
 /** The child strikes: hooks a biting fish, scares one that is only nibbling or coming. */
 export function strike(a) {
   if (a.phase === 'bite') {
-    const first = TUNING.thrash[a.size].gap[0] * a.pace;
+    const first = TUNING.thrash[a.size].gap[0] * TUNING.firstThrash * a.pace;
     return { ...a, phase: 'fight', distance: 1, tension: 0, thrashing: false, nextThrash: first };
   }
   if (a.phase === 'approach' || a.phase === 'nibble' || a.phase === 'gap') {

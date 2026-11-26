@@ -109,14 +109,21 @@ test('waiting summons a fish after noFishFallbackMs, once', () => {
   assert.ok(Math.abs(summons[0].t - TUNING.noFishFallbackMs) <= 10);
 });
 
-test('always holding snaps the line on a grand fish (≥ 90 % of 50 seeds)', () => {
-  let broken = 0;
-  for (let s = 1; s <= 50; s++) {
+test('always holding snaps the line, every size (50 seeds each): the same act always has the same result', () => {
+  for (const size of SIZES) for (let s = 1; s <= 50; s++) {
     const rng = makeRng(s);
-    const { a } = run(hooked('grand', rng), 60000, alwaysHold, rng);
-    if (a.result === 'broken') broken++;
+    const { a } = run(hooked(size, rng), 60000, alwaysHold, rng);
+    assert.equal(a.result, 'broken', `${size} seed ${s}`);
   }
-  assert.ok(broken >= 45, `broken ${broken}/50`);
+});
+
+test('every size thrashes at least once before it can be landed', () => {
+  for (const size of SIZES) for (let s = 1; s <= 50; s++) {
+    const rng = makeRng(200 + s);
+    const { a, events } = run(hooked(size, rng), 60000, releaseOnThrash, rng);
+    assert.equal(a.result, 'landed');
+    assert.ok(events.some((x) => x.e === 'thrashStart'), `${size} seed ${s} never thrashed`);
+  }
 });
 
 test('releasing during every thrash lands every size (100 % of 50 seeds, each within 30 s)', () => {
