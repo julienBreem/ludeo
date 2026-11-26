@@ -8,7 +8,7 @@ import { CutScene } from './scenes/CutScene.js';
 import { PlateScene } from './scenes/PlateScene.js';
 import { EndScene } from './scenes/EndScene.js';
 
-new Phaser.Game({
+const game = new Phaser.Game({
   type: Phaser.AUTO,
   width: W,
   height: H,
@@ -18,6 +18,9 @@ new Phaser.Game({
   banner: false,
   scene: [BootScene, FishingScene, WeighScene, KitchenScene, CutScene, PlateScene, EndScene],
 });
+
+// Debug only (?debug): the game object, for scripted checks in the browser console.
+if (new URLSearchParams(window.location.search).has('debug')) window.__game = game;
 
 // Back gesture to the game after a trip home: the browser may restore this page as it was left
 // (back-forward cache), with the pace and the evening look of that time, although the parent

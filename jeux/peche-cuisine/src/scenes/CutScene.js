@@ -94,8 +94,8 @@ export class CutScene extends Phaser.Scene {
         this.tag = weightTag(this, fish.weight, this.round.levels.cuisine).setPosition(TAG.x, TAG.y).setDepth(D.fish);
         popIn(this, this.tag);
         if (marks.length === 0) {
-          // weight 1: nothing to cut
-          this.time.delayedCall(dur(700), () => this.fishDone());
+          // weight 1: nothing to cut, so it does not keep her waiting
+          this.time.delayedCall(dur(300), () => this.fishDone());
           return;
         }
         this.drawMarks();

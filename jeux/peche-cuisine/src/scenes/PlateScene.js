@@ -182,7 +182,7 @@ export class PlateScene extends Phaser.Scene {
     if (this.phase !== 'idle') return;
     this.phase = 'busy';
     this.okButton?.disableInteractive().setVisible(false);
-    this.restartButton.disableInteractive();
+    this.restartButton.disableInteractive().setVisible(false); // nothing to start again once served
     for (const p of this.portions) p.c.disableInteractive();
     this.result.dressage = this.plates.every((p) => p.items.length === 1);
     if (this.result.dressage) {

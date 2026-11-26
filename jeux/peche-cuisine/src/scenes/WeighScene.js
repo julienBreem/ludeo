@@ -7,7 +7,7 @@ import { addIconButton } from '../ui/button.js';
 import { goTo } from '../ui/flow.js';
 import { dur } from '../ui/pace.js';
 import { popIn, sparkle, splash } from '../ui/fx.js';
-import { drawFish } from '../ui/fishArt.js';
+import { drawFish, weightTag } from '../ui/fishArt.js';
 import { getRound, getState, updateState } from '../game-state.js';
 import { gameSetup } from '../logic/setup.js';
 import { drawWeight } from '../logic/fish.js';
@@ -17,11 +17,13 @@ import { prepCoins } from '../logic/scoring.js';
 
 const HOME_URL = '../../index.html';
 
-const SCALE = { x: 640, y: 540, size: 1.5 };
-const SCALE_FISH = { x: 640, y: 440 };
+// The basket (left) and the scale must not overlap, even with a big fish at the basket's end.
+const SCALE = { x: 790, y: 540, size: 1.3 };
+const SCALE_FISH = { x: 790, y: 440 };
 const DROP = { halfW: 220, halfH: 190 }; // drop zone around the scale
 const DOTS = { y: 320, gap: 64, max: 5 };
-const BASKET = { left: 40, top: 610, w: 600, h: 170, firstX: 130, gap: 135, y: 690 };
+// Fish wait in the basket drawn smaller (BASKET.size) so four big ones still sit side by side.
+const BASKET = { left: 30, top: 610, w: 590, h: 170, firstX: 110, gap: 140, y: 690, size: 0.65 };
 const COOLER = { x: 1090, y: 600, scale: 1.2 };
 const BUCKET = { x: 1100, y: 290 };
 const COUNTER = { x: W - 110, y: 70 };
@@ -82,7 +84,7 @@ export class WeighScene extends Phaser.Scene {
     const caught = Array.from(this.round.caught).filter(Boolean);
     caught.forEach((info, i) => {
       const x = BASKET.firstX + i * BASKET.gap;
-      const c = drawFish(this, x, BASKET.y, info).setDepth(D.fish);
+      const c = drawFish(this, x, BASKET.y, info, { size: BASKET.size }).setDepth(D.fish);
       const base = c.scaleX;
       c.setSize(Math.max(240, MIN_HIT / base), Math.max(140, MIN_HIT / base));
       this.items.push({ c, info, home: { x, y: BASKET.y }, base, done: false });
@@ -124,7 +126,8 @@ export class WeighScene extends Phaser.Scene {
     this.stopWiggle(it);
     obj.disableInteractive();
     this.tweens.add({
-      targets: obj, x: SCALE_FISH.x, y: SCALE_FISH.y, duration: dur(200), ease: 'Quad.easeOut',
+      targets: obj, x: SCALE_FISH.x, y: SCALE_FISH.y, scaleX: it.base / BASKET.size, scaleY: it.base / BASKET.size,
+      duration: dur(200), ease: 'Quad.easeOut',
       onComplete: () => this.weigh(it),
     });
   }
@@ -147,24 +150,17 @@ export class WeighScene extends Phaser.Scene {
     light(0);
   }
 
-  buildTag(weight) {
-    const tag = this.add.container(0, 0);
-    tag.add(this.add.image(0, 0, 'label').setScale(1.1));
-    tag.add(this.add.text(-30, 0, String(weight), {
-      fontFamily: 'sans-serif', fontSize: '44px', color: '#1f2a44', fontStyle: 'bold',
-    }).setOrigin(0.5));
-    tag.add(this.add.image(30, 0, `dice-${weight}`).setDisplaySize(44, 44));
-    return tag;
-  }
-
   attachLabel(it, weight) {
     const c = it.c;
-    const tag = this.buildTag(weight);
+    // The tag keeps its full size on screen whatever the fish's size (a small fish would
+    // otherwise shrink it to an unreadable stamp), and sticks just under the body.
+    const k = c.scaleX;
+    const tag = weightTag(this, weight, this.level).setScale(1 / k);
     c.add(tag);
     c.tag = tag;
-    tag.setPosition(0, -260 / c.scaleX);
+    tag.setPosition(0, -260 / k);
     this.tweens.add({
-      targets: tag, y: 70, duration: dur(450), ease: 'Back.easeOut',
+      targets: tag, y: (60 * k + 32) / k, duration: dur(450), ease: 'Back.easeOut',
       onComplete: () => this.stick(it, weight),
     });
   }

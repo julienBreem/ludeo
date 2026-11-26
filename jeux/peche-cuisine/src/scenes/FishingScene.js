@@ -17,12 +17,26 @@ const HOME_URL = '../../index.html';
 const PANEL = { left: 716, top: 16, w: 548, h: 120 };
 const CARD = { w: 124, h: 100, gap: 10, y: 76, firstX: 789 };
 const CARD_FISH_SCALE = 0.4; // list fish are drawn smaller than in the pond, sizes stay distinct
-const WATER = { top: 260, bottom: 730 };
+// Inner water of pond-bg.svg (ellipse 640,440 r 500x250, grass from y 700). Fish stay inside a
+// smaller ellipse so their whole body is on the water, never on the rim or the grass.
+const POND = { cx: 640, cy: 430, rx: 400, ry: 170 };
 const MIN_HIT = 100; // px on screen, above the 96 px minimum
-const SWIM_SPEED = 0.055; // px per (paced) ms: slow
+const SWIM_SPEED = 0.05; // px per (paced) ms: slow
+const MIN_LEG = 160; // px: a fish swims at least this far before turning
+const DIVE_RATE = 0.2; // after each leg, chance a fish dives away and a new one comes up
+const MISSING_RATE = 0.8; // chance a new fish is a listed one the pond lacks
+
+// A random point inside the pond's swimming area.
+function pondPoint() {
+  const a = Math.random() * Math.PI * 2;
+  const r = Math.sqrt(Math.random());
+  return { x: POND.cx + Math.cos(a) * r * POND.rx, y: POND.cy + Math.sin(a) * r * POND.ry };
+}
 const ROD_TIP = { x: 270, y: 530 };
 const SHOW_POS = { x: 500, y: 90 }; // where an off-list fish is shown, left of the list
 const D = { fish: 10, line: 40, rod: 50, panel: 100, flying: 300, ok: 400, home: 500 };
+// Smaller fish swim above bigger ones, so a big fish never hides (or steals the tap of) a small one.
+const SIZE_DEPTH = { petit: 2, moyen: 1, grand: 0 };
 
 export class FishingScene extends Phaser.Scene {
   constructor() {
@@ -84,20 +98,40 @@ export class FishingScene extends Phaser.Scene {
   // ---- pond fish ----
 
   spawnFish(initial = false) {
-    const info = spawnCatch(this.round.list, this.round.filled, this.colors, Math.random);
-    const dir = Math.random() < 0.5 ? 1 : -1;
-    const x = initial ? 120 + Math.random() * (W - 240) : (dir > 0 ? -150 : W + 150);
-    const y = WATER.top + Math.random() * (WATER.bottom - WATER.top);
-    const c = drawFish(this, x, y, info).setDepth(D.fish);
+    const info = this.nextCatch();
+    const { x, y } = pondPoint();
+    const c = drawFish(this, x, y, info).setDepth(D.fish + SIZE_DEPTH[info.size]).setAlpha(initial ? 1 : 0);
+    if (!initial) this.tweens.add({ targets: c, alpha: 1, duration: dur(500) });
     const base = c.scaleX;
     // Pad the touch area so even a small fish is at least MIN_HIT px on screen.
     c.setSize(Math.max(240, MIN_HIT / base), Math.max(140, MIN_HIT / base));
     c.setInteractive({ useHandCursor: true });
-    const rec = { c, info, dir, base, tween: null };
+    const rec = { c, info, dir: 1, base, tween: null };
     c.on('pointerdown', () => this.onFishTap(rec));
     this.fishes.push(rec);
     this.startSwim(rec);
     return rec;
+  }
+
+  // Fish fill the list slots that no pond fish matches yet, most of the time: since fish stay
+  // in the pond, a listed fish would otherwise be able to stay away for good.
+  nextCatch() {
+    const { list, filled } = this.round;
+    const missing = list.filter((c, i) => !filled[i]
+      && !this.fishes.some((f) => f.info.color === c.color && f.info.size === c.size));
+    if (missing.length > 0 && Math.random() < MISSING_RATE) {
+      const c = missing[Math.floor(Math.random() * missing.length)];
+      return { color: c.color, size: c.size };
+    }
+    return spawnCatch(list, filled, this.colors, Math.random);
+  }
+
+  // The fish dives away (fades out) and a new one comes up elsewhere.
+  dive(rec) {
+    this.fishes = this.fishes.filter((f) => f !== rec);
+    rec.c.disableInteractive();
+    this.tweens.add({ targets: rec.c, alpha: 0, duration: dur(500), onComplete: () => rec.c.destroy() });
+    this.spawnFish();
   }
 
   face(rec) {
@@ -106,30 +140,26 @@ export class FishingScene extends Phaser.Scene {
 
   startSwim(rec) {
     this.stopSwim(rec);
-    this.face(rec);
     const c = rec.c;
-    const endX = rec.dir > 0 ? W + 160 : -160;
-    const endY = Phaser.Math.Clamp(c.y + (Math.random() - 0.5) * 120, WATER.top, WATER.bottom);
+    // Wander from point to point inside the pond, facing the way it swims.
+    let p = pondPoint();
+    for (let i = 0; i < 8 && Math.hypot(p.x - c.x, p.y - c.y) < MIN_LEG; i++) p = pondPoint();
+    rec.dir = p.x >= c.x ? 1 : -1;
+    this.face(rec);
+    const dist = Math.hypot(p.x - c.x, p.y - c.y);
     rec.tween = this.tweens.add({
-      targets: c, x: endX, y: endY, duration: dur(Math.abs(endX - c.x) / SWIM_SPEED), ease: 'Linear',
-      onComplete: () => this.leavePond(rec),
+      targets: c, x: p.x, y: p.y, duration: dur(dist / SWIM_SPEED), ease: 'Sine.easeInOut',
+      onComplete: () => {
+        rec.tween = null;
+        if (!c.active) return;
+        if (this.phase !== 'done' && Math.random() < DIVE_RATE) this.dive(rec);
+        else this.startSwim(rec);
+      },
     });
   }
 
   stopSwim(rec) {
     if (rec.tween) { rec.tween.remove(); rec.tween = null; }
-  }
-
-  // A fish that left the screen is replaced by a new one.
-  leavePond(rec) {
-    this.removeFish(rec);
-    this.spawnFish();
-  }
-
-  removeFish(rec) {
-    this.stopSwim(rec);
-    this.fishes = this.fishes.filter((f) => f !== rec);
-    rec.c.destroy();
   }
 
   // ---- bamboo rod ----
@@ -261,16 +291,14 @@ export class FishingScene extends Phaser.Scene {
   release(rec) {
     const c = rec.c;
     if (!c.active) return;
-    const x = 200 + Math.random() * (W - 400);
-    const y = WATER.top + Math.random() * (WATER.bottom - WATER.top);
+    const { x, y } = pondPoint();
     this.tweens.add({
       targets: c, x, y, scaleX: rec.base, scaleY: rec.base, duration: dur(600), ease: 'Sine.easeInOut',
       onComplete: () => {
-        c.setDepth(D.fish).setInteractive({ useHandCursor: true });
+        c.setDepth(D.fish + SIZE_DEPTH[rec.info.size]).setInteractive({ useHandCursor: true });
         splash(this, x, y, 0xffffff);
         const ring = this.add.image(x, y, 'splash-ring').setDepth(D.fish + 1).setScale(0.4).setAlpha(0.9);
         this.tweens.add({ targets: ring, scale: 1.1, alpha: 0, duration: dur(600), onComplete: () => ring.destroy() });
-        rec.dir = Math.random() < 0.5 ? 1 : -1;
         this.startSwim(rec);
         this.phase = 'idle';
       },
