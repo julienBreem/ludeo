@@ -41,6 +41,7 @@ export const PRECACHE = [
   'src/config.js',
   'src/game-state.js',
   'src/main.js',
+  'src/logic/angling.js',
   'src/logic/cutting.js',
   'src/logic/fish.js',
   'src/logic/fishing.js',
