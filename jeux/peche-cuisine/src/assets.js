@@ -1,3 +1,8 @@
+import { CLIENT_LAYERS } from '../../../shared/client.js';
+
+// The collection's client layers live in shared/ (the home draws the avatar with them), two levels up.
+export const SHARED_CLIENT_DIR = '../../shared/assets/client/';
+
 // Every SVG the game loads. `file` is relative to the game folder (jeux/peche-cuisine/);
 // `w`/`h` are the sizes to rasterise at (they match each file's viewBox).
 // The home icon is loaded by BootScene from shared/ (precached by the home).
@@ -25,6 +30,8 @@ export const ASSETS = [
   { key: 'icon-restart', file: 'assets/ui/icon-restart.svg', w: 160, h: 160 },
   { key: 'icon-next', file: 'assets/ui/icon-next.svg', w: 160, h: 160 },
   ...[1, 2, 3, 4, 5].map(n => ({ key: `dice-${n}`, file: `assets/ui/dice-${n}.svg`, w: 96, h: 96 })),
+  // clients: shared with the stand and the home's avatar (shared/assets/client/, precached by the home)
+  ...CLIENT_LAYERS.map(key => ({ key, file: `${SHARED_CLIENT_DIR}${key}.svg`, w: 300, h: 300 })),
 ];
 
 // Files to cache for offline play, relative to the game folder (collection.js prefixes them).
@@ -50,13 +57,14 @@ export const PRECACHE = [
   'src/scenes/FishingScene.js',
   'src/scenes/KitchenScene.js',
   'src/scenes/PlateScene.js',
-  'src/scenes/StubScene.js',
   'src/scenes/WeighScene.js',
   'src/ui/button.js',
   'src/ui/client.js',
+  'src/ui/cooler.js',
   'src/ui/fishArt.js',
   'src/ui/flow.js',
   'src/ui/fx.js',
   'src/ui/pace.js',
-  ...ASSETS.map(a => a.file),
+  // the shared client layers are in the home's precache
+  ...ASSETS.map(a => a.file).filter(f => !f.startsWith('../')),
 ];
