@@ -41,31 +41,42 @@ test('every listed colour reaches 2 with the stock', () => {
   }
 });
 
-test('a colour missing from the stock is listed in most lists', () => {
+test('a colour scarce in the stock is listed more often (count term only)', () => {
   const rng = makeRng(4);
-  const stock = [f('a', 'bleu', 'petit', 1), f('b', 'bleu', 'moyen', 3), f('c', 'bleu', 'petit', 1)];
+  // Both colours have a usable petit; rouge has 1 fish, bleu has 4.
+  const stock = [
+    f('a', 'bleu', 'petit', 1), f('b', 'bleu', 'moyen', 3), f('c', 'bleu', 'petit', 1), f('d', 'bleu', 'moyen', 2),
+    f('e', 'rouge', 'petit', 1),
+  ];
   let withRouge = 0;
-  for (let i = 0; i < 500; i++) {
-    if (drawFishingList(stock, 1, ['bleu', 'rouge'], rng).some((c) => c.color === 'rouge')) withRouge++;
+  let withBleu = 0;
+  for (let i = 0; i < 1000; i++) {
+    const list = drawFishingList(stock, 1, ['bleu', 'rouge'], rng);
+    if (list.some((c) => c.color === 'rouge')) withRouge++;
+    if (list.some((c) => c.color === 'bleu')) withBleu++;
   }
-  assert.ok(withRouge > 300, `rouge in ${withRouge}/500`);
+  assert.ok(withRouge > 970, `rouge in ${withRouge}/1000`);
+  assert.ok(withRouge > withBleu, `rouge ${withRouge} vs bleu ${withBleu}`);
 });
 
-test('a colour with no petit gets a petit more often', () => {
+test('a colour with no petit gets a petit more often, per slot of that colour', () => {
   const rng = makeRng(5);
+  // Equal usable counts (2 each); only rouge lacks a usable petit.
   const stock = [
-    f('a', 'bleu', 'petit', 1), f('b', 'bleu', 'petit', 1),
+    f('a', 'bleu', 'petit', 1), f('b', 'bleu', 'moyen', 3),
     f('c', 'rouge', 'moyen', 3), f('d', 'rouge', 'grand', 4),
   ];
-  let bleuPetit = 0;
-  let rougePetit = 0;
-  for (let i = 0; i < 1000; i++) {
+  const slots = { bleu: 0, rouge: 0 };
+  const petits = { bleu: 0, rouge: 0 };
+  for (let i = 0; i < 2000; i++) {
     for (const c of drawFishingList(stock, 1, ['bleu', 'rouge'], rng)) {
-      if (c.size !== 'petit') continue;
-      if (c.color === 'bleu') bleuPetit++; else rougePetit++;
+      slots[c.color]++;
+      if (c.size === 'petit') petits[c.color]++;
     }
   }
-  assert.ok(rougePetit > bleuPetit, `rouge ${rougePetit} vs bleu ${bleuPetit}`);
+  const pBleu = petits.bleu / slots.bleu;
+  const pRouge = petits.rouge / slots.rouge;
+  assert.ok(pRouge > pBleu + 0.1, `P(petit|rouge) ${pRouge.toFixed(2)} vs bleu ${pBleu.toFixed(2)}`);
 });
 
 test('two different lists over 20 draws with the same stock', () => {
