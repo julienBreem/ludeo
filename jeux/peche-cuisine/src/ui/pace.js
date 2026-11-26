@@ -6,8 +6,8 @@ import { getEffective, onEffectiveChange } from '../../../../shared/runtime.js';
 export const EVENING_FILTER = 'brightness(0.8) saturate(0.7) sepia(0.15)';
 export const EVENING_FADE_MS = 1500;
 // The page around the canvas (letterbox on a screen that is not 16:10): the day colour
-// (index.html, #4fc3f7 = BG) as EVENING_FILTER renders it, so both halves match.
-export const EVENING_PAGE_BG = '#6599ac';
+// (index.html, #4dbbe8 = BG) as EVENING_FILTER renders it, so both halves match.
+export const EVENING_PAGE_BG = '#6193a3';
 
 let applied = getEffective(); // what the running scene uses
 let latest = applied; // newest known settings
