@@ -13,13 +13,31 @@ const STOCKS = [
   [f('a', 'bleu', 'petit', 1), f('b', 'bleu', 'petit', 2), f('c', 'bleu', 'petit', 3)],
 ];
 
-test('always 4 slots with a petit', () => {
+test('4 slots; every listed colour without a usable petit in the cooler gets a petit', () => {
   const rng = makeRng(1);
-  for (const stock of STOCKS) for (let i = 0; i < 200; i++) {
-    const list = drawFishingList(stock, 1, COLORS, rng);
+  for (const level of [1, 2]) for (const stock of STOCKS) for (let i = 0; i < 200; i++) {
+    const list = drawFishingList(stock, level, COLORS, rng);
     assert.equal(list.length, LIST_LENGTH);
-    assert.ok(list.some((c) => c.size === 'petit'));
+    const usableStock = stock.filter((x) => x.weight <= maxWeight(level));
+    for (const color of new Set(list.map((c) => c.color))) {
+      if (usableStock.some((x) => x.color === color && x.size === 'petit')) continue;
+      assert.ok(list.some((c) => c.color === color && c.size === 'petit'), `${color} has no petit`);
+    }
   }
+});
+
+test('no petit is forced when the cooler already has one in every colour', () => {
+  const rng = makeRng(11);
+  const stock = [f('a', 'bleu', 'petit', 1), f('b', 'bleu', 'moyen', 3), f('c', 'rouge', 'petit', 1), f('d', 'rouge', 'grand', 4)];
+  let petits = 0;
+  let slots = 0;
+  for (let i = 0; i < 500; i++) {
+    for (const c of drawFishingList(stock, 1, ['bleu', 'rouge'], rng)) {
+      slots++;
+      if (c.size === 'petit') petits++;
+    }
+  }
+  assert.ok(petits / slots < 0.25, `petit share ${(petits / slots).toFixed(2)}`);
 });
 
 test('only owned colours', () => {

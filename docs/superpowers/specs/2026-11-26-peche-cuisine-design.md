@@ -79,7 +79,7 @@ Les niveaux sont lus au début de la partie pour toutes les phases et gardés ju
 
 ### Apparition des poissons et liste de pêche
 
-- La **liste de pêche** (4 poissons à attraper) est tirée **d'après l'état du stock** : elle favorise ce qui manque pour couvrir les commandes (couleurs peu présentes, absence de petit poisson dans une couleur), avec une part de hasard. Elle contient **au moins un petit** et, pour chaque couleur demandée, de quoi faire des combinaisons (au moins deux poissons d'une même couleur dans la liste ou dans liste + stock).
+- La **liste de pêche** (4 poissons à attraper) est tirée **d'après l'état du stock** : elle favorise ce qui manque pour couvrir les commandes (couleurs peu présentes, absence de petit poisson dans une couleur), avec une part de hasard. Elle contient **un petit seulement si besoin** : pour chaque couleur demandée qui n'a pas de petit utilisable dans la glacière (décidé le 2026-11-26 après un essai : imposer un petit à chaque liste remplissait la glacière de poissons de 1). Et, pour chaque couleur demandée, de quoi faire des combinaisons (au moins deux poissons d'une même couleur dans la liste ou dans liste + stock).
 - L'**étang** montre des poissons de la liste et d'autres (intrus). La probabilité d'apparition d'un poisson dépend de l'état du stock et de la liste, **sans être déterministe**.
 - Le poids exact d'un poisson attrapé est tiré au hasard dans sa catégorie, avec un biais vers ce qui rend des totaux faisables (formule laissée au constructeur ; voir « Laissé au constructeur »).
 
@@ -88,7 +88,7 @@ Les niveaux sont lus au début de la partie pour toutes les phases et gardés ju
 - Une commande = une **couleur** + un **nombre d'assiettes** N.
 - Elle est tirée parmi les totaux **réalisables exactement** avec les poissons de cette couleur dans le stock (somme d'un sous-ensemble), dans la plage du niveau de la phase Cuisine et avec le nombre de poissons du niveau.
 - Le client montre la commande en image : poisson de la couleur + N assiettes. Au N1 en constellation, aux N2–N3 en chiffre (+ assiettes dessinées en N2).
-- Une commande **ne sort jamais de la plage de son niveau**. Si une couleur n'a pas de total réalisable avec le nombre de poissons du niveau, la commande se rabat sur moins de poissons (un seul poisson dont le poids est dans la plage), puis sur une autre couleur. Le stock de départ, « au moins un petit » par liste et les poids par niveau garantissent qu'il existe toujours au moins une commande dans la plage ; les tests sur parties simulées le vérifient (y compris après une baisse de niveau). La liste de pêche suivante favorise ce qui manque.
+- Une commande **ne sort jamais de la plage de son niveau**. Si une couleur n'a pas de total réalisable avec le nombre de poissons du niveau, la commande se rabat sur moins de poissons (un seul poisson dont le poids est dans la plage), puis sur une autre couleur. Le stock de départ, le petit ajouté à la liste quand une couleur n'en a plus et les poids par niveau garantissent qu'il existe toujours au moins une commande dans la plage ; les tests sur parties simulées le vérifient (y compris après une baisse de niveau). La liste de pêche suivante favorise ce qui manque.
 
 ### Clients
 
@@ -151,7 +151,7 @@ Comme au stand : chaque phase a ↺ (recommencer l'étape) jusqu'à ✓ ; après
 
 ## Laissé au constructeur
 
-- Formules exactes d'apparition et de tirage des poids, du moment qu'elles respectent : commandes toujours faisables, au moins un petit dans chaque liste, biais vers ce qui manque, part de hasard réelle. Logique pure, testée (y compris sur de nombreuses parties simulées : jamais de commande impossible).
+- Formules exactes d'apparition et de tirage des poids, du moment qu'elles respectent : commandes toujours faisables, un petit dans la liste pour chaque couleur qui n'en a plus, biais vers ce qui manque, part de hasard réelle. Logique pure, testée (y compris sur de nombreuses parties simulées : jamais de commande impossible).
 - Contenu exact du stock de départ, capacités et prix de la boutique, nombre de couleurs maximum.
 - Découpage en lots, fichiers, scènes ; dessins nécessaires (étang, bateau/ponton, poissons par couleur et taille, balance simple et à plateaux, poids, étiquettes, glacière, plan de travail, couteau, assiettes, garnitures, cannes) avec validation du parent comme d'habitude.
 - Animations d'arrivée des poissons, de la balance, de la découpe ; mise à l'échelle.

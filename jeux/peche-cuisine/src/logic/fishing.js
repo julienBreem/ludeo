@@ -5,7 +5,9 @@ import { usable } from './stock.js';
 export const LIST_LENGTH = 4;
 export const ON_LIST_RATE = 0.6;
 
-const SIZE_WEIGHTS = { petit: 0.4, moyen: 0.35, grand: 0.25 };
+// A colour that already has a usable petit gets few more: at level 1 every petit weighs 1,
+// and a cooler full of 1s makes orders that need no addition.
+const SIZE_WEIGHTS = { petit: 0.15, moyen: 0.5, grand: 0.35 };
 const NEEDS_PETIT_WEIGHTS = { petit: 0.7, moyen: 0.2, grand: 0.1 };
 
 function pickWeighted(items, weights, rng) {
@@ -36,14 +38,17 @@ export function drawFishingList(stock, level, colors, rng) {
     list.push({ color, size: pickWeighted(SIZES, SIZES.map((s) => table[s]), rng) });
   }
 
-  // At least one petit, preferably for a colour that has none in the cooler.
-  if (!list.some((c) => c.size === 'petit')) {
-    const needy = list.map((c, i) => i).filter((i) => lacksPetit(list[i].color));
-    const pool = needy.length ? needy : list.map((c, i) => i);
-    list[pool[Math.floor(rng() * pool.length)]].size = 'petit';
-  }
+  ensureTwoPerColor(list, have);
 
-  return ensureTwoPerColor(list, have);
+  // A petit only when needed: every listed colour without a usable petit in the cooler gets
+  // one in the list, so small totals stay possible. Done last, after the recolouring, and it
+  // only changes sizes, so the colours (and the "2 per colour" rule) stay as they are.
+  for (const color of new Set(list.map((c) => c.color))) {
+    if (!lacksPetit(color) || list.some((x) => x.color === color && x.size === 'petit')) continue;
+    const slots = list.map((c, i) => i).filter((i) => list[i].color === color);
+    list[slots[Math.floor(rng() * slots.length)]].size = 'petit';
+  }
+  return list;
 }
 
 // Each listed colour must reach 2 fish counting list + usable stock, so an
