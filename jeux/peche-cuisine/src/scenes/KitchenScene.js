@@ -55,8 +55,10 @@ export class KitchenScene extends Phaser.Scene {
     const previous = round.order;
     round.order = drawOrder(getState().stock, this.level, this.colors, Math.random, previous);
     if (!round.order) {
-      // Nothing can be cooked from the cooler: straight to the end of the round.
-      goTo(this, 'End');
+      // Nothing can be cooked from the cooler: straight to the end of the round. Deferred until
+      // after CREATE: the previous scene's goTo starts this camera's fade-in on CREATE, which
+      // would replace a fade-out started inside create() (stuck on an empty Kitchen).
+      this.events.once('create', () => goTo(this, 'End'));
       return;
     }
     // A new client for every order, never drawn the same as the previous one.
@@ -250,6 +252,7 @@ export class KitchenScene extends Phaser.Scene {
 
   // The combination used leaves the cooler now, then the cutting starts.
   finish(fish, cuisine) {
+    if (this.__leaving) return; // home was tapped during the delay: the cooler stays as it was
     const round = this.round;
     const ids = fish.map((f) => f.id);
     updateState((s) => ({ ...s, stock: removeFish(s.stock, ids) }));
